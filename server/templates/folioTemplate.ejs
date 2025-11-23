@@ -234,7 +234,7 @@
             <div class="section-title">Imágenes de Referencia</div>
             <% folio.imageUrls.forEach(function(imageUrl, index) { %>
                 <div class="image-container">
-                    <img src="http://localhost:3000/<%= imageUrl.replace(/\\/g, '/') %>">
+                    <img src="/<%= imageUrl.replace(/\\/g, '/') %>">
                     <% if (folio.imageComments && folio.imageComments[index]) { %>
                         <p class="image-comment"><%= folio.imageComments[index] %></p>
                     <% } %>

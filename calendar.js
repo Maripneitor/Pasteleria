@@ -12,36 +12,36 @@ function initializeCalendar(authToken, userRole) {
         const loadingEl = document.getElementById('loading');
         if (!query) loadingEl.classList.remove('hidden');
 
-        const url = query ? `http://localhost:3000/api/folios?q=${query}` : 'http://localhost:3000/api/folios';
-        
+        const url = query ? `/api/folios?q=${query}` : '/api/folios';
+
         fetch(url, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${authToken}` }
         })
-        .then(response => {
-            if (!response.ok) throw new Error('Error al cargar los folios');
-            return response.json();
-        })
-        .then(data => {
-            if (!query) {
-                allFoliosData = data;
-            }
-            if (successCallback) {
-                const events = data.map(folio => ({
-                    title: `Folio ${folio.folioNumber} - ${folio.client?.name || 'N/A'}`,
-                    start: `${folio.deliveryDate}T${folio.deliveryTime}`,
-                    extendedProps: { folioData: folio }
-                }));
-                successCallback(events);
-            }
-        })
-        .catch(error => {
-            console.error(error);
-            if(failureCallback) failureCallback(error);
-        })
-        .finally(() => {
-            if (!query) loadingEl.classList.add('hidden');
-        });
+            .then(response => {
+                if (!response.ok) throw new Error('Error al cargar los folios');
+                return response.json();
+            })
+            .then(data => {
+                if (!query) {
+                    allFoliosData = data;
+                }
+                if (successCallback) {
+                    const events = data.map(folio => ({
+                        title: `Folio ${folio.folioNumber} - ${folio.client?.name || 'N/A'}`,
+                        start: `${folio.deliveryDate}T${folio.deliveryTime}`,
+                        extendedProps: { folioData: folio }
+                    }));
+                    successCallback(events);
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                if (failureCallback) failureCallback(error);
+            })
+            .finally(() => {
+                if (!query) loadingEl.classList.add('hidden');
+            });
     }
 
     // Rellena el modal con la información del folio seleccionado.
@@ -116,15 +116,15 @@ function initializeCalendar(authToken, userRole) {
         },
         buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', list: 'Lista' },
         events: (fetchInfo, successCallback, failureCallback) => fetchFolios('', successCallback, failureCallback),
-        
-        dateClick: function(info) {
+
+        dateClick: function (info) {
             const dailyFoliosModal = document.getElementById('dailyFoliosModal');
             dailyFoliosModal.dataset.date = info.dateStr;
 
             const foliosForDay = allFoliosData.filter(folio => folio.deliveryDate === info.dateStr);
-            
+
             foliosForDay.sort((a, b) => a.deliveryTime.localeCompare(b.deliveryTime));
-            
+
             dailyFoliosCache = foliosForDay;
 
             const dailyFoliosList = document.getElementById('dailyFoliosList');
@@ -144,7 +144,7 @@ function initializeCalendar(authToken, userRole) {
                     listItem.dataset.phone = folio.client?.phone || '';
 
                     const time = folio.deliveryTime.substring(0, 5);
-                    
+
                     // ===== INICIO DE LA MODIFICACIÓN (Arreglo 3.1) =====
                     // Determina si los checkboxes deben estar deshabilitados
                     const isDisabled = folio.status === 'Cancelado';
@@ -189,11 +189,11 @@ function initializeCalendar(authToken, userRole) {
             } else {
                 dailyFoliosTitle.innerText = 'No hay folios para este día';
             }
-            
+
             dailyFoliosModal.classList.remove('hidden');
         },
 
-        eventClick: function(info) {
+        eventClick: function (info) {
             const folio = info.event.extendedProps.folioData;
             const foliosForDay = allFoliosData.filter(f => f.deliveryDate === folio.deliveryDate);
             foliosForDay.sort((a, b) => a.deliveryTime.localeCompare(b.deliveryTime));
@@ -203,7 +203,7 @@ function initializeCalendar(authToken, userRole) {
         }
     });
     calendar.render();
-    
+
     // Event listener para todos los checkboxes
     document.getElementById('dailyFoliosList').addEventListener('change', async (e) => {
         if (e.target.classList.contains('folio-status-check')) {
@@ -215,7 +215,7 @@ function initializeCalendar(authToken, userRole) {
             const dataChecked = checkboxContainer.querySelector('[data-status="dataChecked"]').checked;
 
             try {
-                const response = await fetch(`http://localhost:3000/api/folios/${folioId}/status`, {
+                const response = await fetch(`/api/folios/${folioId}/status`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
@@ -224,7 +224,7 @@ function initializeCalendar(authToken, userRole) {
                     body: JSON.stringify({ isPrinted, fondantChecked, dataChecked })
                 });
                 if (!response.ok) throw new Error('Error al actualizar el estado');
-                
+
                 // ===== INICIO DE LA MODIFICACIÓN (Arreglo 3.3) =====
                 // 1. Encuentra el elemento de la lista (el <div>) que se está modificando
                 const listItem = e.target.closest('.folio-list-item');
@@ -252,7 +252,7 @@ function initializeCalendar(authToken, userRole) {
                     }
                 }
                 // ===== FIN DE LA MODIFICACIÓN =====
-                
+
                 // Actualizar el folio en el caché GLOBAL (allFoliosData)
                 const folioInCache = allFoliosData.find(f => f.id == folioId);
                 if (folioInCache) {
@@ -268,7 +268,7 @@ function initializeCalendar(authToken, userRole) {
                     folioInDailyCache.fondantChecked = fondantChecked;
                     folioInDailyCache.dataChecked = dataChecked;
                 }
-                
+
                 calendar.refetchEvents(); // Refrescar los eventos del calendario
             } catch (error) {
                 alert('No se pudo guardar el estado. Inténtalo de nuevo.');
@@ -286,7 +286,7 @@ function initializeCalendar(authToken, userRole) {
 
     function debounce(func, delay) {
         let timeout;
-        return function(...args) {
+        return function (...args) {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(this, args), delay);
         };
@@ -301,7 +301,7 @@ function initializeCalendar(authToken, userRole) {
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/api/folios?q=${query}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const response = await fetch(`/api/folios?q=${query}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             const folios = await response.json();
 
             searchResultsContainer.innerHTML = '';
@@ -329,23 +329,23 @@ function initializeCalendar(authToken, userRole) {
     if (searchInput) {
         searchInput.addEventListener('input', debouncedSearch);
     }
-    
-    if(searchResultsContainer) {
+
+    if (searchResultsContainer) {
         searchResultsContainer.addEventListener('click', async (e) => {
             const targetItem = e.target.closest('[data-folio-id]');
             if (targetItem) {
                 const folioId = targetItem.dataset.folioId;
-                
+
                 searchResultsContainer.innerHTML = '';
                 searchResultsContainer.classList.add('hidden');
                 searchInput.value = '';
-                
+
                 try {
-                    const response = await fetch(`http://localhost:3000/api/folios/${folioId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                    const response = await fetch(`/api/folios/${folioId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
                     const folioData = await response.json();
 
                     dailyFoliosCache = [];
-                    
+
                     showFolioModalWithRoleCheck(folioData);
                 } catch (error) {
                     console.error('Error fetching folio details:', error);
@@ -374,20 +374,20 @@ function initializeCalendar(authToken, userRole) {
             const currentFolio = window.currentEditingFolio;
             if (currentFolio) {
                 const currentToken = localStorage.getItem('authToken');
-                const url = `http://localhost:3000/api/folios/${currentFolio.id}/label-pdf?token=${currentToken}`;
+                const url = `/api/folios/${currentFolio.id}/label-pdf?token=${currentToken}`;
                 window.open(url, '_blank');
             }
         });
     }
 
-    if(cancelFolioButton){
+    if (cancelFolioButton) {
         cancelFolioButton.addEventListener('click', async () => {
             const currentFolio = window.currentEditingFolio;
             if (currentFolio && confirm(`¿Estás seguro de que deseas CANCELAR el folio ${currentFolio.folioNumber}?`)) {
                 modal.classList.add('hidden');
                 document.getElementById('loading').classList.remove('hidden');
                 try {
-                    const response = await fetch(`http://localhost:3000/api/folios/${currentFolio.id}/cancel`, {
+                    const response = await fetch(`/api/folios/${currentFolio.id}/cancel`, {
                         method: 'PATCH',
                         headers: { 'Authorization': `Bearer ${authToken}` }
                     });
@@ -405,7 +405,7 @@ function initializeCalendar(authToken, userRole) {
     }
 
     if (closeModalBtn) { closeModalBtn.addEventListener('click', () => modal.classList.add('hidden')); }
-    
+
     if (editFolioButton) {
         editFolioButton.addEventListener('click', async () => {
             const currentFolio = window.currentEditingFolio;
@@ -415,7 +415,7 @@ function initializeCalendar(authToken, userRole) {
                 document.getElementById('loading').classList.remove('hidden');
                 try {
                     if (window.populateFormForEdit) window.populateFormForEdit(currentFolio);
-                    if(window.showMainView) window.showMainView('form');
+                    if (window.showMainView) window.showMainView('form');
                 } catch (error) {
                     alert(error.message);
                 } finally {
@@ -428,10 +428,10 @@ function initializeCalendar(authToken, userRole) {
     if (viewPdfButton) {
         viewPdfButton.addEventListener('click', () => {
             const currentFolio = window.currentEditingFolio;
-    
+
             if (currentFolio) {
                 const currentFolioIndex = dailyFoliosCache.findIndex(f => f.id === currentFolio.id);
-                
+
                 if (currentFolioIndex !== -1 && dailyFoliosCache.length > 0) {
                     window.openPdfViewer(dailyFoliosCache, currentFolioIndex);
                 } else {
@@ -446,28 +446,28 @@ function initializeCalendar(authToken, userRole) {
     if (deleteFolioButton) {
         deleteFolioButton.addEventListener('click', async () => {
             const currentFolio = window.currentEditingFolio;
-    
+
             if (currentFolio) {
                 if (confirm(`¿Estás seguro de que deseas eliminar el folio ${currentFolio.folioNumber}? Esta acción no se puede deshacer.`)) {
                     const folioId = currentFolio.id;
                     modal.classList.add('hidden');
                     document.getElementById('loading').classList.remove('hidden');
-    
+
                     try {
-                        const response = await fetch(`http://localhost:3000/api/folios/${folioId}`, {
+                        const response = await fetch(`/api/folios/${folioId}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${authToken}` }
                         });
-    
+
                         const result = await response.json();
-    
+
                         if (!response.ok) {
                             throw new Error(result.message || 'No se pudo eliminar el folio.');
                         }
-    
+
                         alert(result.message);
                         calendar.refetchEvents();
-    
+
                     } catch (error) {
                         alert(`Error: ${error.message}`);
                     } finally {
@@ -480,13 +480,13 @@ function initializeCalendar(authToken, userRole) {
 
     const printLabelsButton = document.getElementById('printLabelsButton');
     const printOrdersButton = document.getElementById('printOrdersButton');
-    
+
     if (printLabelsButton) {
         printLabelsButton.addEventListener('click', () => {
             const date = document.getElementById('dailyFoliosModal').dataset.date;
             if (date) {
                 const currentToken = localStorage.getItem('authToken');
-                const url = `http://localhost:3000/api/folios/day-summary-pdf?type=labels&date=${date}&token=${currentToken}`;
+                const url = `/api/folios/day-summary-pdf?type=labels&date=${date}&token=${currentToken}`;
                 window.open(url, '_blank');
             }
         });
@@ -497,7 +497,7 @@ function initializeCalendar(authToken, userRole) {
             const date = document.getElementById('dailyFoliosModal').dataset.date;
             if (date) {
                 const currentToken = localStorage.getItem('authToken');
-                const url = `http://localhost:3000/api/folios/day-summary-pdf?type=orders&date=${date}&token=${currentToken}`;
+                const url = `/api/folios/day-summary-pdf?type=orders&date=${date}&token=${currentToken}`;
                 window.open(url, '_blank');
             }
         });
@@ -508,7 +508,7 @@ function initializeCalendar(authToken, userRole) {
         dailySearchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
             const listItems = document.querySelectorAll('#dailyFoliosList .folio-list-item');
-            
+
             listItems.forEach(item => {
                 const text = item.innerText.toLowerCase();
                 const phone = item.dataset.phone;
@@ -526,7 +526,7 @@ function initializeCalendar(authToken, userRole) {
 window.initializeCalendar = initializeCalendar;
 
 window.addEventListener('folioCreated', () => {
-    const calendar = window.myAppCalendar; 
+    const calendar = window.myAppCalendar;
     if (calendar) {
         calendar.refetchEvents();
     }

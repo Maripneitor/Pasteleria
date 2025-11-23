@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Variable global para recordar la vista anterior
     window.previousView = 'calendar';
     let currentSessionId = null; // Variable para saber en qué sesión de chat estamos
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let timerInterval;
     let startTime;
     // --- FIN NUEVO ---
-    
+
     // === INICIO NUEVO: ELEMENTOS PARA IA PROACTIVA Y ANÁLISIS VISUAL ===
     const aiSuggestionsArea = document.getElementById('aiSuggestionsArea');
     const aiWarningsDiv = document.getElementById('aiWarnings');
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('registerError').textContent = '';
         });
     }
-    
+
     // --- NUEVO: Cerrar modal de registro al hacer clic fuera ---
     if (registerModal) {
         registerModal.addEventListener('click', (e) => {
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
             errorEl.textContent = '';
 
             try {
-                const response = await fetch('http://localhost:3000/api/auth/register', {
+                const response = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, email, password, role }),
@@ -232,15 +232,15 @@ document.addEventListener('DOMContentLoaded', function() {
         userListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">Cargando usuarios...</td></tr>`;
 
         try {
-            const response = await fetch('http://localhost:3000/api/users', {
+            const response = await fetch('/api/users', {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
 
             if (!response.ok) {
                 let errorMsg = 'No se pudieron cargar los usuarios. Es posible que no tengas permisos.';
-                 try { const errorData = await response.json(); errorMsg = errorData.message || errorMsg; } catch (e) { /* ignore json parsing error */ }
-                 throw new Error(`${errorMsg} (Status: ${response.status})`);
+                try { const errorData = await response.json(); errorMsg = errorData.message || errorMsg; } catch (e) { /* ignore json parsing error */ }
+                throw new Error(`${errorMsg} (Status: ${response.status})`);
             }
 
             const users = await response.json();
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (confirm(`¿Estás seguro de que quieres eliminar al usuario con ID ${userId}?`)) {
                 loadingEl.classList.remove('hidden'); // --- NUEVO: Mostrar carga
                 try {
-                    const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
+                    const response = await fetch(`/api/users/${userId}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${authToken}` }
                     });
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (newRole && validRoles.includes(newRole)) {
                 loadingEl.classList.remove('hidden'); // --- NUEVO: Mostrar carga
                 try {
-                    const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
+                    const response = await fetch(`/api/users/${userId}`, {
                         method: 'PUT',
                         headers: {
                             'Authorization': `Bearer ${authToken}`,
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // === INICIO NUEVO: FUNCIONES IA PROACTIVA Y ANÁLISIS DE IMAGEN ===
     function debounce(func, delay) {
         let timeout;
-        return function(...args) {
+        return function (...args) {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(this, args), delay);
         };
@@ -423,15 +423,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Recolectar datos de tiers actuales
         const currentTiersData = Array.from(tiersTableBody.children).map((row, index) => {
-             const tierState = tiersData[index] || { persons: null, panes: [], rellenos: [], notas: null };
-             const personsVal = parseInt(row.querySelector('.tier-persons-input')?.value, 10) || null;
-             const notasVal = row.querySelector('.tier-notes-input')?.value || null;
-             return {
-                 persons: personsVal,
-                 panes: tierState.panes.filter(p => p), // Solo panes válidos
-                 rellenos: tierState.rellenos.filter(r => r), // Solo rellenos válidos
-                 notas: notasVal
-             };
+            const tierState = tiersData[index] || { persons: null, panes: [], rellenos: [], notas: null };
+            const personsVal = parseInt(row.querySelector('.tier-persons-input')?.value, 10) || null;
+            const notasVal = row.querySelector('.tier-notes-input')?.value || null;
+            return {
+                persons: personsVal,
+                panes: tierState.panes.filter(p => p), // Solo panes válidos
+                rellenos: tierState.rellenos.filter(r => r), // Solo rellenos válidos
+                notas: notasVal
+            };
         });
 
         const currentFolioData = {
@@ -446,11 +446,11 @@ document.addEventListener('DOMContentLoaded', function() {
             accessories: accessoriesInput.value || null,
             additional: additionalItems.map(item => ({ name: `${item.quantity} x ${item.name}`, price: item.totalPrice })), // Enviar array procesado
             complements: Array.from(complementsContainer.children).map(form => ({ // Recolectar complementos
-                 persons: parseInt(form.querySelector('.complement-persons')?.value) || null,
-                 shape: form.querySelector('.complement-shape')?.value || null,
-                 flavor: form.querySelector('.complement-flavor')?.value || null,
-                 filling: form.querySelector('.complement-filling')?.value || null,
-                 description: form.querySelector('.complement-description')?.value || null,
+                persons: parseInt(form.querySelector('.complement-persons')?.value) || null,
+                shape: form.querySelector('.complement-shape')?.value || null,
+                flavor: form.querySelector('.complement-flavor')?.value || null,
+                filling: form.querySelector('.complement-filling')?.value || null,
+                description: form.querySelector('.complement-description')?.value || null,
             })),
             deliveryDate: deliveryDateInput.value || null,
             deliveryTime: deliveryTime,
@@ -468,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch('http://localhost:3000/api/folios/validate-suggest', {
+            const response = await fetch('/api/folios/validate-suggest', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -493,8 +493,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     aiWarningsDiv.appendChild(p);
                 });
             } else {
-                 aiWarningsDiv.innerHTML = ''; // Opcional: '<p class="italic text-gray-500 text-xs">Sin advertencias.</p>'
-             }
+                aiWarningsDiv.innerHTML = ''; // Opcional: '<p class="italic text-gray-500 text-xs">Sin advertencias.</p>'
+            }
 
             aiSuggestionsDiv.innerHTML = '';
             if (results.suggestions && results.suggestions.length > 0) {
@@ -504,13 +504,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     aiSuggestionsDiv.appendChild(p);
                 });
             } else {
-                 aiSuggestionsDiv.innerHTML = ''; // Opcional: '<p class="italic text-gray-500 text-xs">Sin sugerencias.</p>'
-             }
+                aiSuggestionsDiv.innerHTML = ''; // Opcional: '<p class="italic text-gray-500 text-xs">Sin sugerencias.</p>'
+            }
 
-             // Ocultar el área completa si ambos están vacíos
-             if(aiWarningsDiv.innerHTML === '' && aiSuggestionsDiv.innerHTML === '') {
-                 aiSuggestionsArea.classList.add('hidden');
-             }
+            // Ocultar el área completa si ambos están vacíos
+            if (aiWarningsDiv.innerHTML === '' && aiSuggestionsDiv.innerHTML === '') {
+                aiSuggestionsArea.classList.add('hidden');
+            }
 
         } catch (error) {
             console.error("Error obteniendo validación/sugerencia IA:", error);
@@ -558,19 +558,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (addCommissionCheckbox.checked) addCommissionCheckbox.checked = false;
         addCommissionCheckbox.dispatchEvent(new Event('change'));
         if (hasExtraHeightCheckbox.checked) hasExtraHeightCheckbox.checked = false;
-        
+
         // === INICIO NUEVO: Resetear campos de IA ===
-        if(aiSuggestionsArea) aiSuggestionsArea.classList.add('hidden');
-        if(aiWarningsDiv) aiWarningsDiv.innerHTML = '';
-        if(aiSuggestionsDiv) aiSuggestionsDiv.innerHTML = '';
-        if(inspirationImageInput) inspirationImageInput.value = ''; // Limpiar input file
-        if(analyzeImageBtn) analyzeImageBtn.disabled = true;
-        if(imageAnalysisResultDiv) imageAnalysisResultDiv.classList.add('hidden');
-        if(analysisDescription) analysisDescription.textContent = '';
-        if(analysisTechniques) analysisTechniques.textContent = '';
-        if(analysisComplexity) analysisComplexity.textContent = '';
-        if(analysisError) analysisError.textContent = '';
-        if(analysisLoading) analysisLoading.classList.add('hidden');
+        if (aiSuggestionsArea) aiSuggestionsArea.classList.add('hidden');
+        if (aiWarningsDiv) aiWarningsDiv.innerHTML = '';
+        if (aiSuggestionsDiv) aiSuggestionsDiv.innerHTML = '';
+        if (inspirationImageInput) inspirationImageInput.value = ''; // Limpiar input file
+        if (analyzeImageBtn) analyzeImageBtn.disabled = true;
+        if (imageAnalysisResultDiv) imageAnalysisResultDiv.classList.add('hidden');
+        if (analysisDescription) analysisDescription.textContent = '';
+        if (analysisTechniques) analysisTechniques.textContent = '';
+        if (analysisComplexity) analysisComplexity.textContent = '';
+        if (analysisError) analysisError.textContent = '';
+        if (analysisLoading) analysisLoading.classList.add('hidden');
         // === FIN NUEVO ===
 
         updateTotals(); // Recalcular totales al final
@@ -638,13 +638,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Populate additional items
         additionalItems = []; // Limpiar antes de llenar
         // --- NUEVO: Parseo seguro de JSON ---
-         let parsedAdditional = [];
-         try {
-             parsedAdditional = typeof folio.additional === 'string' ? JSON.parse(folio.additional || '[]') : (folio.additional || []);
-             if (!Array.isArray(parsedAdditional)) parsedAdditional = [];
-         } catch (e) { console.error("Error parsing folio.additional:", e); parsedAdditional = []; }
-         // --- FIN NUEVO ---
-        
+        let parsedAdditional = [];
+        try {
+            parsedAdditional = typeof folio.additional === 'string' ? JSON.parse(folio.additional || '[]') : (folio.additional || []);
+            if (!Array.isArray(parsedAdditional)) parsedAdditional = [];
+        } catch (e) { console.error("Error parsing folio.additional:", e); parsedAdditional = []; }
+        // --- FIN NUEVO ---
+
         if (parsedAdditional.length > 0) { // --- MODIFICADO: Usar parsedAdditional
             additionalItems = parsedAdditional.map(item => { // --- MODIFICADO: Usar parsedAdditional
                 // Intenta parsear 'X x Nombre ($Y.YY)' o solo 'Nombre ($Y.YY)'
@@ -678,12 +678,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Populate complements
         complementsContainer.innerHTML = ''; // Limpiar antes de llenar
         // --- NUEVO: Parseo seguro de JSON ---
-         let parsedComplements = [];
-         try {
-             parsedComplements = typeof folio.complements === 'string' ? JSON.parse(folio.complements || '[]') : (folio.complements || []);
-             if (!Array.isArray(parsedComplements)) parsedComplements = [];
-         } catch (e) { console.error("Error parsing folio.complements:", e); parsedComplements = []; }
-         // --- FIN NUEVO ---
+        let parsedComplements = [];
+        try {
+            parsedComplements = typeof folio.complements === 'string' ? JSON.parse(folio.complements || '[]') : (folio.complements || []);
+            if (!Array.isArray(parsedComplements)) parsedComplements = [];
+        } catch (e) { console.error("Error parsing folio.complements:", e); parsedComplements = []; }
+        // --- FIN NUEVO ---
         if (parsedComplements.length > 0) { // --- MODIFICADO: Usar parsedComplements
             parsedComplements.forEach(comp => addComplementRow(comp)); // --- MODIFICADO: Usar parsedComplements
         }
@@ -692,13 +692,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (folio.folioType === 'Normal') {
             selectedCakeFlavors = safeJsonParse(folio.cakeFlavor);
             // --- NUEVO: Parseo seguro de JSON ---
-             let parsedFilling = [];
-             try {
-                 parsedFilling = typeof folio.filling === 'string' ? JSON.parse(folio.filling || '[]') : (folio.filling || []);
-                 if (!Array.isArray(parsedFilling)) parsedFilling = [];
-             } catch (e) { console.error("Error parsing folio.filling:", e); parsedFilling = []; }
-             // --- FIN NUEVO ---
-            
+            let parsedFilling = [];
+            try {
+                parsedFilling = typeof folio.filling === 'string' ? JSON.parse(folio.filling || '[]') : (folio.filling || []);
+                if (!Array.isArray(parsedFilling)) parsedFilling = [];
+            } catch (e) { console.error("Error parsing folio.filling:", e); parsedFilling = []; }
+            // --- FIN NUEVO ---
+
             selectedRellenos = parsedFilling.map(r => typeof r === 'string' ? { name: r, hasCost: false } : r); // --- MODIFICADO: Usar parsedFilling
             renderTags(cakeFlavorContainer, selectedCakeFlavors, removeCakeFlavor);
             renderTags(fillingContainer, selectedRellenos, removeRelleno);
@@ -706,13 +706,13 @@ document.addEventListener('DOMContentLoaded', function() {
             tiersTableBody.innerHTML = ''; // Limpiar antes
             tiersData = []; // Limpiar antes
             // --- NUEVO: Parseo seguro de JSON ---
-             let parsedTiers = [];
-              try {
-                  parsedTiers = typeof folio.tiers === 'string' ? JSON.parse(folio.tiers || '[]') : (folio.tiers || []);
-                  if (!Array.isArray(parsedTiers)) parsedTiers = [];
-              } catch (e) { console.error("Error parsing folio.tiers:", e); parsedTiers = []; }
+            let parsedTiers = [];
+            try {
+                parsedTiers = typeof folio.tiers === 'string' ? JSON.parse(folio.tiers || '[]') : (folio.tiers || []);
+                if (!Array.isArray(parsedTiers)) parsedTiers = [];
+            } catch (e) { console.error("Error parsing folio.tiers:", e); parsedTiers = []; }
             // --- FIN NUEVO ---
-            
+
             parsedTiers.forEach(tier => { // --- MODIFICADO: Usar parsedTiers
                 // Asegurarse de que panes y rellenos sean arrays
                 tier.panes = Array.isArray(tier.panes) ? tier.panes : (tier.panes ? [tier.panes] : []);
@@ -745,13 +745,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 addressPart = addressPart.replace(colMatch[0], '').trim().replace(/^,\s*/, '').replace(/,\s*$/, '');
             }
 
-             // Extraer Número Exterior (puede tener letra)
-             const numExtMatch = addressPart.match(/\b(\d+[A-Z]?)\b/);
-             if (numExtMatch) {
-                 extNumberInput.value = numExtMatch[0];
-                 // Remover el número y comas/espacios adyacentes
-                 addressPart = addressPart.replace(new RegExp(`\\b${numExtMatch[0]}\\b\\s*,?|,?\\s*\\b${numExtMatch[0]}\\b`), '').trim();
-             }
+            // Extraer Número Exterior (puede tener letra)
+            const numExtMatch = addressPart.match(/\b(\d+[A-Z]?)\b/);
+            if (numExtMatch) {
+                extNumberInput.value = numExtMatch[0];
+                // Remover el número y comas/espacios adyacentes
+                addressPart = addressPart.replace(new RegExp(`\\b${numExtMatch[0]}\\b\\s*,?|,?\\s*\\b${numExtMatch[0]}\\b`), '').trim();
+            }
 
 
             // Extraer Número Interior
@@ -795,34 +795,34 @@ document.addEventListener('DOMContentLoaded', function() {
         // Calcular costo base restando todo lo demás del total guardado (que ya incluye comisión si la hubo)
         const totalGuardado = parseFloat(folio.total) || 0;
         const deliveryGuardado = parseFloat(folio.deliveryCost) || 0;
-        
+
         // Estimar subtotal sin comisión
         const subtotalSinBase = deliveryGuardado + additionalTotalCost + calculatedFillingCost;
         let costoBaseEstimado = totalGuardado - subtotalSinBase; // Esto aún puede incluir la comisión
-        
+
         // Asumir que la comisión está aplicada si el checkbox (si existiera en folio) está marcado
         // O intentar inferirlo
         let comisionAplicadaEstimada = false;
         if (folio.commission?.appliedToCustomer) { // Si el backend nos da esta info
-             comisionAplicadaEstimada = true;
-             // Quitar la comisión del totalGuardado para obtener el costo base real
-             costoBaseEstimado = (totalGuardado - subtotalSinBase) / 1.05; // Asumiendo 5% simple (ignora redondeo por ahora)
-             // Esta lógica es imperfecta por el redondeo.
-             // Mejor: Usar el 'total' del folio (que es el costo base)
-             costoBaseEstimado = parseFloat(folio.total) || 0;
-             
-             // Si el 'total' del folio YA ES el costo base, la lógica anterior es incorrecta.
-             // Asumamos que folio.total es el COSTO BASE
-             costoBaseEstimado = parseFloat(folio.total) || 0;
-             // Y que addCommissionCheckbox debe recalcularse basado en si el 'folio.commission' existe
-             addCommissionCheckbox.checked = !!(folio.commission && folio.commission.amount > 0 && folio.commission.appliedToCustomer);
+            comisionAplicadaEstimada = true;
+            // Quitar la comisión del totalGuardado para obtener el costo base real
+            costoBaseEstimado = (totalGuardado - subtotalSinBase) / 1.05; // Asumiendo 5% simple (ignora redondeo por ahora)
+            // Esta lógica es imperfecta por el redondeo.
+            // Mejor: Usar el 'total' del folio (que es el costo base)
+            costoBaseEstimado = parseFloat(folio.total) || 0;
+
+            // Si el 'total' del folio YA ES el costo base, la lógica anterior es incorrecta.
+            // Asumamos que folio.total es el COSTO BASE
+            costoBaseEstimado = parseFloat(folio.total) || 0;
+            // Y que addCommissionCheckbox debe recalcularse basado en si el 'folio.commission' existe
+            addCommissionCheckbox.checked = !!(folio.commission && folio.commission.amount > 0 && folio.commission.appliedToCustomer);
 
         } else {
             // Si no viene info de comisión, asumimos que total es el costo base
-             costoBaseEstimado = parseFloat(folio.total) || 0;
-             addCommissionCheckbox.checked = false; // Asumir no comisión si no se indica
+            costoBaseEstimado = parseFloat(folio.total) || 0;
+            addCommissionCheckbox.checked = false; // Asumir no comisión si no se indica
         }
-        
+
         // --- FIN MODIFICADO ---
 
         totalInput.value = isNaN(costoBaseEstimado) ? '0.00' : Math.max(0, costoBaseEstimado).toFixed(2); // Evitar negativos
@@ -844,7 +844,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadingEl.classList.remove('hidden');
         document.getElementById('loginError').textContent = ''; // Limpiar error previo
         try {
-            const response = await fetchWithTimeout('http://localhost:3000/api/auth/login', {
+            const response = await fetchWithTimeout('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
@@ -903,137 +903,137 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- NUEVO: Lógica del Modal de Dictado ---
 
-     function startRecording() {
-         navigator.mediaDevices.getUserMedia({ audio: true })
-             .then(stream => {
-                 audioChunks = []; // Limpiar chunks anteriores
-                 mediaRecorder = new MediaRecorder(stream);
-                 mediaRecorder.ondataavailable = event => {
-                     audioChunks.push(event.data);
-                 };
-                 mediaRecorder.onstop = sendAudioToServer; // Llama a esta función al detener
+    function startRecording() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                audioChunks = []; // Limpiar chunks anteriores
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                mediaRecorder.onstop = sendAudioToServer; // Llama a esta función al detener
 
-                 mediaRecorder.start();
-                 dictationStatus.textContent = 'Dicta los detalles del pedido...';
-                 dictationError.textContent = '';
-                 recordButton.classList.add('hidden');
-                 stopButton.classList.remove('hidden');
-                 recordingIndicator.classList.remove('hidden');
+                mediaRecorder.start();
+                dictationStatus.textContent = 'Dicta los detalles del pedido...';
+                dictationError.textContent = '';
+                recordButton.classList.add('hidden');
+                stopButton.classList.remove('hidden');
+                recordingIndicator.classList.remove('hidden');
 
-                 // Iniciar temporizador
-                 startTime = Date.now();
-                 timerInterval = setInterval(() => {
-                     const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-                     const minutes = Math.floor(elapsedTime / 60);
-                     const seconds = elapsedTime % 60;
-                     recordingTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                 }, 1000);
+                // Iniciar temporizador
+                startTime = Date.now();
+                timerInterval = setInterval(() => {
+                    const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                    const minutes = Math.floor(elapsedTime / 60);
+                    const seconds = elapsedTime % 60;
+                    recordingTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }, 1000);
 
-             })
-             .catch(err => {
-                 console.error("Error al acceder al micrófono:", err);
-                 dictationStatus.textContent = 'Error al acceder al micrófono.';
-                 dictationError.textContent = 'Asegúrate de permitir el acceso al micrófono.';
-             });
-     }
+            })
+            .catch(err => {
+                console.error("Error al acceder al micrófono:", err);
+                dictationStatus.textContent = 'Error al acceder al micrófono.';
+                dictationError.textContent = 'Asegúrate de permitir el acceso al micrófono.';
+            });
+    }
 
-     function stopRecording() {
-         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-             mediaRecorder.stop();
-             // Detener el stream para apagar el indicador del micrófono en el navegador
-             mediaRecorder.stream.getTracks().forEach(track => track.stop());
-         }
-         stopButton.classList.add('hidden');
-         recordButton.classList.remove('hidden');
-         recordingIndicator.classList.add('hidden');
-         clearInterval(timerInterval);
-         recordingTimer.textContent = '0:00';
-         dictationStatus.textContent = 'Procesando audio... por favor espera.';
-         // Deshabilitar botones mientras procesa
-         recordButton.disabled = true;
-         stopButton.disabled = true;
-     }
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            // Detener el stream para apagar el indicador del micrófono en el navegador
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+        stopButton.classList.add('hidden');
+        recordButton.classList.remove('hidden');
+        recordingIndicator.classList.add('hidden');
+        clearInterval(timerInterval);
+        recordingTimer.textContent = '0:00';
+        dictationStatus.textContent = 'Procesando audio... por favor espera.';
+        // Deshabilitar botones mientras procesa
+        recordButton.disabled = true;
+        stopButton.disabled = true;
+    }
 
-     async function sendAudioToServer() {
-         if (audioChunks.length === 0) {
-             console.warn("No audio data recorded.");
-             dictationStatus.textContent = 'No se grabó audio. Intenta de nuevo.';
-             recordButton.disabled = false;
-             stopButton.disabled = false;
-             return;
-         }
-         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); // Asegúrate que el backend espere este tipo
-         const formData = new FormData();
-         formData.append('audio', audioBlob, 'dictated_order.webm');
+    async function sendAudioToServer() {
+        if (audioChunks.length === 0) {
+            console.warn("No audio data recorded.");
+            dictationStatus.textContent = 'No se grabó audio. Intenta de nuevo.';
+            recordButton.disabled = false;
+            stopButton.disabled = false;
+            return;
+        }
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); // Asegúrate que el backend espere este tipo
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'dictated_order.webm');
 
-         const authToken = localStorage.getItem('authToken');
-         loadingEl.classList.remove('hidden'); // Mostrar indicador global
-         dictationError.textContent = '';
+        const authToken = localStorage.getItem('authToken');
+        loadingEl.classList.remove('hidden'); // Mostrar indicador global
+        dictationError.textContent = '';
 
-         try {
-             const response = await fetch('http://localhost:3000/api/dictation/process', {
-                 method: 'POST',
-                 headers: { 'Authorization': `Bearer ${authToken}` },
-                 body: formData
-             });
+        try {
+            const response = await fetch('/api/dictation/process', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                body: formData
+            });
 
-             const result = await response.json();
+            const result = await response.json();
 
-             if (!response.ok) {
-                 throw new Error(result.message || `Error del servidor: ${response.status}`);
-             }
+            if (!response.ok) {
+                throw new Error(result.message || `Error del servidor: ${response.status}`);
+            }
 
-             console.log("Datos extraídos del dictado:", result);
-             dictationModal.classList.add('hidden'); // Cerrar modal
-             // Resetear estado del modal
-             dictationStatus.textContent = 'Presiona "Grabar" para empezar...';
-             recordButton.disabled = false;
-             stopButton.disabled = false;
+            console.log("Datos extraídos del dictado:", result);
+            dictationModal.classList.add('hidden'); // Cerrar modal
+            // Resetear estado del modal
+            dictationStatus.textContent = 'Presiona "Grabar" para empezar...';
+            recordButton.disabled = false;
+            stopButton.disabled = false;
 
-             // Pre-rellenar formulario y mostrarlo
-             populateFormFromDictation(result);
-             window.previousView = 'calendar'; // O la vista desde donde se abrió el modal
-             showView('form'); // Mostrar vista del formulario
+            // Pre-rellenar formulario y mostrarlo
+            populateFormFromDictation(result);
+            window.previousView = 'calendar'; // O la vista desde donde se abrió el modal
+            showView('form'); // Mostrar vista del formulario
 
-         } catch (error) {
-             console.error("Error al procesar dictado:", error);
-             dictationStatus.textContent = 'Error al procesar el audio.';
-             dictationError.textContent = error.message;
-             // Habilitar botones de nuevo en caso de error
-             recordButton.disabled = false;
-             stopButton.disabled = false;
-         } finally {
-             loadingEl.classList.add('hidden'); // Ocultar indicador global
-         }
-     }
+        } catch (error) {
+            console.error("Error al procesar dictado:", error);
+            dictationStatus.textContent = 'Error al procesar el audio.';
+            dictationError.textContent = error.message;
+            // Habilitar botones de nuevo en caso de error
+            recordButton.disabled = false;
+            stopButton.disabled = false;
+        } finally {
+            loadingEl.classList.add('hidden'); // Ocultar indicador global
+        }
+    }
 
-     // --- NUEVO: Event Listeners para Dictado ---
-     if (dictateOrderButton) {
-         dictateOrderButton.addEventListener('click', () => {
-             // Resetear UI del modal antes de mostrar
-             dictationModal.classList.remove('hidden');
-             dictationStatus.textContent = 'Presiona "Grabar" para empezar...';
-             dictationError.textContent = '';
-             recordButton.classList.remove('hidden');
-             stopButton.classList.add('hidden');
-             recordingIndicator.classList.add('hidden');
-             recordButton.disabled = false;
-             stopButton.disabled = false;
-             clearInterval(timerInterval); // Limpiar timer por si acaso
-             recordingTimer.textContent = '0:00';
-         });
-     }
+    // --- NUEVO: Event Listeners para Dictado ---
+    if (dictateOrderButton) {
+        dictateOrderButton.addEventListener('click', () => {
+            // Resetear UI del modal antes de mostrar
+            dictationModal.classList.remove('hidden');
+            dictationStatus.textContent = 'Presiona "Grabar" para empezar...';
+            dictationError.textContent = '';
+            recordButton.classList.remove('hidden');
+            stopButton.classList.add('hidden');
+            recordingIndicator.classList.add('hidden');
+            recordButton.disabled = false;
+            stopButton.disabled = false;
+            clearInterval(timerInterval); // Limpiar timer por si acaso
+            recordingTimer.textContent = '0:00';
+        });
+    }
 
-     if (closeDictationModalBtn) {
-         closeDictationModalBtn.addEventListener('click', () => {
-             if (mediaRecorder && mediaRecorder.state === 'recording') {
-                 stopRecording(); // Detener si está grabando al cerrar
-             }
-             dictationModal.classList.add('hidden');
-         });
-     }
-     
-     // --- NUEVO: Cerrar modal de dictado al hacer clic fuera ---
+    if (closeDictationModalBtn) {
+        closeDictationModalBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                stopRecording(); // Detener si está grabando al cerrar
+            }
+            dictationModal.classList.add('hidden');
+        });
+    }
+
+    // --- NUEVO: Cerrar modal de dictado al hacer clic fuera ---
     if (dictationModal) {
         dictationModal.addEventListener('click', (e) => {
             if (e.target === dictationModal) { // Solo si el clic es en el fondo
@@ -1045,157 +1045,157 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- FIN NUEVO ---
 
 
-     if (recordButton) {
-         recordButton.addEventListener('click', startRecording);
-     }
+    if (recordButton) {
+        recordButton.addEventListener('click', startRecording);
+    }
 
-     if (stopButton) {
-         stopButton.addEventListener('click', stopRecording);
-     }
-     // --- FIN NUEVO ---
+    if (stopButton) {
+        stopButton.addEventListener('click', stopRecording);
+    }
+    // --- FIN NUEVO ---
 
-     // --- NUEVO: Función para poblar el formulario desde el dictado ---
-     // Adaptación de populateFormForEdit
-     function populateFormFromDictation(extractedData) {
-         resetForm(); // Limpia el formulario primero
-         formTitle.textContent = 'Revisar Folio Dictado'; // Nuevo título
+    // --- NUEVO: Función para poblar el formulario desde el dictado ---
+    // Adaptación de populateFormForEdit
+    function populateFormFromDictation(extractedData) {
+        resetForm(); // Limpia el formulario primero
+        formTitle.textContent = 'Revisar Folio Dictado'; // Nuevo título
 
-         // Marcar que viene de dictado (opcional, podrías usar un dataset)
-         folioForm.dataset.source = 'dictation';
-         folioForm.dataset.originalStatus = 'Pendiente'; // Marcar como pendiente internamente
+        // Marcar que viene de dictado (opcional, podrías usar un dataset)
+        folioForm.dataset.source = 'dictation';
+        folioForm.dataset.originalStatus = 'Pendiente'; // Marcar como pendiente internamente
 
-         // Rellenar campos simples
-         clientNameInput.value = extractedData.clientName || '';
-         clientPhoneInput.value = extractedData.clientPhone || '';
-         clientPhone2Input.value = extractedData.clientPhone2 || '';
-         deliveryDateInput.value = extractedData.deliveryDate || '';
-         personsInput.value = extractedData.persons || '';
-         shapeInput.value = extractedData.shape || '';
-         designDescriptionTextarea.value = extractedData.designDescription || '';
-         dedicationInput.value = extractedData.dedication || '';
-         deliveryCostInput.value = (parseFloat(extractedData.deliveryCost) || 0).toFixed(2);
-         totalInput.value = (parseFloat(extractedData.total) || 0).toFixed(2); // Costo base
-         advanceInput.value = (parseFloat(extractedData.advancePayment) || 0).toFixed(2);
-         accessoriesInput.value = extractedData.accessories || '';
-         isPaidCheckbox.checked = extractedData.isPaid || false;
-         hasExtraHeightCheckbox.checked = extractedData.hasExtraHeight || false;
-         addCommissionCheckbox.checked = extractedData.addCommissionToCustomer || false; // Asumiendo que la IA puede extraer esto
+        // Rellenar campos simples
+        clientNameInput.value = extractedData.clientName || '';
+        clientPhoneInput.value = extractedData.clientPhone || '';
+        clientPhone2Input.value = extractedData.clientPhone2 || '';
+        deliveryDateInput.value = extractedData.deliveryDate || '';
+        personsInput.value = extractedData.persons || '';
+        shapeInput.value = extractedData.shape || '';
+        designDescriptionTextarea.value = extractedData.designDescription || '';
+        dedicationInput.value = extractedData.dedication || '';
+        deliveryCostInput.value = (parseFloat(extractedData.deliveryCost) || 0).toFixed(2);
+        totalInput.value = (parseFloat(extractedData.total) || 0).toFixed(2); // Costo base
+        advanceInput.value = (parseFloat(extractedData.advancePayment) || 0).toFixed(2);
+        accessoriesInput.value = extractedData.accessories || '';
+        isPaidCheckbox.checked = extractedData.isPaid || false;
+        hasExtraHeightCheckbox.checked = extractedData.hasExtraHeight || false;
+        addCommissionCheckbox.checked = extractedData.addCommissionToCustomer || false; // Asumiendo que la IA puede extraer esto
 
-         // Rellenar Hora
-         if (extractedData.deliveryTime) {
-             const timeParts = extractedData.deliveryTime.split(':');
-             if (timeParts.length >= 2) {
-                 const hour = parseInt(timeParts[0], 10);
-                 const minute = timeParts[1];
-                 if (!isNaN(hour)) {
-                     const hour12 = (hour % 12) || 12;
-                     deliveryHourSelect.value = hour12;
-                     // Asegurarse de que el minuto exista en las opciones
-                     const minuteOptionExists = Array.from(deliveryMinuteSelect.options).some(opt => opt.value === minute);
-                     deliveryMinuteSelect.value = minuteOptionExists ? minute : '00'; // Default a 00 si no existe
-                     deliveryPeriodSelect.value = hour >= 12 ? 'PM' : 'AM';
-                 }
-             }
-         }
+        // Rellenar Hora
+        if (extractedData.deliveryTime) {
+            const timeParts = extractedData.deliveryTime.split(':');
+            if (timeParts.length >= 2) {
+                const hour = parseInt(timeParts[0], 10);
+                const minute = timeParts[1];
+                if (!isNaN(hour)) {
+                    const hour12 = (hour % 12) || 12;
+                    deliveryHourSelect.value = hour12;
+                    // Asegurarse de que el minuto exista en las opciones
+                    const minuteOptionExists = Array.from(deliveryMinuteSelect.options).some(opt => opt.value === minute);
+                    deliveryMinuteSelect.value = minuteOptionExists ? minute : '00'; // Default a 00 si no existe
+                    deliveryPeriodSelect.value = hour >= 12 ? 'PM' : 'AM';
+                }
+            }
+        }
 
-         // Rellenar Tipo de Folio y campos dependientes
-         folioTypeSelect.value = extractedData.folioType || 'Normal';
-         folioTypeSelect.dispatchEvent(new Event('change')); // Disparar evento para mostrar/ocultar campos
+        // Rellenar Tipo de Folio y campos dependientes
+        folioTypeSelect.value = extractedData.folioType || 'Normal';
+        folioTypeSelect.dispatchEvent(new Event('change')); // Disparar evento para mostrar/ocultar campos
 
-         if (extractedData.folioType === 'Normal') {
-             selectedCakeFlavors = extractedData.cakeFlavor || [];
-             // Asegurar formato {name, hasCost} para rellenos
-             selectedRellenos = (extractedData.filling || []).map(r => typeof r === 'string' ? { name: r, hasCost: false } : r);
-             renderTags(cakeFlavorContainer, selectedCakeFlavors, removeCakeFlavor);
-             renderTags(fillingContainer, selectedRellenos, removeRelleno);
-         } else if (extractedData.folioType === 'Base/Especial') {
-             tiersTableBody.innerHTML = '';
-             tiersData = [];
-             (extractedData.tiers || []).forEach(tier => addTierRow(tier));
-         }
+        if (extractedData.folioType === 'Normal') {
+            selectedCakeFlavors = extractedData.cakeFlavor || [];
+            // Asegurar formato {name, hasCost} para rellenos
+            selectedRellenos = (extractedData.filling || []).map(r => typeof r === 'string' ? { name: r, hasCost: false } : r);
+            renderTags(cakeFlavorContainer, selectedCakeFlavors, removeCakeFlavor);
+            renderTags(fillingContainer, selectedRellenos, removeRelleno);
+        } else if (extractedData.folioType === 'Base/Especial') {
+            tiersTableBody.innerHTML = '';
+            tiersData = [];
+            (extractedData.tiers || []).forEach(tier => addTierRow(tier));
+        }
 
-         // Rellenar Adicionales
-         additionalItems = [];
-         if (extractedData.additional && Array.isArray(extractedData.additional)) {
-             additionalItems = extractedData.additional.map(item => {
-                 // Intentar extraer cantidad, nombre y precio del string o usar objeto
-                 let name = item.name || 'Adicional';
-                 let quantity = 1;
-                 let totalPrice = parseFloat(item.price) || 0;
-                 let unitPrice = totalPrice;
+        // Rellenar Adicionales
+        additionalItems = [];
+        if (extractedData.additional && Array.isArray(extractedData.additional)) {
+            additionalItems = extractedData.additional.map(item => {
+                // Intentar extraer cantidad, nombre y precio del string o usar objeto
+                let name = item.name || 'Adicional';
+                let quantity = 1;
+                let totalPrice = parseFloat(item.price) || 0;
+                let unitPrice = totalPrice;
 
-                 const nameMatch = name.match(/^(\d+)\s*x\s*(.*)/i);
-                 if (nameMatch) {
-                     quantity = parseInt(nameMatch[1], 10) || 1;
-                     name = nameMatch[2].trim();
-                 }
+                const nameMatch = name.match(/^(\d+)\s*x\s*(.*)/i);
+                if (nameMatch) {
+                    quantity = parseInt(nameMatch[1], 10) || 1;
+                    name = nameMatch[2].trim();
+                }
 
-                 const priceMatch = name.match(/\(\$\s*([\d.]+)\s*\)$/);
-                 if (priceMatch) {
-                     totalPrice = parseFloat(priceMatch[1]) || totalPrice; // Precio del string tiene prioridad
-                     name = name.substring(0, priceMatch.index).trim();
-                 }
+                const priceMatch = name.match(/\(\$\s*([\d.]+)\s*\)$/);
+                if (priceMatch) {
+                    totalPrice = parseFloat(priceMatch[1]) || totalPrice; // Precio del string tiene prioridad
+                    name = name.substring(0, priceMatch.index).trim();
+                }
 
-                 unitPrice = (quantity > 0 && !isNaN(totalPrice)) ? totalPrice / quantity : 0;
+                unitPrice = (quantity > 0 && !isNaN(totalPrice)) ? totalPrice / quantity : 0;
 
-                 return { name, quantity, price: unitPrice, totalPrice };
-             }).filter(item => item && !isNaN(item.totalPrice));
-             renderAdditionalItems();
-         }
+                return { name, quantity, price: unitPrice, totalPrice };
+            }).filter(item => item && !isNaN(item.totalPrice));
+            renderAdditionalItems();
+        }
 
-         // Rellenar Complementos
-         complementsContainer.innerHTML = '';
-         if (extractedData.complements && Array.isArray(extractedData.complements)) {
-             extractedData.complements.forEach(comp => addComplementRow(comp));
-         }
+        // Rellenar Complementos
+        complementsContainer.innerHTML = '';
+        if (extractedData.complements && Array.isArray(extractedData.complements)) {
+            extractedData.complements.forEach(comp => addComplementRow(comp));
+        }
 
-         // Rellenar Entrega
-         const location = extractedData.deliveryLocation || '';
-         if (location.toLowerCase() === 'recoge en tienda') {
-             inStorePickupCheckbox.checked = true;
-         } else if (location.includes('El cliente envía ubicación')) {
-             googleMapsLocationCheckbox.checked = true;
-             // Intentar extraer dirección si viene entre paréntesis
-             const addressMatch = location.match(/\(([^)]+)\)/);
-             if (addressMatch) {
-                 // Lógica simple para extraer partes (puedes mejorarla)
-                 const parts = addressMatch[1].split(',');
-                 streetInput.value = parts[0]?.trim() || '';
-                 if (parts.length > 1 && parts[1].toLowerCase().includes('col.')) {
-                     neighborhoodInput.value = parts[1].replace(/col\./i, '').trim();
-                 }
-                 // ... (extraer número si es posible) ...
-             }
-         } else {
-             // Asumir dirección completa
-             inStorePickupCheckbox.checked = false;
-             googleMapsLocationCheckbox.checked = false;
-             // Lógica similar para extraer partes de la dirección completa
-             let addressPart = location;
-             const colMatch = addressPart.match(/(?:Colonia|Col\.?)\s*([^,]+)/i);
-             if (colMatch) {
-                 neighborhoodInput.value = colMatch[1].trim();
-                 addressPart = addressPart.replace(colMatch[0], '').trim().replace(/^,\s*/, '').replace(/,\s*$/, '');
-             }
-             const numExtMatch = addressPart.match(/\b(\d+[A-Z]?)\b/);
-             if (numExtMatch) {
-                 extNumberInput.value = numExtMatch[0];
-                 addressPart = addressPart.replace(new RegExp(`\\b${numExtMatch[0]}\\b\\s*,?|,?\\s*\\b${numExtMatch[0]}\\b`), '').trim();
-             }
-             streetInput.value = addressPart.trim();
-         }
-         inStorePickupCheckbox.dispatchEvent(new Event('change'));
-         googleMapsLocationCheckbox.dispatchEvent(new Event('change'));
+        // Rellenar Entrega
+        const location = extractedData.deliveryLocation || '';
+        if (location.toLowerCase() === 'recoge en tienda') {
+            inStorePickupCheckbox.checked = true;
+        } else if (location.includes('El cliente envía ubicación')) {
+            googleMapsLocationCheckbox.checked = true;
+            // Intentar extraer dirección si viene entre paréntesis
+            const addressMatch = location.match(/\(([^)]+)\)/);
+            if (addressMatch) {
+                // Lógica simple para extraer partes (puedes mejorarla)
+                const parts = addressMatch[1].split(',');
+                streetInput.value = parts[0]?.trim() || '';
+                if (parts.length > 1 && parts[1].toLowerCase().includes('col.')) {
+                    neighborhoodInput.value = parts[1].replace(/col\./i, '').trim();
+                }
+                // ... (extraer número si es posible) ...
+            }
+        } else {
+            // Asumir dirección completa
+            inStorePickupCheckbox.checked = false;
+            googleMapsLocationCheckbox.checked = false;
+            // Lógica similar para extraer partes de la dirección completa
+            let addressPart = location;
+            const colMatch = addressPart.match(/(?:Colonia|Col\.?)\s*([^,]+)/i);
+            if (colMatch) {
+                neighborhoodInput.value = colMatch[1].trim();
+                addressPart = addressPart.replace(colMatch[0], '').trim().replace(/^,\s*/, '').replace(/,\s*$/, '');
+            }
+            const numExtMatch = addressPart.match(/\b(\d+[A-Z]?)\b/);
+            if (numExtMatch) {
+                extNumberInput.value = numExtMatch[0];
+                addressPart = addressPart.replace(new RegExp(`\\b${numExtMatch[0]}\\b\\s*,?|,?\\s*\\b${numExtMatch[0]}\\b`), '').trim();
+            }
+            streetInput.value = addressPart.trim();
+        }
+        inStorePickupCheckbox.dispatchEvent(new Event('change'));
+        googleMapsLocationCheckbox.dispatchEvent(new Event('change'));
 
 
-         updateTotals(); // Recalcular balance
-     }
-     // --- FIN NUEVO ---
+        updateTotals(); // Recalcular balance
+    }
+    // --- FIN NUEVO ---
 
 
     // --- LÓGICA DEL CHAT ---
-     // Esta sección permanece igual que en tu código base original
-     function addMessageToChat(text, sender) {
+    // Esta sección permanece igual que en tu código base original
+    function addMessageToChat(text, sender) {
         if (!chatMessagesContainer) return; // --- NUEVO: Chequeo de existencia
         const messageEl = document.createElement('div');
         messageEl.className = `p-2 rounded-lg max-w-[80%] break-words ${sender === 'user' ? 'bg-blue-500 text-white self-end ml-auto' : 'bg-gray-200 text-gray-800 self-start mr-auto'}`; // --- NUEVO: break-words y ml/mr-auto
@@ -1227,19 +1227,19 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const key in keyMap) {
             if (keyMap[key] === null) continue;
             let value = data[key];
-            
+
             // --- MODIFICADO: Chequeo más robusto para valor (incluye 0 pero no string vacío) ---
             if (value !== null && value !== undefined && (value !== '' || typeof value === 'boolean' || value === 0)) {
-                
+
                 // --- MODIFICADO: Formateo más robusto y seguro ---
                 if (key === 'tiers' && Array.isArray(value)) {
-                    value = value.map((tier, i) => `P${i+1}: ${tier.persons || '?'}p, ${tier.panes?.join('/')||'Pan?'} / ${tier.rellenos?.join('/')||'Relleno?'}`).join('; ');
+                    value = value.map((tier, i) => `P${i + 1}: ${tier.persons || '?'}p, ${tier.panes?.join('/') || 'Pan?'} / ${tier.rellenos?.join('/') || 'Relleno?'}`).join('; ');
                 } else if (key === 'additional' && Array.isArray(value)) {
                     value = value.map(item => `${item.name || 'Adicional'}${item.price ? ` ($${parseFloat(item.price).toFixed(2)})` : ''}`).join(', ');
                 } else if (key === 'complements' && Array.isArray(value)) {
-                     value = value.map((c, i) => `C${i+1}: ${c.persons||'?'}p ${c.flavor||'Sabor?'}/${c.filling || 'Relleno?'}`).join('; ');
+                    value = value.map((c, i) => `C${i + 1}: ${c.persons || '?'}p ${c.flavor || 'Sabor?'}/${c.filling || 'Relleno?'}`).join('; ');
                 } else if ((key === 'cakeFlavor' || key === 'filling') && Array.isArray(value)) {
-                     value = value.map(item => (typeof item === 'object' ? item.name : item) || '?').join(', '); // Maneja items nulos/vacíos
+                    value = value.map(item => (typeof item === 'object' ? item.name : item) || '?').join(', '); // Maneja items nulos/vacíos
                 } else if (typeof value === 'boolean') {
                     value = value ? 'Sí' : 'No';
                 } else if (key === 'deliveryTime' && typeof value === 'string' && value.includes(':')) {
@@ -1254,9 +1254,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (typeof value === 'number' && ['total', 'advancePayment', 'deliveryCost'].includes(key)) {
                     value = `$${value.toFixed(2)}`;
                 }
-                
+
                 if (typeof value !== 'string') value = JSON.stringify(value); // Fallback por si algo no se formateó
-                
+
                 if (value) { // --- NUEVO: Chequeo final de que value no sea string vacío
                     const itemEl = document.createElement('div');
                     itemEl.className = 'text-sm mb-1';
@@ -1269,53 +1269,53 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-     async function loadChatSession(sessionId) {
-         currentSessionId = sessionId;
-         loadingEl.classList.remove('hidden');
-         showView('chat');
-         chatMessagesContainer.innerHTML = '';
-         folioStatusPanel.innerHTML = '<p class="text-gray-500 italic">Cargando datos de la sesión...</p>';
-         // --- NUEVO: Habilitar botones al cargar ---
-         chatInput.disabled = false;
-         generateFolioBtn.disabled = false;
-         manualEditBtn.disabled = false;
-         // --- FIN NUEVO ---
-         try {
-             const authToken = localStorage.getItem('authToken');
-             const response = await fetch(`http://localhost:3000/api/ai-sessions/${sessionId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'No se pudo cargar la sesión de chat.'); }
-             const session = await response.json();
-             chatTitle.textContent = `Asistente - Sesión #${session.id}`;
-             if (session.chatHistory && Array.isArray(session.chatHistory)) {
-                 session.chatHistory.forEach(msg => { if (msg.content && (msg.role === 'user' || msg.role === 'assistant')) { addMessageToChat(msg.content, msg.role); } });
-             }
-             renderFolioStatus(session.extractedData);
-             const lastMessage = session.chatHistory?.[session.chatHistory.length - 1];
-             if (!lastMessage || lastMessage.role !== 'assistant' || !lastMessage.content) {
-                 addMessageToChat('¡Hola! He analizado la conversación inicial. ¿Qué deseas hacer? Puedes pedirme que modifique datos ("cambia el nombre a X", "añade un piso para Y personas", etc.) o que genere el folio ("genera el folio").', 'assistant');
-             }
-             // --- NUEVO: Deshabilitar si está completada ---
-             if(session.status === 'completed'){
+    async function loadChatSession(sessionId) {
+        currentSessionId = sessionId;
+        loadingEl.classList.remove('hidden');
+        showView('chat');
+        chatMessagesContainer.innerHTML = '';
+        folioStatusPanel.innerHTML = '<p class="text-gray-500 italic">Cargando datos de la sesión...</p>';
+        // --- NUEVO: Habilitar botones al cargar ---
+        chatInput.disabled = false;
+        generateFolioBtn.disabled = false;
+        manualEditBtn.disabled = false;
+        // --- FIN NUEVO ---
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`http://localhost:3000/api/ai-sessions/${sessionId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'No se pudo cargar la sesión de chat.'); }
+            const session = await response.json();
+            chatTitle.textContent = `Asistente - Sesión #${session.id}`;
+            if (session.chatHistory && Array.isArray(session.chatHistory)) {
+                session.chatHistory.forEach(msg => { if (msg.content && (msg.role === 'user' || msg.role === 'assistant')) { addMessageToChat(msg.content, msg.role); } });
+            }
+            renderFolioStatus(session.extractedData);
+            const lastMessage = session.chatHistory?.[session.chatHistory.length - 1];
+            if (!lastMessage || lastMessage.role !== 'assistant' || !lastMessage.content) {
+                addMessageToChat('¡Hola! He analizado la conversación inicial. ¿Qué deseas hacer? Puedes pedirme que modifique datos ("cambia el nombre a X", "añade un piso para Y personas", etc.) o que genere el folio ("genera el folio").', 'assistant');
+            }
+            // --- NUEVO: Deshabilitar si está completada ---
+            if (session.status === 'completed') {
                 addMessageToChat("Esta sesión ya fue completada (Folio generado).", "assistant");
                 chatInput.disabled = true;
                 generateFolioBtn.disabled = true;
                 manualEditBtn.disabled = true;
             }
-             // --- FIN NUEVO ---
-         } catch (error) {
-             console.error("Error cargando sesión de chat:", error);
-             folioStatusPanel.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
-             addMessageToChat(`Error al cargar la sesión: ${error.message}`, 'assistant');
-             // --- NUEVO: Deshabilitar en error ---
-             chatInput.disabled = true;
-             generateFolioBtn.disabled = true;
-             manualEditBtn.disabled = true;
-             // --- FIN NUEVO ---
-         } finally {
-             loadingEl.classList.add('hidden');
-             chatInput.focus();
-         }
-     }
+            // --- FIN NUEVO ---
+        } catch (error) {
+            console.error("Error cargando sesión de chat:", error);
+            folioStatusPanel.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+            addMessageToChat(`Error al cargar la sesión: ${error.message}`, 'assistant');
+            // --- NUEVO: Deshabilitar en error ---
+            chatInput.disabled = true;
+            generateFolioBtn.disabled = true;
+            manualEditBtn.disabled = true;
+            // --- FIN NUEVO ---
+        } finally {
+            loadingEl.classList.add('hidden');
+            chatInput.focus();
+        }
+    }
 
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1336,29 +1336,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                 body: JSON.stringify({ message: messageText })
             });
-             thinkingEl.remove();
+            thinkingEl.remove();
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || `Error del servidor: ${response.status}`); }
             const { message, sessionData } = await response.json();
             if (message && message.content) { addMessageToChat(message.content, 'assistant'); }
             else if (message && message.tool_calls) { console.log("Asistente llamó a herramienta(s), sin respuesta textual directa."); }
             if (sessionData && sessionData.extractedData) {
                 renderFolioStatus(sessionData.extractedData);
-                 if (sessionData.status === 'completed') {
-                     addMessageToChat("El folio ha sido generado. Esta sesión está completa.", "assistant");
-                     chatInput.disabled = true; generateFolioBtn.disabled = true; manualEditBtn.disabled = true;
-                 }
+                if (sessionData.status === 'completed') {
+                    addMessageToChat("El folio ha sido generado. Esta sesión está completa.", "assistant");
+                    chatInput.disabled = true; generateFolioBtn.disabled = true; manualEditBtn.disabled = true;
+                }
             } else { console.warn("No se recibieron datos de sesión actualizados en la respuesta del chat."); }
         } catch (error) {
-             thinkingEl.remove();
+            thinkingEl.remove();
             console.error("Error en chat submit:", error);
             addMessageToChat(`Error: ${error.message}`, 'assistant');
         } finally {
-             // --- MODIFICADO: Chequeo más robusto ---
-             const sessionCompleted = generateFolioBtn.disabled;
-              if (chatInput && !sessionCompleted) {
-                 chatInput.disabled = false;
-                 chatInput.focus();
-             }
+            // --- MODIFICADO: Chequeo más robusto ---
+            const sessionCompleted = generateFolioBtn.disabled;
+            if (chatInput && !sessionCompleted) {
+                chatInput.disabled = false;
+                chatInput.focus();
+            }
         }
     });
 
@@ -1384,24 +1384,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const mockFolio = {
                 id: `ai-${session.id}`, ...extracted,
                 client: { name: extracted.clientName || '', phone: extracted.clientPhone || '', phone2: extracted.clientPhone2 || '' },
-                cakeFlavor: JSON.stringify(extracted.cakeFlavor || []), 
+                cakeFlavor: JSON.stringify(extracted.cakeFlavor || []),
                 filling: JSON.stringify(extracted.filling || []),
-                tiers: extracted.tiers || [], 
-                additional: extracted.additional || [], 
+                tiers: extracted.tiers || [],
+                additional: extracted.additional || [],
                 complements: extracted.complements || [],
-                imageUrls: session.imageUrls || [], 
+                imageUrls: session.imageUrls || [],
                 imageComments: session.imageComments || [],
-                status: 'Pendiente', 
-                deliveryCost: extracted.deliveryCost || 0, 
+                status: 'Pendiente',
+                deliveryCost: extracted.deliveryCost || 0,
                 advancePayment: extracted.advancePayment || 0,
-                total: extracted.total || 0, 
-                isPaid: extracted.isPaid || false, 
+                total: extracted.total || 0,
+                isPaid: extracted.isPaid || false,
                 hasExtraHeight: extracted.hasExtraHeight || false,
             };
             window.previousView = 'chat';
             populateFormForEdit(mockFolio);
             showView('form');
-        } catch (error) { 
+        } catch (error) {
             console.error("Error preparing manual edit:", error); // --- NUEVO: Log de error
             alert(`Error al preparar edición manual: ${error.message}`);
         } finally { loadingEl.classList.add('hidden'); }
@@ -1418,11 +1418,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 try {
                     const authToken = localStorage.getItem('authToken');
-                    
+
                     // ===== INICIO DE LA CORRECCIÓN =====
                     // Usamos la URL absoluta para que coincida con tus otras llamadas
                     const response = await fetch(`http://localhost:3000/api/ai-sessions/${currentSessionId}`, {
-                    // ===== FIN DE LA CORRECCIÓN =====
+                        // ===== FIN DE LA CORRECCIÓN =====
                         method: 'DELETE',
                         headers: {
                             'Authorization': `Bearer ${authToken}`
@@ -1452,15 +1452,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // --- Lógica para Estadísticas ---
     function renderStatsList(elementId, data) {
-         const container = document.getElementById(elementId);
-         if (!container) return; // --- NUEVO: Chequeo de existencia
-         container.innerHTML = '';
-         if (!data || data.length === 0) { container.innerHTML = `<p class="text-gray-500 italic">No hay datos para mostrar.</p>`; return; }
-         const ol = document.createElement('ol');
-         ol.className = 'list-decimal list-inside space-y-1';
-         data.forEach(item => { const li = document.createElement('li'); li.className = 'text-gray-700'; li.innerHTML = `${item.name || 'Desconocido'} <span class="font-bold text-gray-900">(${item.count} veces)</span>`; ol.appendChild(li); }); // --- NUEVO: Fallback para nombre
-         container.appendChild(ol);
-     }
+        const container = document.getElementById(elementId);
+        if (!container) return; // --- NUEVO: Chequeo de existencia
+        container.innerHTML = '';
+        if (!data || data.length === 0) { container.innerHTML = `<p class="text-gray-500 italic">No hay datos para mostrar.</p>`; return; }
+        const ol = document.createElement('ol');
+        ol.className = 'list-decimal list-inside space-y-1';
+        data.forEach(item => { const li = document.createElement('li'); li.className = 'text-gray-700'; li.innerHTML = `${item.name || 'Desconocido'} <span class="font-bold text-gray-900">(${item.count} veces)</span>`; ol.appendChild(li); }); // --- NUEVO: Fallback para nombre
+        container.appendChild(ol);
+    }
 
     async function loadFlavorAndFillingStats() {
         try {
@@ -1477,45 +1477,45 @@ document.addEventListener('DOMContentLoaded', function() {
             // --- NUEVO: Mostrar error en todas las listas ---
             ['normalFlavorsList', 'normalFillingsList', 'specialFlavorsList', 'specialFillingsList'].forEach(id => {
                 const el = document.getElementById(id);
-                if(el) el.innerHTML = `<p class="text-red-500">Error al cargar.</p>`;
+                if (el) el.innerHTML = `<p class="text-red-500">Error al cargar.</p>`;
             });
         }
     }
 
     async function loadProductivityStats() {
-         if (!productivityDateInput || !productivityListBody) return; // --- NUEVO: Chequeo de existencia
-         const date = productivityDateInput.value; 
-         if (!date) { // --- NUEVO: Chequeo si hay fecha
+        if (!productivityDateInput || !productivityListBody) return; // --- NUEVO: Chequeo de existencia
+        const date = productivityDateInput.value;
+        if (!date) { // --- NUEVO: Chequeo si hay fecha
             productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4 text-gray-500">Selecciona una fecha.</td></tr>`;
             return;
-         }
-         productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">Cargando...</td></tr>`;
-         try {
-             const authToken = localStorage.getItem('authToken');
-             const response = await fetch(`http://localhost:3000/api/folios/productivity?date=${date}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
-             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'No se pudieron cargar los datos de productividad.'); }
-             const stats = await response.json();
-             productivityListBody.innerHTML = '';
-             if (stats.length === 0) { productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">No se capturaron folios en esta fecha.</td></tr>`; return; }
-             stats.forEach(userStat => {
-                 if (userStat.responsibleUser) {
-                     const row = document.createElement('tr'); row.className = 'border-b';
-                     row.innerHTML = `<td class="py-2 px-4">${userStat.responsibleUser.username || 'Desconocido'}</td><td class="py-2 px-4 font-bold">${userStat.folioCount}</td>`; // --- NUEVO: Fallback para nombre
-                     productivityListBody.appendChild(row);
-                 } else { console.warn("Estadística encontrada sin usuario asociado:", userStat); }
-             });
-         } catch (error) { 
+        }
+        productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">Cargando...</td></tr>`;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`http://localhost:3000/api/folios/productivity?date=${date}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'No se pudieron cargar los datos de productividad.'); }
+            const stats = await response.json();
+            productivityListBody.innerHTML = '';
+            if (stats.length === 0) { productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">No se capturaron folios en esta fecha.</td></tr>`; return; }
+            stats.forEach(userStat => {
+                if (userStat.responsibleUser) {
+                    const row = document.createElement('tr'); row.className = 'border-b';
+                    row.innerHTML = `<td class="py-2 px-4">${userStat.responsibleUser.username || 'Desconocido'}</td><td class="py-2 px-4 font-bold">${userStat.folioCount}</td>`; // --- NUEVO: Fallback para nombre
+                    productivityListBody.appendChild(row);
+                } else { console.warn("Estadística encontrada sin usuario asociado:", userStat); }
+            });
+        } catch (error) {
             console.error("Error loading productivity stats:", error); // --- NUEVO: Log de error
-            productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4 text-red-500">${error.message}</td></tr>`; 
-         }
-     }
+            productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4 text-red-500">${error.message}</td></tr>`;
+        }
+    }
 
     if (viewStatsButton) {
         viewStatsButton.addEventListener('click', () => {
             showView('stats'); loadingEl.classList.remove('hidden');
-             const today = new Date(); 
-             if(productivityDateInput) productivityDateInput.value = today.toISOString().split('T')[0];
-            Promise.all([ loadFlavorAndFillingStats(), loadProductivityStats() ])
+            const today = new Date();
+            if (productivityDateInput) productivityDateInput.value = today.toISOString().split('T')[0];
+            Promise.all([loadFlavorAndFillingStats(), loadProductivityStats()])
                 .catch(err => console.error("Error loading stats:", err)) // --- NUEVO: Catch general
                 .finally(() => { loadingEl.classList.add('hidden'); });
         });
@@ -1555,26 +1555,26 @@ document.addEventListener('DOMContentLoaded', function() {
             'Duraznos': { suboptions: ['Rompope', 'Crema de Yogurth', 'Chantilly'] }
         }
     };
-     // Rellenos para Base/Especial (estructura diferente)
-     const rellenosDataEspecial = {
-         principales: [
-             { name: 'Manjar', suboptions: ['Nuez', 'Coco', 'Almendra', 'Cajeta'] },
-             { name: 'Cajeta', suboptions: ['Nuez', 'Coco', 'Oreo'] },
-             { name: 'Chantilly', suboptions: ['Duraznos', 'Fresas', 'Piña'] },
-             { name: 'Mermelada', suboptions: ['Fresa', 'Zarzamora', 'Piña', 'Chabacano'] },
-             { name: 'Crema de Queso', suboptions: ['Cajeta', 'Envinada'] },
-             { name: 'Nutella', suboptions: ['Nuez', 'Almendra'] },
-             { name: 'Dulce de Leche', suboptions: ['Nuez', 'Almendra', 'Envinada'] },
-             { name: 'Nuez', suboptions: ['Capuchino', 'Mocka', 'Chocolate'] },
-             { name: 'Cremas', suboptions: ['Yogurth de fresa', 'Café con o sin brandy'] },
-             { name: 'Duraznos', suboptions: ['Rompope', 'Crema de Yogurth', 'Chantilly'] }
-         ],
-         secundarios: [
-             'Manjar', 'Cajeta', 'Chantilly', 'Mermelada de Fresa', 'Mermelada de Zarzamora',
-             'Mermelada de Piña', 'Mermelada de Chabacano', 'Crema de Queso', 'Nutella',
-             'Dulce de Leche', 'Nuez', 'Crema de Yogurth de fresa', 'Crema de Café', 'Duraznos', 'Rompope'
-         ]
-     };
+    // Rellenos para Base/Especial (estructura diferente)
+    const rellenosDataEspecial = {
+        principales: [
+            { name: 'Manjar', suboptions: ['Nuez', 'Coco', 'Almendra', 'Cajeta'] },
+            { name: 'Cajeta', suboptions: ['Nuez', 'Coco', 'Oreo'] },
+            { name: 'Chantilly', suboptions: ['Duraznos', 'Fresas', 'Piña'] },
+            { name: 'Mermelada', suboptions: ['Fresa', 'Zarzamora', 'Piña', 'Chabacano'] },
+            { name: 'Crema de Queso', suboptions: ['Cajeta', 'Envinada'] },
+            { name: 'Nutella', suboptions: ['Nuez', 'Almendra'] },
+            { name: 'Dulce de Leche', suboptions: ['Nuez', 'Almendra', 'Envinada'] },
+            { name: 'Nuez', suboptions: ['Capuchino', 'Mocka', 'Chocolate'] },
+            { name: 'Cremas', suboptions: ['Yogurth de fresa', 'Café con o sin brandy'] },
+            { name: 'Duraznos', suboptions: ['Rompope', 'Crema de Yogurth', 'Chantilly'] }
+        ],
+        secundarios: [
+            'Manjar', 'Cajeta', 'Chantilly', 'Mermelada de Fresa', 'Mermelada de Zarzamora',
+            'Mermelada de Piña', 'Mermelada de Chabacano', 'Crema de Queso', 'Nutella',
+            'Dulce de Leche', 'Nuez', 'Crema de Yogurth de fresa', 'Crema de Café', 'Duraznos', 'Rompope'
+        ]
+    };
 
     folioForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1600,13 +1600,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (inStorePickupCheckbox.checked) {
             deliveryLocation = 'Recoge en Tienda';
         } else {
-             const addressParts = [
-                 (streetInput.value || '').trim(),
-                 (extNumberInput.value ? `${extNumberInput.value}` : '').trim(),
-                 (intNumberInput.value ? `Int. ${intNumberInput.value}` : '').trim(),
-                 (neighborhoodInput.value ? `Col. ${neighborhoodInput.value}` : '').trim()
-             ].filter(Boolean); // Filtra partes vacías
-             const address = addressParts.join(', ');
+            const addressParts = [
+                (streetInput.value || '').trim(),
+                (extNumberInput.value ? `${extNumberInput.value}` : '').trim(),
+                (intNumberInput.value ? `Int. ${intNumberInput.value}` : '').trim(),
+                (neighborhoodInput.value ? `Col. ${neighborhoodInput.value}` : '').trim()
+            ].filter(Boolean); // Filtra partes vacías
+            const address = addressParts.join(', ');
 
             if (googleMapsLocationCheckbox.checked) {
                 deliveryLocation = `El cliente envía ubicación (Google Maps)${address ? ` (${address})` : ''}`;
@@ -1633,10 +1633,10 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('accessories', accessoriesInput.value);
 
         // Adicionales: asegurar que el precio total esté bien calculado
-         const finalAdditionalItems = additionalItems.map(item => ({
-             name: `${item.quantity} x ${item.name}`,
-             price: (item.quantity * item.price).toFixed(2) // Enviar precio total calculado
-         }));
+        const finalAdditionalItems = additionalItems.map(item => ({
+            name: `${item.quantity} x ${item.name}`,
+            price: (item.quantity * item.price).toFixed(2) // Enviar precio total calculado
+        }));
         formData.append('additional', JSON.stringify(finalAdditionalItems));
 
         formData.append('isPaid', isPaidCheckbox.checked);
@@ -1665,22 +1665,22 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('cakeFlavor', '[]'); // Enviar array vacío
             formData.append('filling', '[]');    // Enviar array vacío
             const currentTiersData = Array.from(tiersTableBody.children).map((row, index) => {
-                 const tierState = tiersData[index] || { persons: null, panes: [], rellenos: [], notas: null }; // Asegurar estado existe
-                 // Validar y limpiar datos del tier antes de enviar
-                 const persons = parseInt(row.querySelector('.tier-persons-input').value, 10) || null;
-                 const panes = tierState.panes.filter(p => p); // Eliminar nulls/vacíos
-                 const rellenos = tierState.rellenos.filter(r => r); // Eliminar nulls/vacíos
-                 const notas = row.querySelector('.tier-notes-input').value || null;
+                const tierState = tiersData[index] || { persons: null, panes: [], rellenos: [], notas: null }; // Asegurar estado existe
+                // Validar y limpiar datos del tier antes de enviar
+                const persons = parseInt(row.querySelector('.tier-persons-input').value, 10) || null;
+                const panes = tierState.panes.filter(p => p); // Eliminar nulls/vacíos
+                const rellenos = tierState.rellenos.filter(r => r); // Eliminar nulls/vacíos
+                const notas = row.querySelector('.tier-notes-input').value || null;
 
-                 // Asegurar estructura mínima incluso si está incompleto
-                 return {
-                     persons: persons,
-                     // Asegurar 3 panes, rellenando con null si es necesario
-                     panes: [...panes, null, null, null].slice(0, 3),
-                      // Asegurar 2 rellenos, rellenando con null si es necesario
-                     rellenos: [...rellenos, null, null].slice(0, 2),
-                     notas: notas
-                 };
+                // Asegurar estructura mínima incluso si está incompleto
+                return {
+                    persons: persons,
+                    // Asegurar 3 panes, rellenando con null si es necesario
+                    panes: [...panes, null, null, null].slice(0, 3),
+                    // Asegurar 2 rellenos, rellenando con null si es necesario
+                    rellenos: [...rellenos, null, null].slice(0, 2),
+                    notas: notas
+                };
             });
             formData.append('tiers', JSON.stringify(currentTiersData));
         }
@@ -1691,12 +1691,12 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('existingImageUrls', JSON.stringify(existingImages.map(img => img.url)));
             formData.append('existingImageComments', JSON.stringify(existingImages.map(img => img.comment)));
         } else {
-             // Si es nuevo o desde IA, no hay 'existing'
-             formData.append('existingImageUrls', '[]');
-             formData.append('existingImageComments', '[]');
+            // Si es nuevo o desde IA, no hay 'existing'
+            formData.append('existingImageUrls', '[]');
+            formData.append('existingImageComments', '[]');
         }
 
-         // Nuevas imágenes y sus comentarios
+        // Nuevas imágenes y sus comentarios
         const newImageComments = selectedFiles.map(sf => sf.comment);
         formData.append('imageComments', JSON.stringify(newImageComments)); // Comentarios para las nuevas imágenes
         selectedFiles.forEach(fileData => {
@@ -1709,79 +1709,79 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('status', 'Nuevo');
         }
 
-try {
-    const response = await fetch(url, { method, headers: { 'Authorization': `Bearer ${authToken}` }, body: formData });
-
-     const responseBody = await response.text(); // Leer como texto primero
-     let responseData;
-     try {
-         responseData = JSON.parse(responseBody); // Intentar parsear como JSON
-     } catch (e) {
-         // Si falla el parseo, lanzar error con el texto original
-         console.error("Respuesta no es JSON:", responseBody);
-         throw new Error(`Respuesta inesperada del servidor: ${responseBody}`);
-     }
-
-
-    if (!response.ok) {
-         // Usar el mensaje del JSON parseado si existe
-        throw new Error(responseData.message || `Error del servidor: ${response.status}`);
-    }
-
-    // =================================================================
-    // ===== INICIO DE LA MODIFICACIÓN (Arreglo 3 y 4 Combinados) =====
-    // =================================================================
-
-    // ARREGLO 3: Descartar la sesión de IA si se creó desde el formulario manual
-    if (isCreatingFromAI) {
-        const sessionId = editingId.split('-')[1]; // Extraer ID (ej. "31" de "ai-31")
-        console.log(`Folio creado desde IA. Descartando sesión ${sessionId}...`);
-
         try {
-            // Llamamos a la ruta DELETE para descartar la sesión de la bandeja de entrada
-            const deleteResponse = await fetch(`http://localhost:3000/api/ai-sessions/${sessionId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
+            const response = await fetch(url, { method, headers: { 'Authorization': `Bearer ${authToken}` }, body: formData });
 
-            if (!deleteResponse.ok) {
-                console.warn(`Error al descartar la sesión de IA ${sessionId}. Es posible que siga apareciendo en la bandeja.`);
-            } else {
-                console.log(`Sesión de IA ${sessionId} descartada exitosamente.`);
-                // Refrescamos la lista de sesiones en segundo plano para la próxima vez que entres
-                loadActiveSessions(); 
+            const responseBody = await response.text(); // Leer como texto primero
+            let responseData;
+            try {
+                responseData = JSON.parse(responseBody); // Intentar parsear como JSON
+            } catch (e) {
+                // Si falla el parseo, lanzar error con el texto original
+                console.error("Respuesta no es JSON:", responseBody);
+                throw new Error(`Respuesta inesperada del servidor: ${responseBody}`);
             }
-        } catch (discardError) {
-            console.warn(`Error de red al descartar la sesión de IA ${sessionId}:`, discardError.message);
-        }
-    }
 
-    // ARREGLO 4: Refrescar el calendario (igual que hicimos en el chat submit)
-    if (window.myAppCalendar) {
-        console.log('Refrescando calendario desde el formulario...');
-        window.myAppCalendar.refetchEvents();
-    }
 
-    // =================================================================
-    // ===== FIN DE LA MODIFICACIÓN =====
-    // =================================================================
+            if (!response.ok) {
+                // Usar el mensaje del JSON parseado si existe
+                throw new Error(responseData.message || `Error del servidor: ${response.status}`);
+            }
+
+            // =================================================================
+            // ===== INICIO DE LA MODIFICACIÓN (Arreglo 3 y 4 Combinados) =====
+            // =================================================================
+
+            // ARREGLO 3: Descartar la sesión de IA si se creó desde el formulario manual
+            if (isCreatingFromAI) {
+                const sessionId = editingId.split('-')[1]; // Extraer ID (ej. "31" de "ai-31")
+                console.log(`Folio creado desde IA. Descartando sesión ${sessionId}...`);
+
+                try {
+                    // Llamamos a la ruta DELETE para descartar la sesión de la bandeja de entrada
+                    const deleteResponse = await fetch(`http://localhost:3000/api/ai-sessions/${sessionId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+
+                    if (!deleteResponse.ok) {
+                        console.warn(`Error al descartar la sesión de IA ${sessionId}. Es posible que siga apareciendo en la bandeja.`);
+                    } else {
+                        console.log(`Sesión de IA ${sessionId} descartada exitosamente.`);
+                        // Refrescamos la lista de sesiones en segundo plano para la próxima vez que entres
+                        loadActiveSessions();
+                    }
+                } catch (discardError) {
+                    console.warn(`Error de red al descartar la sesión de IA ${sessionId}:`, discardError.message);
+                }
+            }
+
+            // ARREGLO 4: Refrescar el calendario (igual que hicimos en el chat submit)
+            if (window.myAppCalendar) {
+                console.log('Refrescando calendario desde el formulario...');
+                window.myAppCalendar.refetchEvents();
+            }
+
+            // =================================================================
+            // ===== FIN DE LA MODIFICACIÓN =====
+            // =================================================================
 
             const successMessage = (isCreatingFromAI || !isEditingExisting)
-                 ? '¡Folio creado con éxito!'
-                 : '¡Folio actualizado con éxito!';
+                ? '¡Folio creado con éxito!'
+                : '¡Folio actualizado con éxito!';
 
             alert(successMessage);
 
             const event = new CustomEvent('folioCreated'); // Reusar el mismo evento
             window.dispatchEvent(event); // Disparar evento para actualizar calendario/listas
 
-             // Si se creó desde IA, ahora podríamos querer marcar la sesión de IA como completada
-             if (isCreatingFromAI) {
-                 const sessionId = editingId.split('-')[1]; // Extraer ID original de 'ai-ID'
-                 // Opcional: Llamar a una ruta API para marcar la sesión como 'completed'
-                 // fetch(`/api/ai-sessions/${sessionId}/complete`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${authToken}` } });
-                 console.log(`Folio creado desde la sesión de IA ${sessionId}. Considerar marcarla como completada.`);
-             }
+            // Si se creó desde IA, ahora podríamos querer marcar la sesión de IA como completada
+            if (isCreatingFromAI) {
+                const sessionId = editingId.split('-')[1]; // Extraer ID original de 'ai-ID'
+                // Opcional: Llamar a una ruta API para marcar la sesión como 'completed'
+                // fetch(`/api/ai-sessions/${sessionId}/complete`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${authToken}` } });
+                console.log(`Folio creado desde la sesión de IA ${sessionId}. Considerar marcarla como completada.`);
+            }
 
 
         } catch (error) {
@@ -1792,29 +1792,29 @@ try {
         }
     });
 
-     window.addEventListener('folioCreated', () => {
-         // Decide a qué vista volver basado en `previousView`
-         const returnView = window.previousView || 'calendar';
-         resetForm(); // Limpiar el formulario después de guardar
-         showView(returnView);
+    window.addEventListener('folioCreated', () => {
+        // Decide a qué vista volver basado en `previousView`
+        const returnView = window.previousView || 'calendar';
+        resetForm(); // Limpiar el formulario después de guardar
+        showView(returnView);
 
-         // Recargar datos relevantes para la vista de retorno
-         if (returnView === 'calendar' && window.myAppCalendar) {
-             window.myAppCalendar.refetchEvents();
-         } else if (returnView === 'pending' || returnView === 'chat') {
-             // Si volvemos a pending o chat (aunque chat no debería ser directo), recargar sesiones
-             loadActiveSessions();
-             // Si específicamente volvemos al chat (quizás tras error), podríamos recargar esa sesión
-             if (returnView === 'chat' && currentSessionId) {
-                 loadChatSession(currentSessionId);
-             }
-         }
-     });
+        // Recargar datos relevantes para la vista de retorno
+        if (returnView === 'calendar' && window.myAppCalendar) {
+            window.myAppCalendar.refetchEvents();
+        } else if (returnView === 'pending' || returnView === 'chat') {
+            // Si volvemos a pending o chat (aunque chat no debería ser directo), recargar sesiones
+            loadActiveSessions();
+            // Si específicamente volvemos al chat (quizás tras error), podríamos recargar esa sesión
+            if (returnView === 'chat' && currentSessionId) {
+                loadChatSession(currentSessionId);
+            }
+        }
+    });
 
 
     function renderImagePreviews() {
-         // ... (código sin cambios)
-         imagePreview.innerHTML = '';
+        // ... (código sin cambios)
+        imagePreview.innerHTML = '';
 
         existingImages.forEach((imgData, index) => {
             const wrapper = document.createElement('div');
@@ -1829,7 +1829,7 @@ try {
 
         selectedFiles.forEach((fileData, index) => {
             const wrapper = document.createElement('div');
-             wrapper.className = 'relative border rounded-md overflow-hidden shadow'; // Estilo
+            wrapper.className = 'relative border rounded-md overflow-hidden shadow'; // Estilo
             wrapper.innerHTML = `
                 <img src="${URL.createObjectURL(fileData.file)}" alt="Nueva imagen ${index + 1}" class="block w-full h-32 object-cover">
                 <button type="button" class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold delete-image-btn new" data-index="${index}">&times;</button>
@@ -1840,39 +1840,39 @@ try {
     }
 
     imageInput.addEventListener('change', () => {
-         // ... (código sin cambios)
-         const files = Array.from(imageInput.files);
+        // ... (código sin cambios)
+        const files = Array.from(imageInput.files);
         const totalImages = selectedFiles.length + existingImages.length;
         const allowedNew = 5 - totalImages;
 
         if (files.length > allowedNew) {
             alert(`Solo puedes añadir ${allowedNew} imágenes más (máximo 5 en total).`);
-             // Mantener solo las permitidas
-             files.splice(allowedNew);
+            // Mantener solo las permitidas
+            files.splice(allowedNew);
         }
 
         if (files.length > 0) {
-             selectedFiles.push(...files.map(file => ({ file, comment: '' })));
-             renderImagePreviews();
+            selectedFiles.push(...files.map(file => ({ file, comment: '' })));
+            renderImagePreviews();
         }
         imageInput.value = ''; // Limpiar input para permitir seleccionar los mismos archivos de nuevo si se borran
     });
 
     imagePreview.addEventListener('click', (e) => {
-         // ... (código sin cambios)
-         if (e.target.classList.contains('delete-image-btn')) {
+        // ... (código sin cambios)
+        if (e.target.classList.contains('delete-image-btn')) {
             const index = parseInt(e.target.dataset.index, 10);
             if (e.target.classList.contains('existing')) {
-                 if (index >= 0 && index < existingImages.length) {
-                     existingImages.splice(index, 1);
-                 }
+                if (index >= 0 && index < existingImages.length) {
+                    existingImages.splice(index, 1);
+                }
             } else {
-                 if (index >= 0 && index < selectedFiles.length) {
-                     const fileData = selectedFiles[index];
-                     // Revocar URL para liberar memoria
-                     if (fileData.file) URL.revokeObjectURL(e.target.previousElementSibling.src);
-                     selectedFiles.splice(index, 1);
-                 }
+                if (index >= 0 && index < selectedFiles.length) {
+                    const fileData = selectedFiles[index];
+                    // Revocar URL para liberar memoria
+                    if (fileData.file) URL.revokeObjectURL(e.target.previousElementSibling.src);
+                    selectedFiles.splice(index, 1);
+                }
             }
             renderImagePreviews(); // Re-renderizar con índices actualizados
             debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
@@ -1880,8 +1880,8 @@ try {
     });
 
     imagePreview.addEventListener('input', (e) => {
-         // ... (código sin cambios)
-         if (e.target.tagName === 'TEXTAREA') {
+        // ... (código sin cambios)
+        if (e.target.tagName === 'TEXTAREA') {
             const index = parseInt(e.target.dataset.index, 10);
             if (e.target.classList.contains('existing-comment')) {
                 if (existingImages[index]) existingImages[index].comment = e.target.value;
@@ -1892,287 +1892,287 @@ try {
         }
     });
 
-     // --- Resto de funciones auxiliares (renderTags, modales, add/remove flavors/fillings/tiers, etc.) ---
-     // ... (El código de estas funciones permanece igual que en tu base) ...
-     function renderTags(container, tagsArray, onRemoveCallback) {
-         if (!container) return; // --- NUEVO: Chequeo ---
-         container.innerHTML = '';
-         (tagsArray || []).forEach((tagData, index) => {
-             const tagEl = document.createElement('div'); tagEl.className = 'tag';
-             // Manejar si tagData es string u objeto {name: ..., hasCost: ...}
-             const tagName = (typeof tagData === 'object' ? tagData.name : tagData) || '??'; // --- NUEVO: Fallback
-             const hasCost = typeof tagData === 'object' ? tagData.hasCost : false; // Asumir no costo si es string
+    // --- Resto de funciones auxiliares (renderTags, modales, add/remove flavors/fillings/tiers, etc.) ---
+    // ... (El código de estas funciones permanece igual que en tu base) ...
+    function renderTags(container, tagsArray, onRemoveCallback) {
+        if (!container) return; // --- NUEVO: Chequeo ---
+        container.innerHTML = '';
+        (tagsArray || []).forEach((tagData, index) => {
+            const tagEl = document.createElement('div'); tagEl.className = 'tag';
+            // Manejar si tagData es string u objeto {name: ..., hasCost: ...}
+            const tagName = (typeof tagData === 'object' ? tagData.name : tagData) || '??'; // --- NUEVO: Fallback
+            const hasCost = typeof tagData === 'object' ? tagData.hasCost : false; // Asumir no costo si es string
 
-             tagEl.innerHTML = `<span>${tagName}${hasCost ? ' ($)' : ''}</span><button type="button" class="tag-remove-btn" data-index="${index}">&times;</button>`;
-             container.appendChild(tagEl);
-         });
-         if (onRemoveCallback) {
-             container.querySelectorAll('.tag-remove-btn').forEach(btn => {
-                 btn.addEventListener('click', (e) => {
-                     e.stopPropagation(); // Prevenir que otros listeners se activen
-                     onRemoveCallback(parseInt(e.target.dataset.index, 10));
-                     // --- NUEVO: La función onRemoveCallback (ej. removeCakeFlavor) llamará a debouncedGetAIValidation ---
-                 });
-             });
-         }
-     }
+            tagEl.innerHTML = `<span>${tagName}${hasCost ? ' ($)' : ''}</span><button type="button" class="tag-remove-btn" data-index="${index}">&times;</button>`;
+            container.appendChild(tagEl);
+        });
+        if (onRemoveCallback) {
+            container.querySelectorAll('.tag-remove-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevenir que otros listeners se activen
+                    onRemoveCallback(parseInt(e.target.dataset.index, 10));
+                    // --- NUEVO: La función onRemoveCallback (ej. removeCakeFlavor) llamará a debouncedGetAIValidation ---
+                });
+            });
+        }
+    }
 
 
     function openSelectionModal(title, data, currentTags, onSelectCallback, limit) {
-         if (!selectionModal) return; // --- NUEVO: Chequeo ---
-         modalStep1.classList.remove('hidden');
-         modalStep2.classList.add('hidden');
-         modalTitle.textContent = title;
-         modalSearch.value = '';
+        if (!selectionModal) return; // --- NUEVO: Chequeo ---
+        modalStep1.classList.remove('hidden');
+        modalStep2.classList.add('hidden');
+        modalTitle.textContent = title;
+        modalSearch.value = '';
 
-         function populateList(filter = '') {
-             modalList.innerHTML = '';
-             const lowerFilter = filter.toLowerCase();
-             // Filtrar datos y asegurar que no se añadan duplicados (basado en nombre si son objetos)
-             const currentTagNames = (currentTags || []).map(tag => (typeof tag === 'object' ? tag.name : tag).toLowerCase()); // --- NUEVO: Default a array vacío ---
-             const filteredData = (data || []).filter(item => { // --- NUEVO: Default a array vacío ---
-                 const itemName = (typeof item === 'object' ? item.name : item).toLowerCase();
-                 return itemName.includes(lowerFilter) && !currentTagNames.includes(itemName);
-             });
-
-
-             filteredData.forEach(item => {
-                 const itemEl = document.createElement('div');
-                 itemEl.className = 'modal-list-item';
-                 const itemName = typeof item === 'object' ? item.name : item;
-                 const hasCost = typeof item === 'object' ? item.hasCost : false;
-                 itemEl.textContent = itemName;
-                 if (hasCost) itemEl.classList.add('cost-extra'); // Aplicar estilo si tiene costo
-
-                 itemEl.addEventListener('click', () => {
-                     if (currentTags.length < limit) {
-                         onSelectCallback(item); // Pasar el item completo (puede ser string u objeto)
-                         selectionModal.classList.add('hidden');
-                     } else {
-                         alert(`Solo puedes seleccionar un máximo de ${limit}.`);
-                     }
-                 });
-                 modalList.appendChild(itemEl);
-             });
-             if (filteredData.length === 0) {
-                 modalList.innerHTML = '<p class="text-gray-500 p-2">No hay más opciones o ya están seleccionadas.</p>';
-             }
-         }
-         populateList();
-         modalSearch.oninput = () => populateList(modalSearch.value); // Usar oninput para respuesta más rápida
-         selectionModal.classList.remove('hidden');
-     }
-
-     function openRellenoModal(onSelectCallback, currentRellenos, limit) {
-         if (!selectionModal) return; // --- NUEVO: Chequeo ---
-         modalTitle.textContent = 'Añadir Relleno';
-         modalStep1.classList.remove('hidden');
-         modalStep2.classList.add('hidden');
-         modalSearch.value = '';
-         modalList.innerHTML = '';
-
-         // Crear lista combinada con info de costo
-         const allRellenos = [
-             ...Object.keys(rellenosData.incluidos).map(name => ({ name, hasCost: false, data: rellenosData.incluidos[name] })),
-             ...Object.keys(rellenosData.conCosto).map(name => ({ name, hasCost: true, data: rellenosData.conCosto[name] }))
-         ];
-         // Nombres de rellenos ya seleccionados para evitar duplicados
-         const currentRellenoNames = (currentRellenos || []).map(r => r.name.toLowerCase()); // --- NUEVO: Default a array vacío ---
+        function populateList(filter = '') {
+            modalList.innerHTML = '';
+            const lowerFilter = filter.toLowerCase();
+            // Filtrar datos y asegurar que no se añadan duplicados (basado en nombre si son objetos)
+            const currentTagNames = (currentTags || []).map(tag => (typeof tag === 'object' ? tag.name : tag).toLowerCase()); // --- NUEVO: Default a array vacío ---
+            const filteredData = (data || []).filter(item => { // --- NUEVO: Default a array vacío ---
+                const itemName = (typeof item === 'object' ? item.name : item).toLowerCase();
+                return itemName.includes(lowerFilter) && !currentTagNames.includes(itemName);
+            });
 
 
-         function populateList(filter = '') {
-             modalList.innerHTML = '';
-             const lowerFilter = filter.toLowerCase();
-             const filteredRellenos = allRellenos.filter(r =>
-                 r.name.toLowerCase().includes(lowerFilter) &&
-                 !currentRellenoNames.includes(r.name.toLowerCase()) // Evitar ya seleccionados
-             );
+            filteredData.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'modal-list-item';
+                const itemName = typeof item === 'object' ? item.name : item;
+                const hasCost = typeof item === 'object' ? item.hasCost : false;
+                itemEl.textContent = itemName;
+                if (hasCost) itemEl.classList.add('cost-extra'); // Aplicar estilo si tiene costo
+
+                itemEl.addEventListener('click', () => {
+                    if (currentTags.length < limit) {
+                        onSelectCallback(item); // Pasar el item completo (puede ser string u objeto)
+                        selectionModal.classList.add('hidden');
+                    } else {
+                        alert(`Solo puedes seleccionar un máximo de ${limit}.`);
+                    }
+                });
+                modalList.appendChild(itemEl);
+            });
+            if (filteredData.length === 0) {
+                modalList.innerHTML = '<p class="text-gray-500 p-2">No hay más opciones o ya están seleccionadas.</p>';
+            }
+        }
+        populateList();
+        modalSearch.oninput = () => populateList(modalSearch.value); // Usar oninput para respuesta más rápida
+        selectionModal.classList.remove('hidden');
+    }
+
+    function openRellenoModal(onSelectCallback, currentRellenos, limit) {
+        if (!selectionModal) return; // --- NUEVO: Chequeo ---
+        modalTitle.textContent = 'Añadir Relleno';
+        modalStep1.classList.remove('hidden');
+        modalStep2.classList.add('hidden');
+        modalSearch.value = '';
+        modalList.innerHTML = '';
+
+        // Crear lista combinada con info de costo
+        const allRellenos = [
+            ...Object.keys(rellenosData.incluidos).map(name => ({ name, hasCost: false, data: rellenosData.incluidos[name] })),
+            ...Object.keys(rellenosData.conCosto).map(name => ({ name, hasCost: true, data: rellenosData.conCosto[name] }))
+        ];
+        // Nombres de rellenos ya seleccionados para evitar duplicados
+        const currentRellenoNames = (currentRellenos || []).map(r => r.name.toLowerCase()); // --- NUEVO: Default a array vacío ---
 
 
-             filteredRellenos.forEach(titular => {
-                 const itemEl = document.createElement('div');
-                 itemEl.className = 'modal-list-item';
-                 if (titular.hasCost) itemEl.classList.add('cost-extra');
-                 // Indicar si tiene subopciones
-                 itemEl.textContent = titular.name + (titular.data.suboptions && titular.data.suboptions.length > 0 ? ' (...)' : '');
-
-                 itemEl.addEventListener('click', () => {
-                     const suboptions = titular.data.suboptions;
-                     if (suboptions && suboptions.length > 0) {
-                         showStep2(titular, suboptions);
-                     } else {
-                         if (currentRellenos.length < limit) {
-                             // Pasar objeto { name, hasCost }
-                             onSelectCallback({ name: titular.name, hasCost: titular.hasCost });
-                             selectionModal.classList.add('hidden');
-                         } else {
-                             alert(`Solo puedes seleccionar un máximo de ${limit} rellenos.`);
-                         }
-                     }
-                 });
-                 modalList.appendChild(itemEl);
-             });
-             if (filteredRellenos.length === 0) {
-                 modalList.innerHTML = '<p class="text-gray-500 p-2">No hay más opciones o ya están seleccionadas.</p>';
-             }
-         }
-
-         const showStep2 = (titular, suboptions) => {
-             modalStep1.classList.add('hidden');
-             modalStep2.classList.remove('hidden');
-             modalTitle.textContent = `Paso 2: Elige para "${titular.name}"`;
-             modalStep2Title.innerHTML = `Opción para "<b>${titular.name}</b>" <button type="button" class="back-to-step1 text-sm text-blue-600 hover:underline">(Volver)</button>`;
-             modalStep2List.innerHTML = '';
-
-             // Filtrar subopciones para evitar duplicados completos (ej. "Manjar con Nuez")
-             const filteredSuboptions = suboptions.filter(sub => {
-                 const fullName = `${titular.name} ${titular.data.separator || 'con'} ${sub}`;
-                 return !currentRellenoNames.includes(fullName.toLowerCase());
-             });
+        function populateList(filter = '') {
+            modalList.innerHTML = '';
+            const lowerFilter = filter.toLowerCase();
+            const filteredRellenos = allRellenos.filter(r =>
+                r.name.toLowerCase().includes(lowerFilter) &&
+                !currentRellenoNames.includes(r.name.toLowerCase()) // Evitar ya seleccionados
+            );
 
 
-             filteredSuboptions.forEach(comp => {
-                 const compEl = document.createElement('div');
-                 compEl.className = 'modal-list-item';
-                 compEl.textContent = comp;
-                 compEl.addEventListener('click', () => {
-                     if (currentRellenos.length < limit) {
-                         const separator = titular.data.separator || 'con';
-                         const finalName = `${titular.name} ${separator} ${comp}`;
-                         // Pasar objeto { name, hasCost }
-                         onSelectCallback({ name: finalName, hasCost: titular.hasCost });
-                         selectionModal.classList.add('hidden');
-                     } else {
-                         alert(`Solo puedes seleccionar un máximo de ${limit} rellenos.`);
-                     }
-                 });
-                 modalStep2List.appendChild(compEl);
-             });
+            filteredRellenos.forEach(titular => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'modal-list-item';
+                if (titular.hasCost) itemEl.classList.add('cost-extra');
+                // Indicar si tiene subopciones
+                itemEl.textContent = titular.name + (titular.data.suboptions && titular.data.suboptions.length > 0 ? ' (...)' : '');
 
-             if (filteredSuboptions.length === 0) {
-                 modalStep2List.innerHTML = '<p class="text-gray-500 p-2">No hay más opciones o ya están seleccionadas.</p>';
-             }
+                itemEl.addEventListener('click', () => {
+                    const suboptions = titular.data.suboptions;
+                    if (suboptions && suboptions.length > 0) {
+                        showStep2(titular, suboptions);
+                    } else {
+                        if (currentRellenos.length < limit) {
+                            // Pasar objeto { name, hasCost }
+                            onSelectCallback({ name: titular.name, hasCost: titular.hasCost });
+                            selectionModal.classList.add('hidden');
+                        } else {
+                            alert(`Solo puedes seleccionar un máximo de ${limit} rellenos.`);
+                        }
+                    }
+                });
+                modalList.appendChild(itemEl);
+            });
+            if (filteredRellenos.length === 0) {
+                modalList.innerHTML = '<p class="text-gray-500 p-2">No hay más opciones o ya están seleccionadas.</p>';
+            }
+        }
 
-             modalStep2Title.querySelector('.back-to-step1').addEventListener('click', () => {
-                 modalStep1.classList.remove('hidden');
-                 modalStep2.classList.add('hidden');
-                 populateList(modalSearch.value); // Volver a poblar paso 1
-             });
-         };
+        const showStep2 = (titular, suboptions) => {
+            modalStep1.classList.add('hidden');
+            modalStep2.classList.remove('hidden');
+            modalTitle.textContent = `Paso 2: Elige para "${titular.name}"`;
+            modalStep2Title.innerHTML = `Opción para "<b>${titular.name}</b>" <button type="button" class="back-to-step1 text-sm text-blue-600 hover:underline">(Volver)</button>`;
+            modalStep2List.innerHTML = '';
 
-         populateList();
-         modalSearch.oninput = () => populateList(modalSearch.value);
-         selectionModal.classList.remove('hidden');
-     }
-
-     function openRellenoModalEspecial(onSelectCallback) {
-         // ... (código sin cambios)
-         if (!selectionModal) return; // --- NUEVO: Chequeo ---
-         let state = { principal: null, finalPrincipal: '' };
-         modalSearch.value = '';
-
-         const showPrincipales = (filter = '') => {
-             modalTitle.textContent = 'Paso 1: Elige un Relleno Principal';
-             modalStep1.classList.remove('hidden');
-             modalStep2.classList.add('hidden');
-             modalList.innerHTML = '';
-
-             const lowerFilter = filter.toLowerCase();
-             const filteredPrincipales = rellenosDataEspecial.principales.filter(item =>
-                 item.name.toLowerCase().includes(lowerFilter)
-             );
-
-             filteredPrincipales.forEach(item => {
-                 const itemEl = document.createElement('div');
-                 itemEl.className = 'modal-list-item';
-                 itemEl.textContent = item.name + (item.suboptions && item.suboptions.length > 0 ? ` (...)` : '');
-                 itemEl.addEventListener('click', () => {
-                     state.principal = item;
-                     if (item.suboptions && item.suboptions.length > 0) {
-                         showPrincipalSuboptions();
-                     } else {
-                         state.finalPrincipal = item.name;
-                         showSecundarios();
-                     }
-                 });
-                 modalList.appendChild(itemEl);
-             });
-             if (filteredPrincipales.length === 0) {
-                 modalList.innerHTML = '<p class="text-gray-500 p-2">No hay opciones.</p>';
-             }
-             selectionModal.classList.remove('hidden');
-         };
-
-         const showPrincipalSuboptions = () => {
-             modalStep1.classList.add('hidden');
-             modalStep2.classList.remove('hidden');
-             modalTitle.textContent = `Elige una opción para "${state.principal.name}"`;
-             modalStep2Title.innerHTML = `Opción para "<b>${state.principal.name}</b>" <button type="button" class="back-to-step1 text-sm text-blue-600 hover:underline">(Volver)</button>`;
-             modalStep2List.innerHTML = '';
-
-             state.principal.suboptions.forEach(subItem => {
-                 const itemEl = document.createElement('div');
-                 itemEl.className = 'modal-list-item';
-                 itemEl.textContent = subItem;
-                 itemEl.addEventListener('click', () => {
-                     const separator = state.principal.separator || ' con '; // Default a ' con '
-                     state.finalPrincipal = `${state.principal.name}${separator}${subItem}`;
-                     showSecundarios();
-                 });
-                 modalStep2List.appendChild(itemEl);
-             });
-             modalStep2Title.querySelector('.back-to-step1').addEventListener('click', () => {
-                 modalStep1.classList.remove('hidden');
-                 modalStep2.classList.add('hidden');
-                 showPrincipales(modalSearch.value);
-             });
-         };
+            // Filtrar subopciones para evitar duplicados completos (ej. "Manjar con Nuez")
+            const filteredSuboptions = suboptions.filter(sub => {
+                const fullName = `${titular.name} ${titular.data.separator || 'con'} ${sub}`;
+                return !currentRellenoNames.includes(fullName.toLowerCase());
+            });
 
 
-         const showSecundarios = () => {
-             modalStep1.classList.add('hidden');
-             modalStep2.classList.remove('hidden');
-             modalTitle.textContent = 'Paso 2: Elige un Relleno Secundario (Opcional)';
-             modalStep2Title.innerHTML = `Principal: "<b>${state.finalPrincipal}</b>" <button type="button" class="back-to-step1-from-sec text-sm text-blue-600 hover:underline">(Cambiar Principal)</button>`;
-             modalStep2List.innerHTML = '';
+            filteredSuboptions.forEach(comp => {
+                const compEl = document.createElement('div');
+                compEl.className = 'modal-list-item';
+                compEl.textContent = comp;
+                compEl.addEventListener('click', () => {
+                    if (currentRellenos.length < limit) {
+                        const separator = titular.data.separator || 'con';
+                        const finalName = `${titular.name} ${separator} ${comp}`;
+                        // Pasar objeto { name, hasCost }
+                        onSelectCallback({ name: finalName, hasCost: titular.hasCost });
+                        selectionModal.classList.add('hidden');
+                    } else {
+                        alert(`Solo puedes seleccionar un máximo de ${limit} rellenos.`);
+                    }
+                });
+                modalStep2List.appendChild(compEl);
+            });
 
-             // Opción para no añadir secundario
-             const noSecundarioEl = document.createElement('div');
-             noSecundarioEl.className = 'modal-list-item italic text-gray-500';
-             noSecundarioEl.textContent = '(Sin relleno secundario)';
-             noSecundarioEl.addEventListener('click', () => {
-                 onSelectCallback([state.finalPrincipal]); // Solo el principal
-                 selectionModal.classList.add('hidden');
-             });
-             modalStep2List.appendChild(noSecundarioEl);
+            if (filteredSuboptions.length === 0) {
+                modalStep2List.innerHTML = '<p class="text-gray-500 p-2">No hay más opciones o ya están seleccionadas.</p>';
+            }
+
+            modalStep2Title.querySelector('.back-to-step1').addEventListener('click', () => {
+                modalStep1.classList.remove('hidden');
+                modalStep2.classList.add('hidden');
+                populateList(modalSearch.value); // Volver a poblar paso 1
+            });
+        };
+
+        populateList();
+        modalSearch.oninput = () => populateList(modalSearch.value);
+        selectionModal.classList.remove('hidden');
+    }
+
+    function openRellenoModalEspecial(onSelectCallback) {
+        // ... (código sin cambios)
+        if (!selectionModal) return; // --- NUEVO: Chequeo ---
+        let state = { principal: null, finalPrincipal: '' };
+        modalSearch.value = '';
+
+        const showPrincipales = (filter = '') => {
+            modalTitle.textContent = 'Paso 1: Elige un Relleno Principal';
+            modalStep1.classList.remove('hidden');
+            modalStep2.classList.add('hidden');
+            modalList.innerHTML = '';
+
+            const lowerFilter = filter.toLowerCase();
+            const filteredPrincipales = rellenosDataEspecial.principales.filter(item =>
+                item.name.toLowerCase().includes(lowerFilter)
+            );
+
+            filteredPrincipales.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'modal-list-item';
+                itemEl.textContent = item.name + (item.suboptions && item.suboptions.length > 0 ? ` (...)` : '');
+                itemEl.addEventListener('click', () => {
+                    state.principal = item;
+                    if (item.suboptions && item.suboptions.length > 0) {
+                        showPrincipalSuboptions();
+                    } else {
+                        state.finalPrincipal = item.name;
+                        showSecundarios();
+                    }
+                });
+                modalList.appendChild(itemEl);
+            });
+            if (filteredPrincipales.length === 0) {
+                modalList.innerHTML = '<p class="text-gray-500 p-2">No hay opciones.</p>';
+            }
+            selectionModal.classList.remove('hidden');
+        };
+
+        const showPrincipalSuboptions = () => {
+            modalStep1.classList.add('hidden');
+            modalStep2.classList.remove('hidden');
+            modalTitle.textContent = `Elige una opción para "${state.principal.name}"`;
+            modalStep2Title.innerHTML = `Opción para "<b>${state.principal.name}</b>" <button type="button" class="back-to-step1 text-sm text-blue-600 hover:underline">(Volver)</button>`;
+            modalStep2List.innerHTML = '';
+
+            state.principal.suboptions.forEach(subItem => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'modal-list-item';
+                itemEl.textContent = subItem;
+                itemEl.addEventListener('click', () => {
+                    const separator = state.principal.separator || ' con '; // Default a ' con '
+                    state.finalPrincipal = `${state.principal.name}${separator}${subItem}`;
+                    showSecundarios();
+                });
+                modalStep2List.appendChild(itemEl);
+            });
+            modalStep2Title.querySelector('.back-to-step1').addEventListener('click', () => {
+                modalStep1.classList.remove('hidden');
+                modalStep2.classList.add('hidden');
+                showPrincipales(modalSearch.value);
+            });
+        };
 
 
-             rellenosDataEspecial.secundarios.forEach(item => {
-                 const itemEl = document.createElement('div');
-                 itemEl.className = 'modal-list-item';
-                 itemEl.textContent = item;
-                 itemEl.addEventListener('click', () => {
-                     onSelectCallback([state.finalPrincipal, item]); // Ambos rellenos
-                     selectionModal.classList.add('hidden');
-                 });
-                 modalStep2List.appendChild(itemEl);
-             });
+        const showSecundarios = () => {
+            modalStep1.classList.add('hidden');
+            modalStep2.classList.remove('hidden');
+            modalTitle.textContent = 'Paso 2: Elige un Relleno Secundario (Opcional)';
+            modalStep2Title.innerHTML = `Principal: "<b>${state.finalPrincipal}</b>" <button type="button" class="back-to-step1-from-sec text-sm text-blue-600 hover:underline">(Cambiar Principal)</button>`;
+            modalStep2List.innerHTML = '';
 
-             modalStep2Title.querySelector('.back-to-step1-from-sec').addEventListener('click', () => {
-                 // Volver al paso anterior correcto (subopciones o principales)
-                 if (state.principal.suboptions && state.principal.suboptions.length > 0) {
-                     showPrincipalSuboptions();
-                 } else {
-                     modalStep1.classList.remove('hidden');
-                     modalStep2.classList.add('hidden');
-                     showPrincipales(modalSearch.value);
-                 }
-             });
-         };
+            // Opción para no añadir secundario
+            const noSecundarioEl = document.createElement('div');
+            noSecundarioEl.className = 'modal-list-item italic text-gray-500';
+            noSecundarioEl.textContent = '(Sin relleno secundario)';
+            noSecundarioEl.addEventListener('click', () => {
+                onSelectCallback([state.finalPrincipal]); // Solo el principal
+                selectionModal.classList.add('hidden');
+            });
+            modalStep2List.appendChild(noSecundarioEl);
 
-         showPrincipales();
-         modalSearch.oninput = () => showPrincipales(modalSearch.value);
-     }
+
+            rellenosDataEspecial.secundarios.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'modal-list-item';
+                itemEl.textContent = item;
+                itemEl.addEventListener('click', () => {
+                    onSelectCallback([state.finalPrincipal, item]); // Ambos rellenos
+                    selectionModal.classList.add('hidden');
+                });
+                modalStep2List.appendChild(itemEl);
+            });
+
+            modalStep2Title.querySelector('.back-to-step1-from-sec').addEventListener('click', () => {
+                // Volver al paso anterior correcto (subopciones o principales)
+                if (state.principal.suboptions && state.principal.suboptions.length > 0) {
+                    showPrincipalSuboptions();
+                } else {
+                    modalStep1.classList.remove('hidden');
+                    modalStep2.classList.add('hidden');
+                    showPrincipales(modalSearch.value);
+                }
+            });
+        };
+
+        showPrincipales();
+        modalSearch.oninput = () => showPrincipales(modalSearch.value);
+    }
 
 
     modalCloseBtn.addEventListener('click', () => selectionModal.classList.add('hidden'));
@@ -2215,9 +2215,9 @@ try {
     addCakeFlavorBtn.addEventListener('click', () => openSelectionModal('Sabor de Pan', cakeFlavorsData.normal, selectedCakeFlavors, addCakeFlavor, 2));
     addFillingBtn.addEventListener('click', () => openRellenoModal(addRelleno, selectedRellenos, 2));
 
-     function checkRestrictions() {
-         // ... (código sin cambios)
-         const hasNoFillingPan = selectedCakeFlavors.some(flavor => ['Pastel de queso', 'Queso/Flan'].includes(flavor));
+    function checkRestrictions() {
+        // ... (código sin cambios)
+        const hasNoFillingPan = selectedCakeFlavors.some(flavor => ['Pastel de queso', 'Queso/Flan'].includes(flavor));
         const isMilHojas = selectedCakeFlavors.includes('Mil Hojas');
 
         const isDisabled = hasNoFillingPan || isMilHojas;
@@ -2242,11 +2242,11 @@ try {
         debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
     }
 
-    inStorePickupCheckbox.addEventListener('change', function() {
+    inStorePickupCheckbox.addEventListener('change', function () {
         const isPickup = this.checked;
         deliveryAddressSection.classList.toggle('hidden', isPickup);
         deliveryCostInput.readOnly = isPickup;
-         googleMapsLocationCheckbox.disabled = isPickup; // Deshabilitar si es pickup
+        googleMapsLocationCheckbox.disabled = isPickup; // Deshabilitar si es pickup
 
         if (isPickup) {
             deliveryCostInput.value = '0.00'; // Establecer a 0.00
@@ -2257,57 +2257,57 @@ try {
             intNumberInput.value = '';
             neighborhoodInput.value = '';
         }
-         googleMapsLocationCheckbox.dispatchEvent(new Event('change')); // Actualizar visibilidad de campos de dirección
+        googleMapsLocationCheckbox.dispatchEvent(new Event('change')); // Actualizar visibilidad de campos de dirección
         updateTotals();
         debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
     });
 
-     googleMapsLocationCheckbox.addEventListener('change', function() {
-         // Ocultar campos de dirección específicos si se marca "Google Maps"
-         addressFields.classList.toggle('hidden', this.checked);
-         if (this.checked) {
-             // Opcional: Limpiar campos cuando se marca
-             // streetInput.value = '';
-             // extNumberInput.value = '';
-             // intNumberInput.value = '';
-             // neighborhoodInput.value = '';
-         }
-         debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
-     });
+    googleMapsLocationCheckbox.addEventListener('change', function () {
+        // Ocultar campos de dirección específicos si se marca "Google Maps"
+        addressFields.classList.toggle('hidden', this.checked);
+        if (this.checked) {
+            // Opcional: Limpiar campos cuando se marca
+            // streetInput.value = '';
+            // extNumberInput.value = '';
+            // intNumberInput.value = '';
+            // neighborhoodInput.value = '';
+        }
+        debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
+    });
 
 
-     function getGrandTotal() {
-         const baseCakeCost = parseFloat(totalInput.value) || 0;
-         const delivery = parseFloat(deliveryCostInput.value) || 0;
-         const additionalTotal = additionalItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0); // Usar totalPrice
+    function getGrandTotal() {
+        const baseCakeCost = parseFloat(totalInput.value) || 0;
+        const delivery = parseFloat(deliveryCostInput.value) || 0;
+        const additionalTotal = additionalItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0); // Usar totalPrice
 
-         let calculatedFillingCost = 0;
-         if (folioTypeSelect.value === 'Normal') {
-             const personsValue = parseFloat(personsInput.value) || 0;
-             // Calcular costo basado en los objetos {name, hasCost}
-             calculatedFillingCost = selectedRellenos.reduce((sum, relleno) => {
-                 return (relleno && relleno.hasCost && personsValue > 0) ? sum + (Math.ceil(personsValue / 20) * 30) : sum; // Ceil para cobrar por fracción
-             }, 0);
-         }
-         // Nota: El costo de relleno para Base/Especial podría necesitar lógica diferente si aplica.
+        let calculatedFillingCost = 0;
+        if (folioTypeSelect.value === 'Normal') {
+            const personsValue = parseFloat(personsInput.value) || 0;
+            // Calcular costo basado en los objetos {name, hasCost}
+            calculatedFillingCost = selectedRellenos.reduce((sum, relleno) => {
+                return (relleno && relleno.hasCost && personsValue > 0) ? sum + (Math.ceil(personsValue / 20) * 30) : sum; // Ceil para cobrar por fracción
+            }, 0);
+        }
+        // Nota: El costo de relleno para Base/Especial podría necesitar lógica diferente si aplica.
 
-         const subtotalForCommission = baseCakeCost + delivery + additionalTotal + calculatedFillingCost;
+        const subtotalForCommission = baseCakeCost + delivery + additionalTotal + calculatedFillingCost;
 
-         let commissionCost = 0;
-         if (addCommissionCheckbox.checked) {
-             const commission = subtotalForCommission * 0.05;
-             // Redondear comisión hacia arriba a la decena más cercana
-             commissionCost = Math.ceil(commission / 10) * 10;
-         }
+        let commissionCost = 0;
+        if (addCommissionCheckbox.checked) {
+            const commission = subtotalForCommission * 0.05;
+            // Redondear comisión hacia arriba a la decena más cercana
+            commissionCost = Math.ceil(commission / 10) * 10;
+        }
 
-         return subtotalForCommission + commissionCost;
-     }
+        return subtotalForCommission + commissionCost;
+    }
 
-     function calculateBalance() {
-         const grandTotal = getGrandTotal();
-         const advance = parseFloat(advanceInput.value) || 0;
-         balanceInput.value = (grandTotal - advance).toFixed(2);
-     }
+    function calculateBalance() {
+        const grandTotal = getGrandTotal();
+        const advance = parseFloat(advanceInput.value) || 0;
+        balanceInput.value = (grandTotal - advance).toFixed(2);
+    }
 
     function updateTotals() {
         const grandTotal = getGrandTotal();
@@ -2315,7 +2315,7 @@ try {
             advanceInput.value = grandTotal.toFixed(2);
             advanceInput.readOnly = true; // Asegurar que sea readonly
         } else {
-             advanceInput.readOnly = false; // Asegurar que sea editable
+            advanceInput.readOnly = false; // Asegurar que sea editable
         }
         calculateBalance(); // Siempre recalcular balance
     }
@@ -2338,12 +2338,12 @@ try {
     // Observar cambios en contenedores de tags/tablas para IA
     [cakeFlavorContainer, fillingContainer, additionalList, tiersTableBody, complementsContainer].forEach(container => {
         if (container) {
-             const observer = new MutationObserver(debouncedGetAIValidation);
-             observer.observe(container, { childList: true, subtree: true });
-             if (container.tagName === 'TBODY' || container.id === 'complementsContainer') {
-                 container.addEventListener('input', debouncedGetAIValidation);
-                 container.addEventListener('change', debouncedGetAIValidation);
-             }
+            const observer = new MutationObserver(debouncedGetAIValidation);
+            observer.observe(container, { childList: true, subtree: true });
+            if (container.tagName === 'TBODY' || container.id === 'complementsContainer') {
+                container.addEventListener('input', debouncedGetAIValidation);
+                container.addEventListener('change', debouncedGetAIValidation);
+            }
         }
     });
     // --- FIN NUEVO ---
@@ -2358,13 +2358,13 @@ try {
 
 
     function renderAdditionalItems() {
-         // ... (código sin cambios)
-         additionalList.innerHTML = '';
+        // ... (código sin cambios)
+        additionalList.innerHTML = '';
         additionalItems.forEach((item, index) => {
-             // Asegurarse de que totalPrice esté calculado
-             item.totalPrice = (item.quantity || 0) * (item.price || 0);
+            // Asegurarse de que totalPrice esté calculado
+            item.totalPrice = (item.quantity || 0) * (item.price || 0);
             const li = document.createElement('li');
-             li.className = 'text-sm text-gray-700 flex justify-between items-center';
+            li.className = 'text-sm text-gray-700 flex justify-between items-center';
             li.innerHTML = `
                  <span>${item.quantity} x ${item.name} (@ $${(item.price || 0).toFixed(2)}) = <strong>$${item.totalPrice.toFixed(2)}</strong></span>
                  <button type="button" class="remove-additional-btn text-red-500 ml-2 font-bold" data-index="${index}">[X]</button>`;
@@ -2373,59 +2373,59 @@ try {
     }
 
     addAdditionalButton.addEventListener('click', () => {
-         // ... (código sin cambios)
-         const nameInput = document.getElementById('additionalName');
-         const quantityInput = document.getElementById('additionalQuantity');
-         const priceInput = document.getElementById('additionalPrice');
+        // ... (código sin cambios)
+        const nameInput = document.getElementById('additionalName');
+        const quantityInput = document.getElementById('additionalQuantity');
+        const priceInput = document.getElementById('additionalPrice');
 
         const name = nameInput.value.trim();
         const quantity = parseInt(quantityInput.value, 10);
         const price = parseFloat(priceInput.value); // Precio unitario
 
         if (name && quantity > 0 && !isNaN(price) && price >= 0) {
-             additionalItems.push({ name, quantity, price, totalPrice: quantity * price }); // Guardar precio unitario y total
-             renderAdditionalItems();
-             updateTotals(); // Recalcular total general y balance
-             // Limpiar inputs
-             nameInput.value = '';
-             quantityInput.value = '1';
-             priceInput.value = '';
-             nameInput.focus(); // Foco en el nombre para el siguiente item
-             debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
+            additionalItems.push({ name, quantity, price, totalPrice: quantity * price }); // Guardar precio unitario y total
+            renderAdditionalItems();
+            updateTotals(); // Recalcular total general y balance
+            // Limpiar inputs
+            nameInput.value = '';
+            quantityInput.value = '1';
+            priceInput.value = '';
+            nameInput.focus(); // Foco en el nombre para el siguiente item
+            debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
         } else {
             alert('Por favor, completa la descripción (texto), cantidad (>0) y precio unitario (>=0) del adicional.');
         }
     });
 
     additionalList.addEventListener('click', (e) => {
-         // ... (código sin cambios)
-         if (e.target.classList.contains('remove-additional-btn')) {
-             const index = parseInt(e.target.dataset.index, 10);
-             if (index >= 0 && index < additionalItems.length) {
-                 additionalItems.splice(index, 1);
-                 renderAdditionalItems();
-                 updateTotals(); // Recalcular
-                 debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
-             }
-         }
+        // ... (código sin cambios)
+        if (e.target.classList.contains('remove-additional-btn')) {
+            const index = parseInt(e.target.dataset.index, 10);
+            if (index >= 0 && index < additionalItems.length) {
+                additionalItems.splice(index, 1);
+                renderAdditionalItems();
+                updateTotals(); // Recalcular
+                debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
+            }
+        }
     });
 
 
-     function addTierRow(tier = null) {
-         const index = tiersData.length;
-         // Crear estado inicial seguro
-         const initialTierData = {
-             persons: tier?.persons || '',
-             panes: Array.isArray(tier?.panes) ? tier.panes.filter(p => p) : [], // Limpiar nulls/vacíos
-             rellenos: Array.isArray(tier?.rellenos) ? tier.rellenos.filter(r => r) : [], // Limpiar nulls/vacíos
-             notas: tier?.notas || ''
-         };
-         tiersData.push(initialTierData);
+    function addTierRow(tier = null) {
+        const index = tiersData.length;
+        // Crear estado inicial seguro
+        const initialTierData = {
+            persons: tier?.persons || '',
+            panes: Array.isArray(tier?.panes) ? tier.panes.filter(p => p) : [], // Limpiar nulls/vacíos
+            rellenos: Array.isArray(tier?.rellenos) ? tier.rellenos.filter(r => r) : [], // Limpiar nulls/vacíos
+            notas: tier?.notas || ''
+        };
+        tiersData.push(initialTierData);
 
-         const row = document.createElement('tr');
-         row.className = 'tier-row border-b align-top'; // align-top para mejor layout
-         row.dataset.index = index;
-         row.innerHTML = `
+        const row = document.createElement('tr');
+        row.className = 'tier-row border-b align-top'; // align-top para mejor layout
+        row.dataset.index = index;
+        row.innerHTML = `
              <td class="p-2 w-1/5"><input type="number" step="5" min="0" class="tier-persons-input bg-gray-50 border border-gray-300 text-sm rounded-lg block w-full p-2" placeholder="Personas" value="${initialTierData.persons}"></td>
              <td class="p-2 w-2/5">
                  <div class="tag-container panes-container mb-1"></div>
@@ -2439,46 +2439,46 @@ try {
              <td class="p-1 text-center"><button type="button" class="remove-tier-button text-red-500 font-bold px-2 text-lg hover:text-red-700">X</button></td>
          `;
 
-         // Renderizar tags iniciales
-         renderTags(row.querySelector('.panes-container'), initialTierData.panes, (tagIndex) => removeTierPane(index, tagIndex));
-         renderTags(row.querySelector('.fillings-container'), initialTierData.rellenos, (tagIndex) => removeTierFilling(index, tagIndex));
+        // Renderizar tags iniciales
+        renderTags(row.querySelector('.panes-container'), initialTierData.panes, (tagIndex) => removeTierPane(index, tagIndex));
+        renderTags(row.querySelector('.fillings-container'), initialTierData.rellenos, (tagIndex) => removeTierFilling(index, tagIndex));
 
-         tiersTableBody.appendChild(row);
-     }
+        tiersTableBody.appendChild(row);
+    }
 
 
-    folioTypeSelect.addEventListener('change', function() {
-         // ... (código sin cambios)
-         const isSpecial = this.value === 'Base/Especial';
+    folioTypeSelect.addEventListener('change', function () {
+        // ... (código sin cambios)
+        const isSpecial = this.value === 'Base/Especial';
         normalFields.classList.toggle('hidden', isSpecial);
         specialFields.classList.toggle('hidden', !isSpecial);
 
         if (isSpecial) {
-             // Si cambiamos a Especial y no hay filas, añadir una
-             if (tiersTableBody.children.length === 0) {
-                 addTierRow();
-             }
-             // Limpiar sabores y rellenos normales si existían
+            // Si cambiamos a Especial y no hay filas, añadir una
+            if (tiersTableBody.children.length === 0) {
+                addTierRow();
+            }
+            // Limpiar sabores y rellenos normales si existían
             if (selectedCakeFlavors.length > 0 || selectedRellenos.length > 0) {
-                 selectedCakeFlavors = [];
-                 selectedRellenos = [];
-                 renderTags(cakeFlavorContainer, [], null);
-                 renderTags(fillingContainer, [], null);
+                selectedCakeFlavors = [];
+                selectedRellenos = [];
+                renderTags(cakeFlavorContainer, [], null);
+                renderTags(fillingContainer, [], null);
             }
         } else { // Si cambiamos a Normal
-             // Limpiar estructura de pisos si existía
-             if (tiersData.length > 0) {
-                 tiersData = [];
-                 tiersTableBody.innerHTML = '';
-             }
+            // Limpiar estructura de pisos si existía
+            if (tiersData.length > 0) {
+                tiersData = [];
+                tiersTableBody.innerHTML = '';
+            }
         }
         updateTotals(); // Recalcular costos (ej. costo de relleno normal)
     });
     addTierButton.addEventListener('click', () => { addTierRow(); debouncedGetAIValidation(); }); // --- NUEVO: Llamar validación ---
 
     const removeTierPane = (tierIndex, tagIndex) => {
-         // ... (código sin cambios)
-         if (tierIndex >= 0 && tierIndex < tiersData.length) {
+        // ... (código sin cambios)
+        if (tierIndex >= 0 && tierIndex < tiersData.length) {
             tiersData[tierIndex].panes.splice(tagIndex, 1);
             const row = tiersTableBody.querySelector(`tr[data-index="${tierIndex}"]`);
             if (row) {
@@ -2488,8 +2488,8 @@ try {
         }
     };
     const removeTierFilling = (tierIndex, tagIndex) => {
-         // ... (código sin cambios)
-         if (tierIndex >= 0 && tierIndex < tiersData.length) {
+        // ... (código sin cambios)
+        if (tierIndex >= 0 && tierIndex < tiersData.length) {
             tiersData[tierIndex].rellenos.splice(tagIndex, 1);
             const row = tiersTableBody.querySelector(`tr[data-index="${tierIndex}"]`);
             if (row) {
@@ -2500,83 +2500,83 @@ try {
         }
     };
 
-    tiersTableBody.addEventListener('click', function(e) {
-         // ... (código sin cambios, asegurando que addTierPane/Filling funcionen)
-         const target = e.target;
+    tiersTableBody.addEventListener('click', function (e) {
+        // ... (código sin cambios, asegurando que addTierPane/Filling funcionen)
+        const target = e.target;
         const row = target.closest('.tier-row');
         if (!row) return;
 
         currentTierIndex = parseInt(row.dataset.index, 10);
-         // Asegurar que el índice es válido
-         if (isNaN(currentTierIndex) || currentTierIndex < 0 || currentTierIndex >= tiersData.length) {
-             console.error("Índice de piso inválido:", currentTierIndex);
-             return;
-         }
+        // Asegurar que el índice es válido
+        if (isNaN(currentTierIndex) || currentTierIndex < 0 || currentTierIndex >= tiersData.length) {
+            console.error("Índice de piso inválido:", currentTierIndex);
+            return;
+        }
 
         const addTierPane = (flavor) => {
-             // No añadir si ya está o si se alcanzó el límite
-             if (tiersData[currentTierIndex].panes.length < 3 && !tiersData[currentTierIndex].panes.includes(flavor)) {
-                 tiersData[currentTierIndex].panes.push(flavor);
-                 renderTags(row.querySelector('.panes-container'), tiersData[currentTierIndex].panes, (tagIndex) => removeTierPane(currentTierIndex, tagIndex));
-                 debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
-             } else if (tiersData[currentTierIndex].panes.length >= 3) {
-                 alert("Máximo 3 panes por piso.");
-             }
+            // No añadir si ya está o si se alcanzó el límite
+            if (tiersData[currentTierIndex].panes.length < 3 && !tiersData[currentTierIndex].panes.includes(flavor)) {
+                tiersData[currentTierIndex].panes.push(flavor);
+                renderTags(row.querySelector('.panes-container'), tiersData[currentTierIndex].panes, (tagIndex) => removeTierPane(currentTierIndex, tagIndex));
+                debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
+            } else if (tiersData[currentTierIndex].panes.length >= 3) {
+                alert("Máximo 3 panes por piso.");
+            }
         };
 
         const addTierFilling = (rellenosSeleccionados) => { // Recibe array de 1 o 2 rellenos
             if (rellenosSeleccionados && rellenosSeleccionados.length > 0 && rellenosSeleccionados.length <= 2) {
-                 // Reemplazar los rellenos actuales por los nuevos seleccionados
-                 tiersData[currentTierIndex].rellenos = rellenosSeleccionados;
-                 renderTags(row.querySelector('.fillings-container'), tiersData[currentTierIndex].rellenos, (tagIndex) => removeTierFilling(currentTierIndex, tagIndex));
-                 // updateTotals(); // Podría recalcular si rellenos especiales tuvieran costo asociado
-                 debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
+                // Reemplazar los rellenos actuales por los nuevos seleccionados
+                tiersData[currentTierIndex].rellenos = rellenosSeleccionados;
+                renderTags(row.querySelector('.fillings-container'), tiersData[currentTierIndex].rellenos, (tagIndex) => removeTierFilling(currentTierIndex, tagIndex));
+                // updateTotals(); // Podría recalcular si rellenos especiales tuvieran costo asociado
+                debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
             } else if (rellenosSeleccionados.length > 2) {
-                 alert("Máximo 2 rellenos por piso.");
+                alert("Máximo 2 rellenos por piso.");
             }
         };
 
 
         if (target.classList.contains('add-tier-pane-btn')) {
             openSelectionModal(
-                 `Panes Piso ${currentTierIndex + 1}`,
-                 cakeFlavorsData.tier,
-                 tiersData[currentTierIndex].panes,
-                 addTierPane,
-                 3 // Límite de panes
+                `Panes Piso ${currentTierIndex + 1}`,
+                cakeFlavorsData.tier,
+                tiersData[currentTierIndex].panes,
+                addTierPane,
+                3 // Límite de panes
             );
         } else if (target.classList.contains('add-tier-filling-btn')) {
-             // Limpiar rellenos existentes antes de abrir modal para reemplazarlos
-             tiersData[currentTierIndex].rellenos = [];
-             renderTags(row.querySelector('.fillings-container'), [], (tagIndex) => removeTierFilling(currentTierIndex, tagIndex));
-             // Abrir modal especial que devuelve un array de 1 o 2 rellenos
-             openRellenoModalEspecial(addTierFilling);
+            // Limpiar rellenos existentes antes de abrir modal para reemplazarlos
+            tiersData[currentTierIndex].rellenos = [];
+            renderTags(row.querySelector('.fillings-container'), [], (tagIndex) => removeTierFilling(currentTierIndex, tagIndex));
+            // Abrir modal especial que devuelve un array de 1 o 2 rellenos
+            openRellenoModalEspecial(addTierFilling);
         } else if (target.classList.contains('remove-tier-button')) {
-             if (confirm(`¿Eliminar piso ${currentTierIndex + 1}?`)) {
-                 tiersData.splice(currentTierIndex, 1); // Eliminar del array de datos
-                 row.remove(); // Eliminar del DOM
-                 // Re-indexar las filas restantes en el DOM y en los datos si es necesario (o manejarlo al guardar)
-                 Array.from(tiersTableBody.children).forEach((r, i) => r.dataset.index = i);
-                 // updateTotals(); // Recalcular si personas afectan total
-                 debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
-             }
+            if (confirm(`¿Eliminar piso ${currentTierIndex + 1}?`)) {
+                tiersData.splice(currentTierIndex, 1); // Eliminar del array de datos
+                row.remove(); // Eliminar del DOM
+                // Re-indexar las filas restantes en el DOM y en los datos si es necesario (o manejarlo al guardar)
+                Array.from(tiersTableBody.children).forEach((r, i) => r.dataset.index = i);
+                // updateTotals(); // Recalcular si personas afectan total
+                debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
+            }
         }
-         // Delegación para botones de eliminar tags dentro de los tiers
-         else if(target.classList.contains('tag-remove-btn')) {
-             const tagContainer = target.closest('.tag-container');
-             const tagIndex = parseInt(target.dataset.index, 10);
-             if (tagContainer.classList.contains('panes-container')) {
-                 removeTierPane(currentTierIndex, tagIndex); // Esta función ya llama a debounce
-             } else if (tagContainer.classList.contains('fillings-container')) {
-                 removeTierFilling(currentTierIndex, tagIndex); // Esta función ya llama a debounce
-             }
-         }
+        // Delegación para botones de eliminar tags dentro de los tiers
+        else if (target.classList.contains('tag-remove-btn')) {
+            const tagContainer = target.closest('.tag-container');
+            const tagIndex = parseInt(target.dataset.index, 10);
+            if (tagContainer.classList.contains('panes-container')) {
+                removeTierPane(currentTierIndex, tagIndex); // Esta función ya llama a debounce
+            } else if (tagContainer.classList.contains('fillings-container')) {
+                removeTierFilling(currentTierIndex, tagIndex); // Esta función ya llama a debounce
+            }
+        }
 
     });
 
-     function addComplementRow(complement = null) {
-         // ... (código sin cambios)
-         const complementIndex = complementsContainer.children.length;
+    function addComplementRow(complement = null) {
+        // ... (código sin cambios)
+        const complementIndex = complementsContainer.children.length;
         const formWrapper = document.createElement('div');
         formWrapper.className = 'complement-form relative space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50 mb-4'; // Añadir mb-4
         formWrapper.dataset.index = complementIndex;
@@ -2610,31 +2610,31 @@ try {
         complementsContainer.appendChild(formWrapper);
 
         formWrapper.querySelector('.remove-complement-btn').addEventListener('click', () => {
-             if (confirm(`¿Eliminar Complemento ${parseInt(formWrapper.dataset.index) + 1}?`)) {
-                 formWrapper.remove();
-                 // Re-numerar los títulos de los complementos restantes
-                 document.querySelectorAll('#complementsContainer .complement-form').forEach((form, index) => {
-                     form.dataset.index = index; // Actualizar índice del dataset
-                     form.querySelector('h4').textContent = `Complemento ${index + 1}`;
-                 });
-                 debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
-             }
+            if (confirm(`¿Eliminar Complemento ${parseInt(formWrapper.dataset.index) + 1}?`)) {
+                formWrapper.remove();
+                // Re-numerar los títulos de los complementos restantes
+                document.querySelectorAll('#complementsContainer .complement-form').forEach((form, index) => {
+                    form.dataset.index = index; // Actualizar índice del dataset
+                    form.querySelector('h4').textContent = `Complemento ${index + 1}`;
+                });
+                debouncedGetAIValidation(); // --- NUEVO: Llamar validación ---
+            }
         });
     }
 
     addComplementButton.addEventListener('click', () => { addComplementRow(); debouncedGetAIValidation(); }); // --- NUEVO: Llamar validación ---
-    
+
     // === INICIO NUEVO: Listeners para Análisis de Imagen ===
     if (inspirationImageInput) {
         inspirationImageInput.addEventListener('change', () => {
-            if(analyzeImageBtn) analyzeImageBtn.disabled = !inspirationImageInput.files || inspirationImageInput.files.length === 0;
+            if (analyzeImageBtn) analyzeImageBtn.disabled = !inspirationImageInput.files || inspirationImageInput.files.length === 0;
             // Limpiar análisis previo si se cambia la imagen
-             if(imageAnalysisResultDiv) imageAnalysisResultDiv.classList.add('hidden');
-             if(analysisDescription) analysisDescription.textContent = '';
-             if(analysisTechniques) analysisTechniques.textContent = '';
-             if(analysisComplexity) analysisComplexity.textContent = '';
-             if(analysisError) analysisError.textContent = '';
-             if(analysisLoading) analysisLoading.classList.add('hidden');
+            if (imageAnalysisResultDiv) imageAnalysisResultDiv.classList.add('hidden');
+            if (analysisDescription) analysisDescription.textContent = '';
+            if (analysisTechniques) analysisTechniques.textContent = '';
+            if (analysisComplexity) analysisComplexity.textContent = '';
+            if (analysisError) analysisError.textContent = '';
+            if (analysisLoading) analysisLoading.classList.add('hidden');
         });
     }
 
@@ -2650,9 +2650,9 @@ try {
             formData.append('inspirationImage', file);
 
             // Mostrar carga, ocultar resultado previo, limpiar error
-            if(analysisLoading) analysisLoading.classList.remove('hidden');
-            if(imageAnalysisResultDiv) imageAnalysisResultDiv.classList.add('hidden');
-            if(analysisError) analysisError.textContent = '';
+            if (analysisLoading) analysisLoading.classList.remove('hidden');
+            if (imageAnalysisResultDiv) imageAnalysisResultDiv.classList.add('hidden');
+            if (analysisError) analysisError.textContent = '';
             analyzeImageBtn.disabled = true; // Deshabilitar mientras analiza
 
             try {
@@ -2670,22 +2670,22 @@ try {
                 }
 
                 // Mostrar resultados
-                if(analysisDescription) analysisDescription.innerHTML = `<strong>Descripción:</strong> ${result.description || 'N/A'}`;
-                if(analysisTechniques) analysisTechniques.innerHTML = `<strong>Técnicas Probables:</strong> ${(result.techniques && result.techniques.length > 0) ? result.techniques.join(', ') : 'N/A'}`;
-                if(analysisComplexity) analysisComplexity.innerHTML = `<strong>Complejidad:</strong> ${result.complexity || 'N/A'} (${result.complexity_reason || 'sin detalle'})`;
-                if(imageAnalysisResultDiv) imageAnalysisResultDiv.classList.remove('hidden');
+                if (analysisDescription) analysisDescription.innerHTML = `<strong>Descripción:</strong> ${result.description || 'N/A'}`;
+                if (analysisTechniques) analysisTechniques.innerHTML = `<strong>Técnicas Probables:</strong> ${(result.techniques && result.techniques.length > 0) ? result.techniques.join(', ') : 'N/A'}`;
+                if (analysisComplexity) analysisComplexity.innerHTML = `<strong>Complejidad:</strong> ${result.complexity || 'N/A'} (${result.complexity_reason || 'sin detalle'})`;
+                if (imageAnalysisResultDiv) imageAnalysisResultDiv.classList.remove('hidden');
 
             } catch (error) {
                 console.error("Error analizando imagen:", error);
-                if(analysisError) analysisError.textContent = `Error: ${error.message}`;
-                 if(imageAnalysisResultDiv) imageAnalysisResultDiv.classList.remove('hidden'); // Mostrar el div para ver el error
-                 if(analysisDescription) analysisDescription.textContent = ''; // Limpiar otras partes
-                 if(analysisTechniques) analysisTechniques.textContent = '';
-                 if(analysisComplexity) analysisComplexity.textContent = '';
+                if (analysisError) analysisError.textContent = `Error: ${error.message}`;
+                if (imageAnalysisResultDiv) imageAnalysisResultDiv.classList.remove('hidden'); // Mostrar el div para ver el error
+                if (analysisDescription) analysisDescription.textContent = ''; // Limpiar otras partes
+                if (analysisTechniques) analysisTechniques.textContent = '';
+                if (analysisComplexity) analysisComplexity.textContent = '';
             } finally {
-                if(analysisLoading) analysisLoading.classList.add('hidden');
+                if (analysisLoading) analysisLoading.classList.add('hidden');
                 // Habilitar botón de nuevo solo si hay una imagen seleccionada
-                 analyzeImageBtn.disabled = !inspirationImageInput.files || inspirationImageInput.files.length === 0;
+                analyzeImageBtn.disabled = !inspirationImageInput.files || inspirationImageInput.files.length === 0;
             }
         });
     }
@@ -2697,9 +2697,9 @@ try {
         try {
             const tokenPayload = JSON.parse(atob(storedToken.split('.')[1]));
             // Validación básica de expiración (opcional pero recomendada)
-             if (tokenPayload.exp * 1000 < Date.now()) {
-                 throw new Error("Token expirado");
-             }
+            if (tokenPayload.exp * 1000 < Date.now()) {
+                throw new Error("Token expirado");
+            }
             const userRole = tokenPayload.role;
             window.currentUserRole = userRole; // Guardar rol globalmente si es útil
             showAppView(storedToken, userRole);
@@ -2709,7 +2709,7 @@ try {
             showView('login'); // Asegurar que muestre login si hay error
         }
     } else {
-         showView('login'); // Asegurar que muestre login si no hay token
+        showView('login'); // Asegurar que muestre login si no hay token
     }
 
 
@@ -2728,15 +2728,15 @@ try {
 
     function updatePdfViewer() {
         if (currentFolioIndex < 0 || currentFolioIndex >= currentFolioList.length) {
-             console.warn("Índice de PDF fuera de rango.");
-             closePdfViewer(); // Cerrar si el índice es inválido
+            console.warn("Índice de PDF fuera de rango.");
+            closePdfViewer(); // Cerrar si el índice es inválido
             return;
         }
 
         const folio = currentFolioList[currentFolioIndex];
         if (!folio || !folio.id) {
-             console.error("Datos de folio inválidos para el visor PDF.");
-             closePdfViewer();
+            console.error("Datos de folio inválidos para el visor PDF.");
+            closePdfViewer();
             return;
         }
 
@@ -2749,20 +2749,20 @@ try {
         prevFolioBtn.disabled = currentFolioIndex === 0;
         nextFolioBtn.disabled = currentFolioIndex === currentFolioList.length - 1;
 
-         // Añadir/quitar clases para estilo de deshabilitado si usas Tailwind u otro framework
-         prevFolioBtn.classList.toggle('opacity-50', prevFolioBtn.disabled);
-         prevFolioBtn.classList.toggle('cursor-not-allowed', prevFolioBtn.disabled);
-         nextFolioBtn.classList.toggle('opacity-50', nextFolioBtn.disabled);
-         nextFolioBtn.classList.toggle('cursor-not-allowed', nextFolioBtn.disabled);
+        // Añadir/quitar clases para estilo de deshabilitado si usas Tailwind u otro framework
+        prevFolioBtn.classList.toggle('opacity-50', prevFolioBtn.disabled);
+        prevFolioBtn.classList.toggle('cursor-not-allowed', prevFolioBtn.disabled);
+        nextFolioBtn.classList.toggle('opacity-50', nextFolioBtn.disabled);
+        nextFolioBtn.classList.toggle('cursor-not-allowed', nextFolioBtn.disabled);
 
     }
 
 
     window.openPdfViewer = (folios, index) => {
-         if (!Array.isArray(folios) || folios.length === 0 || index < 0 || index >= folios.length) {
-             console.error("Datos inválidos para abrir el visor PDF.");
-             return;
-         }
+        if (!Array.isArray(folios) || folios.length === 0 || index < 0 || index >= folios.length) {
+            console.error("Datos inválidos para abrir el visor PDF.");
+            return;
+        }
         currentFolioList = folios;
         currentFolioIndex = index;
         updatePdfViewer();
@@ -2788,36 +2788,36 @@ try {
     });
 
     nextFolioBtn.addEventListener('click', () => {
-         if (!nextFolioBtn.disabled) { // Solo actuar si no está deshabilitado
+        if (!nextFolioBtn.disabled) { // Solo actuar si no está deshabilitado
             currentFolioIndex++;
             updatePdfViewer();
-         }
+        }
     });
 
-     // Cerrar con tecla Escape
+    // Cerrar con tecla Escape
     window.addEventListener('keydown', (e) => {
         if (e.key === "Escape" && !pdfViewerModal.classList.contains('hidden')) {
             closePdfViewer();
         }
-         // Navegación con flechas izquierda/derecha
-         else if (!pdfViewerModal.classList.contains('hidden')) {
-             if (e.key === "ArrowLeft" && !prevFolioBtn.disabled) {
-                 currentFolioIndex--;
-                 updatePdfViewer();
-             } else if (e.key === "ArrowRight" && !nextFolioBtn.disabled) {
-                 currentFolioIndex++;
-                 updatePdfViewer();
-             }
-         }
+        // Navegación con flechas izquierda/derecha
+        else if (!pdfViewerModal.classList.contains('hidden')) {
+            if (e.key === "ArrowLeft" && !prevFolioBtn.disabled) {
+                currentFolioIndex--;
+                updatePdfViewer();
+            } else if (e.key === "ArrowRight" && !nextFolioBtn.disabled) {
+                currentFolioIndex++;
+                updatePdfViewer();
+            }
+        }
     });
 
-     // Re-enfocar si se pierde el foco (útil para Escape/Flechas)
+    // Re-enfocar si se pierde el foco (útil para Escape/Flechas)
     window.addEventListener('blur', () => {
         if (!pdfViewerModal.classList.contains('hidden')) {
             setTimeout(() => window.focus(), 0);
         }
     });
-    
+
     // --- NUEVO: Cerrar visor PDF al hacer clic fuera ---
     if (pdfViewerModal) {
         pdfViewerModal.addEventListener('click', (e) => {
@@ -2830,69 +2830,69 @@ try {
 
 
     // --- LÓGICA DEL BOTÓN DE REPORTE (sin cambios) ---
-     if (commissionReportButton) {
-         commissionReportButton.addEventListener('click', () => {
-             // Generar reporte para el día ANTERIOR
-             const today = new Date();
-             const yesterday = new Date(today);
-             yesterday.setDate(today.getDate() - 1);
-             const reportDate = yesterday.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    if (commissionReportButton) {
+        commissionReportButton.addEventListener('click', () => {
+            // Generar reporte para el día ANTERIOR
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            const reportDate = yesterday.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-             const authToken = localStorage.getItem('authToken');
-             // Asegurarse de que el token se pasa correctamente como query param
-             const url = `http://localhost:3000/api/folios/commission-report?date=${reportDate}&token=${authToken}`;
+            const authToken = localStorage.getItem('authToken');
+            // Asegurarse de que el token se pasa correctamente como query param
+            const url = `http://localhost:3000/api/folios/commission-report?date=${reportDate}&token=${authToken}`;
 
-             console.log("Abriendo URL de reporte:", url); // Log para depuración
-             window.open(url, '_blank'); // Abrir en nueva pestaña
-         });
-     }
+            console.log("Abriendo URL de reporte:", url); // Log para depuración
+            window.open(url, '_blank'); // Abrir en nueva pestaña
+        });
+    }
 
     // ===== SECCIÓN PARA LA BANDEJA DE ENTRADA (sin cambios) =====
     // --- NUEVA FUNCIÓN para renderizar la lista de sesiones ---
-function renderPendingSessions(sessionsToRender) {
-    pendingFoliosList.innerHTML = ''; // Limpiar lista actual
+    function renderPendingSessions(sessionsToRender) {
+        pendingFoliosList.innerHTML = ''; // Limpiar lista actual
 
-    if (!sessionsToRender || sessionsToRender.length === 0) {
-        const searchTerm = pendingSearchInput ? pendingSearchInput.value.trim() : '';
-        if (searchTerm) {
-            pendingFoliosList.innerHTML = `<p class="text-gray-500 text-center italic mt-4 p-4">No se encontraron sesiones activas para "${searchTerm}".</p>`;
+        if (!sessionsToRender || sessionsToRender.length === 0) {
+            const searchTerm = pendingSearchInput ? pendingSearchInput.value.trim() : '';
+            if (searchTerm) {
+                pendingFoliosList.innerHTML = `<p class="text-gray-500 text-center italic mt-4 p-4">No se encontraron sesiones activas para "${searchTerm}".</p>`;
+            } else {
+                pendingFoliosList.innerHTML = '<p class="text-gray-500 text-center italic mt-4 p-4">No hay sesiones de IA activas en este momento.</p>';
+            }
+            pendingCountBadge.classList.add('hidden'); // Ocultar contador si no hay resultados
+            return;
+        }
+
+        // Actualizar contador (basado en resultados filtrados si hay búsqueda)
+        const totalActive = allActiveSessions.length; // Total real
+        // const displayedCount = sessionsToRender.length; // Si quisieras mostrar "X de Y"
+        if (totalActive > 0) {
+            pendingCountBadge.textContent = totalActive; // Mostrar siempre el total activo
+            pendingCountBadge.classList.remove('hidden');
         } else {
-            pendingFoliosList.innerHTML = '<p class="text-gray-500 text-center italic mt-4 p-4">No hay sesiones de IA activas en este momento.</p>';
+            pendingCountBadge.classList.add('hidden');
         }
-        pendingCountBadge.classList.add('hidden'); // Ocultar contador si no hay resultados
-        return;
-    }
-
-    // Actualizar contador (basado en resultados filtrados si hay búsqueda)
-    const totalActive = allActiveSessions.length; // Total real
-    // const displayedCount = sessionsToRender.length; // Si quisieras mostrar "X de Y"
-    if (totalActive > 0) {
-         pendingCountBadge.textContent = totalActive; // Mostrar siempre el total activo
-         pendingCountBadge.classList.remove('hidden');
-    } else {
-         pendingCountBadge.classList.add('hidden');
-    }
 
 
-    sessionsToRender.forEach(session => {
-        const sessionCard = document.createElement('div');
-        sessionCard.className = 'p-4 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-y-2 sm:gap-x-4 cursor-pointer hover:bg-blue-50 transition-colors duration-150';
-        sessionCard.dataset.sessionId = session.id;
+        sessionsToRender.forEach(session => {
+            const sessionCard = document.createElement('div');
+            sessionCard.className = 'p-4 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-y-2 sm:gap-x-4 cursor-pointer hover:bg-blue-50 transition-colors duration-150';
+            sessionCard.dataset.sessionId = session.id;
 
-        const clientName = session.extractedData?.clientName || 'Cliente Desconocido';
-        let deliveryDateStr = 'Fecha no definida';
-        if (session.extractedData?.deliveryDate) {
-             try {
-                 // Intentar parsear y formatear la fecha
-                 const dateObj = new Date(session.extractedData.deliveryDate + 'T12:00:00Z'); // Asumir UTC
-                 if (!isNaN(dateObj)) {
-                     deliveryDateStr = dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City' });
-                 }
-             } catch (e) { console.error("Error formateando fecha de sesión:", e); }
-        }
-        const persons = session.extractedData?.persons || 'N/A';
+            const clientName = session.extractedData?.clientName || 'Cliente Desconocido';
+            let deliveryDateStr = 'Fecha no definida';
+            if (session.extractedData?.deliveryDate) {
+                try {
+                    // Intentar parsear y formatear la fecha
+                    const dateObj = new Date(session.extractedData.deliveryDate + 'T12:00:00Z'); // Asumir UTC
+                    if (!isNaN(dateObj)) {
+                        deliveryDateStr = dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City' });
+                    }
+                } catch (e) { console.error("Error formateando fecha de sesión:", e); }
+            }
+            const persons = session.extractedData?.persons || 'N/A';
 
-        sessionCard.innerHTML = `
+            sessionCard.innerHTML = `
              <div class="flex-grow">
                  <p class="font-bold text-base text-gray-800">${clientName} <span class="text-sm font-normal text-gray-500">(ID: ${session.id})</span></p>
                  <p class="text-sm text-gray-600">
@@ -2903,66 +2903,66 @@ function renderPendingSessions(sessionsToRender) {
              <button class="bg-blue-600 text-white font-bold py-1 px-3 rounded-md text-sm hover:bg-blue-700 transition-colors flex-shrink-0">Abrir Asistente</button>
         `;
 
-        // Event listener para abrir el chat
-        sessionCard.addEventListener('click', (e) => {
-             if (e.target.tagName !== 'BUTTON') {
-                 window.previousView = 'pending';
-                 loadChatSession(session.id);
-             }
-        });
-        sessionCard.querySelector('button').addEventListener('click', () => {
-             window.previousView = 'pending';
-             loadChatSession(session.id);
-        });
+            // Event listener para abrir el chat
+            sessionCard.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') {
+                    window.previousView = 'pending';
+                    loadChatSession(session.id);
+                }
+            });
+            sessionCard.querySelector('button').addEventListener('click', () => {
+                window.previousView = 'pending';
+                loadChatSession(session.id);
+            });
 
-        pendingFoliosList.appendChild(sessionCard);
-    });
-}
-    // --- MODIFICAR la función `loadActiveSessions` original ---
-async function loadActiveSessions() {
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
-         console.warn("No auth token found for loading sessions.");
-         return;
+            pendingFoliosList.appendChild(sessionCard);
+        });
     }
-
-    const pendingTitle = document.querySelector('#pendingView h2');
-    if (pendingTitle) pendingTitle.textContent = 'Bandeja de Entrada - Sesiones de IA Activas';
-
-    pendingFoliosList.innerHTML = '<p class="text-gray-500 text-center italic mt-4 p-4">Cargando sesiones activas...</p>';
-    pendingCountBadge.classList.add('hidden');
-    if (pendingSearchInput) pendingSearchInput.value = ''; // Limpiar búsqueda al recargar
-
-    try {
-        const response = await fetch('http://localhost:3000/api/ai-sessions?status=active', {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-
-        if (!response.ok) {
-             if (response.status === 404) {
-                 pendingFoliosList.innerHTML = '<p class="text-orange-600 text-center italic mt-4 p-4">Funcionalidad de Sesiones IA no disponible o sin sesiones activas.</p>';
-             } else {
-                 const errorData = await response.json();
-                 throw new Error(errorData.message || `Error ${response.status} al cargar sesiones.`);
-             }
-             allActiveSessions = []; // Limpiar caché local
-             renderPendingSessions(allActiveSessions); // Renderizar lista vacía
-             return;
+    // --- MODIFICAR la función `loadActiveSessions` original ---
+    async function loadActiveSessions() {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            console.warn("No auth token found for loading sessions.");
+            return;
         }
 
-        allActiveSessions = await response.json(); // Guardar en la variable global
-        renderPendingSessions(allActiveSessions); // Mostrar todas inicialmente
+        const pendingTitle = document.querySelector('#pendingView h2');
+        if (pendingTitle) pendingTitle.textContent = 'Bandeja de Entrada - Sesiones de IA Activas';
 
-    } catch (error) {
-        console.error("Error en loadActiveSessions:", error);
-        pendingFoliosList.innerHTML = `<p class="text-red-600 text-center p-4">Error al cargar sesiones: ${error.message}</p>`;
-        allActiveSessions = []; // Limpiar caché
-        renderPendingSessions(allActiveSessions); // Renderizar lista vacía
+        pendingFoliosList.innerHTML = '<p class="text-gray-500 text-center italic mt-4 p-4">Cargando sesiones activas...</p>';
         pendingCountBadge.classList.add('hidden');
-    }
-}
+        if (pendingSearchInput) pendingSearchInput.value = ''; // Limpiar búsqueda al recargar
 
-// --- Event Listener para Búsqueda en Bandeja de Entrada ---
+        try {
+            const response = await fetch('http://localhost:3000/api/ai-sessions?status=active', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    pendingFoliosList.innerHTML = '<p class="text-orange-600 text-center italic mt-4 p-4">Funcionalidad de Sesiones IA no disponible o sin sesiones activas.</p>';
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Error ${response.status} al cargar sesiones.`);
+                }
+                allActiveSessions = []; // Limpiar caché local
+                renderPendingSessions(allActiveSessions); // Renderizar lista vacía
+                return;
+            }
+
+            allActiveSessions = await response.json(); // Guardar en la variable global
+            renderPendingSessions(allActiveSessions); // Mostrar todas inicialmente
+
+        } catch (error) {
+            console.error("Error en loadActiveSessions:", error);
+            pendingFoliosList.innerHTML = `<p class="text-red-600 text-center p-4">Error al cargar sesiones: ${error.message}</p>`;
+            allActiveSessions = []; // Limpiar caché
+            renderPendingSessions(allActiveSessions); // Renderizar lista vacía
+            pendingCountBadge.classList.add('hidden');
+        }
+    }
+
+    // --- Event Listener para Búsqueda en Bandeja de Entrada ---
     if (pendingSearchInput) {
         pendingSearchInput.addEventListener('input', () => {
             const searchTerm = pendingSearchInput.value.toLowerCase().trim();
@@ -2982,5 +2982,5 @@ async function loadActiveSessions() {
         });
     }
     // --- Fin Event Listener ---
-    
+
 }); // Fin de DOMContentLoaded
