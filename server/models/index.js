@@ -1,6 +1,6 @@
 const { sequelize } = require('../config/database');
-const User = require('./User');
-const Client = require('./Client');
+const User = require('./user');
+const Client = require('./client');
 const Folio = require('./Folio');
 const FolioEditHistory = require('./FolioEditHistory');
 const Commission = require('./Commission');
@@ -32,5 +32,5 @@ module.exports = {
   Folio,
   FolioEditHistory,
   Commission,
-  AISession 
+  AISession
 };
