@@ -1282,7 +1282,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // --- FIN NUEVO ---
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:3000/api/ai-sessions/${sessionId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const response = await fetch(`/api/ai-sessions/${sessionId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'No se pudo cargar la sesión de chat.'); }
             const session = await response.json();
             chatTitle.textContent = `Asistente - Sesión #${session.id}`;
@@ -1331,7 +1331,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:3000/api/ai-sessions/${currentSessionId}/chat`, {
+            const response = await fetch(`/api/ai-sessions/${currentSessionId}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                 body: JSON.stringify({ message: messageText })
@@ -1377,7 +1377,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loadingEl.classList.remove('hidden');
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:3000/api/ai-sessions/${currentSessionId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const response = await fetch(`/api/ai-sessions/${currentSessionId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) throw new Error('No se pudo cargar la sesión para edición manual.');
             const session = await response.json();
             const extracted = session.extractedData || {}; // --- NUEVO: Usar objeto vacío si no hay datos
@@ -1421,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // ===== INICIO DE LA CORRECCIÓN =====
                     // Usamos la URL absoluta para que coincida con tus otras llamadas
-                    const response = await fetch(`http://localhost:3000/api/ai-sessions/${currentSessionId}`, {
+                    const response = await fetch(`/api/ai-sessions/${currentSessionId}`, {
                         // ===== FIN DE LA CORRECCIÓN =====
                         method: 'DELETE',
                         headers: {
@@ -1465,7 +1465,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function loadFlavorAndFillingStats() {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch('http://localhost:3000/api/folios/statistics', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const response = await fetch('/api/folios/statistics', { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) throw new Error('No se pudieron cargar las estadísticas de sabores.');
             const stats = await response.json();
             renderStatsList('normalFlavorsList', stats.normal?.flavors); // --- NUEVO: Optional chaining
@@ -1492,7 +1492,7 @@ document.addEventListener('DOMContentLoaded', function () {
         productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">Cargando...</td></tr>`;
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:3000/api/folios/productivity?date=${date}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const response = await fetch(`/api/folios/productivity?date=${date}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'No se pudieron cargar los datos de productividad.'); }
             const stats = await response.json();
             productivityListBody.innerHTML = '';
@@ -1584,7 +1584,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isEditingExisting = editingId && !isCreatingFromAI;
 
         const method = isEditingExisting ? 'PUT' : 'POST'; // Siempre POST si es nuevo o desde IA
-        const url = isEditingExisting ? `http://localhost:3000/api/folios/${editingId}` : 'http://localhost:3000/api/folios';
+        const url = isEditingExisting ? `/api/folios/${editingId}` : '/api/folios';
 
         loadingEl.classList.remove('hidden');
         const authToken = localStorage.getItem('authToken');
@@ -1739,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 try {
                     // Llamamos a la ruta DELETE para descartar la sesión de la bandeja de entrada
-                    const deleteResponse = await fetch(`http://localhost:3000/api/ai-sessions/${sessionId}`, {
+                    const deleteResponse = await fetch(`/api/ai-sessions/${sessionId}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${authToken}` }
                     });
@@ -2657,7 +2657,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             try {
                 const authToken = localStorage.getItem('authToken');
-                const response = await fetch('http://localhost:3000/api/folios/analyze-image', { // Usa la ruta correcta
+                const response = await fetch('/api/folios/analyze-image', { // Usa la ruta correcta
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${authToken}` }, // No 'Content-Type' con FormData
                     body: formData
@@ -2741,7 +2741,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const authToken = localStorage.getItem('authToken');
-        const pdfUrl = `http://localhost:3000/api/folios/${folio.id}/pdf?token=${authToken}`;
+        const pdfUrl = `/api/folios/${folio.id}/pdf?token=${authToken}`;
 
         pdfViewerTitle.textContent = `Viendo Folio: ${folio.folioNumber || 'N/A'} (${currentFolioIndex + 1}/${currentFolioList.length})`;
         pdfFrame.src = pdfUrl;
@@ -2840,7 +2840,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const authToken = localStorage.getItem('authToken');
             // Asegurarse de que el token se pasa correctamente como query param
-            const url = `http://localhost:3000/api/folios/commission-report?date=${reportDate}&token=${authToken}`;
+            const url = `/api/folios/commission-report?date=${reportDate}&token=${authToken}`;
 
             console.log("Abriendo URL de reporte:", url); // Log para depuración
             window.open(url, '_blank'); // Abrir en nueva pestaña
@@ -2934,7 +2934,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (pendingSearchInput) pendingSearchInput.value = ''; // Limpiar búsqueda al recargar
 
         try {
-            const response = await fetch('http://localhost:3000/api/ai-sessions?status=active', {
+            const response = await fetch('/api/ai-sessions?status=active', {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
 
