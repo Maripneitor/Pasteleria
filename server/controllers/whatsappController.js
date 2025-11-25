@@ -82,7 +82,8 @@ exports.handleWebhook = async (req, res) => {
         const media = messageData.media;
         const buffer = Buffer.from(media.data, 'base64');
         const fileName = `whatsapp-${Date.now()}.${media.mimetype.split('/')[1]}`;
-        const uploadDir = path.join(__dirname, '../../public/uploads');
+        // CORRECCIÓN: Guardar en 'uploads' en la raíz, que es lo que sirve server.js
+        const uploadDir = path.join(__dirname, '../../uploads');
 
         // Asegurar que existe el directorio
         if (!fs.existsSync(uploadDir)) {

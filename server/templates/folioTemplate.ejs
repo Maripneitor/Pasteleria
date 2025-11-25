@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <style>
@@ -10,217 +11,467 @@
             color: #333;
             margin: 0;
         }
-        .page-break { page-break-before: always; }
-        .paid-watermark { 
-            position: fixed;
-            z-index: -1; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%) rotate(-45deg); 
-            font-size: 100px; font-weight: bold; color: rgba(40, 167, 69, 0.15);
+
+        .page-break {
+            page-break-before: always;
         }
-        .cancel-watermark { 
+
+        .paid-watermark {
             position: fixed;
-            z-index: -1; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%) rotate(-45deg); 
-            font-size: 100px; font-weight: bold; color: rgba(220, 53, 69, 0.15);
+            z-index: -1;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 100px;
+            font-weight: bold;
+            color: rgba(40, 167, 69, 0.15);
         }
-        .balance-watermark { 
+
+        .cancel-watermark {
             position: fixed;
-            z-index: -1; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%) rotate(-45deg); 
-            font-size: 100px; font-weight: bold; color: rgba(108, 117, 125, 0.35);
+            z-index: -1;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 100px;
+            font-weight: bold;
+            color: rgba(220, 53, 69, 0.15);
+        }
+
+        .balance-watermark {
+            position: fixed;
+            z-index: -1;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 100px;
+            font-weight: bold;
+            color: rgba(108, 117, 125, 0.35);
         }
 
         /* --- ENCABEZADO Y FOLIO --- */
         .header {
             display: flex;
-            justify-content: space-between; align-items: flex-start;
-            padding-bottom: 10px; border-bottom: 2px solid #f0f0f0;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
         }
-        .header-info { text-align: left; }
-        .logo { font-size: 20px; font-weight: bold; color: #d9534f; margin-bottom: 4px; }
-        .header-date { font-size: 11pt; font-weight: bold; }
-        .header-time { font-size: 10pt; color: #666; }
-        .folio-box { border-radius: 8px; padding: 8px 12px; text-align: right; min-width: 140px; }
-        .folio-label { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; opacity: 0.85; }
-        .folio-number { font-size: 24px; font-weight: 900; line-height: 1; }
+
+        .header-info {
+            text-align: left;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #d9534f;
+            margin-bottom: 4px;
+        }
+
+        .header-date {
+            font-size: 11pt;
+            font-weight: bold;
+        }
+
+        .header-time {
+            font-size: 10pt;
+            color: #666;
+        }
+
+        .folio-box {
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: right;
+            min-width: 140px;
+        }
+
+        .folio-label {
+            font-size: 10.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            opacity: 0.85;
+        }
+
+        .folio-number {
+            font-size: 24px;
+            font-weight: 900;
+            line-height: 1;
+        }
 
         /* --- CONTENEDOR DE SECCIONES --- */
         .grid-container {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* Tres columnas */
+            grid-template-columns: 1fr 1fr 1fr;
+            /* Tres columnas */
             gap: 10px;
             margin-top: 12px;
         }
-        .section { 
-            border: 1px solid #e9ecef;
-            border-radius: 8px; padding: 9px; 
-            margin-bottom: 10px; page-break-inside: avoid; 
-        }
-        .full-width { grid-column: 1 / -1; }
 
-        .section-title { font-size: 10pt; font-weight: bold; color: #d9534f; text-transform: uppercase; margin-bottom: 7px;
-            border-bottom: 1px solid #f0f0f0; padding-bottom: 4px; }
-        .data-item { margin-bottom: 4px; line-height: 1.35; }
-        .data-label { font-weight: bold; color: #495057; }
-        .account-item { display: flex; justify-content: space-between; margin-bottom: 3px; }
-        .account-total { font-weight: bold; border-top: 1px solid #dee2e6; padding-top: 4px; margin-top: 4px; }
-        .account-balance { font-size: 1.1em; }
+        .section {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 9px;
+            margin-bottom: 10px;
+            page-break-inside: avoid;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .section-title {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #d9534f;
+            text-transform: uppercase;
+            margin-bottom: 7px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 4px;
+        }
+
+        .data-item {
+            margin-bottom: 4px;
+            line-height: 1.35;
+        }
+
+        .data-label {
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .account-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .account-total {
+            font-weight: bold;
+            border-top: 1px solid #dee2e6;
+            padding-top: 4px;
+            margin-top: 4px;
+        }
+
+        .account-balance {
+            font-size: 1.1em;
+        }
 
         /* --- TARJETAS DE ALERTA --- */
-        .card-alert { border-left-width: 5px; padding: 10px 14px; }
-        .card-alert-header { margin-bottom: 8px; font-size: 1.1em; display: flex; align-items: center; font-weight: bold; }
-        .card-alert-header .icon { font-size: 1.6em; margin-right: 10px; line-height: 1; }
-        .detail-item-alert { margin-bottom: 10px; }
-        .detail-label-alert { font-size: 0.8em; font-weight: bold; color: #4B5563; display: block; margin-bottom: 3px; text-transform: uppercase; }
-        .detail-value-alert { font-size: 1.1em; font-weight: normal; color: #111827; word-wrap: break-word; }
-        .detail-value-alert ul { margin: 0; padding-left: 18px; font-size: 0.9em; }
-        .card-creative { border-color: #F97316; }
-        .card-addons { border-color: #3B82F6; }
-        
+        .card-alert {
+            border-left-width: 5px;
+            padding: 10px 14px;
+        }
+
+        .card-alert-header {
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        /* .card-alert-header .icon { font-size: 1.6em; margin-right: 10px; line-height: 1; }  <-- REMOVIDO PARA EVITAR CUADROS BLANCOS */
+        .detail-item-alert {
+            margin-bottom: 10px;
+        }
+
+        .detail-label-alert {
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #4B5563;
+            display: block;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+
+        .detail-value-alert {
+            font-size: 1.1em;
+            font-weight: normal;
+            color: #111827;
+            word-wrap: break-word;
+        }
+
+        .detail-value-alert ul {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 0.9em;
+        }
+
+        .card-creative {
+            border-color: #F97316;
+        }
+
+        .card-addons {
+            border-color: #3B82F6;
+        }
+
         /* --- PÁGINA 2 --- */
-        .table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-        .table th, .table td { border: 1px solid #dee2e6; padding: 5px; text-align: left; }
-        .table th { background-color: #f8f9fa; }
-        .image-container { text-align: center; margin-bottom: 15px; page-break-inside: avoid; }
-        .image-container img { max-width: 85%; max-height: 38vh; object-fit: contain; border: 1px solid #e9ecef; border-radius: 4px; }
-        .image-comment { text-align: center; margin-top: 5px; font-size: 9pt; color: #555; }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+        }
+
+        .table th,
+        .table td {
+            border: 1px solid #dee2e6;
+            padding: 5px;
+            text-align: left;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+        }
+
+        .image-container {
+            text-align: center;
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+
+        .image-container img {
+            max-width: 85%;
+            max-height: 38vh;
+            object-fit: contain;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+        }
+
+        .image-comment {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 9pt;
+            color: #555;
+        }
     </style>
 </head>
+
 <body>
     <div>
-        <% if (folio.isPaid) { %><div class="paid-watermark">PAGADO</div><% } %>
-        <% if (folio.status === 'Cancelado') { %><div class="cancel-watermark">CANCELADO</div><% } %>
-        <% if (folio.balance > 0 && folio.status !== 'Cancelado' && !folio.isPaid) { %><div class="balance-watermark">RESTA</div><% } %>
-
-        <div class="header">
-            <div class="header-info">
-                <div class="logo">Pastelería La Fiesta</div>
-                <div class="header-date"><%= folio.formattedDeliveryDate %></div>
-                <div class="header-time"><b>Hora: <%= folio.formattedDeliveryTime %></b></div>
-            </div>
-            <div class="folio-box" style="background-color: <%= folio.dayColor %>;">
-                <div class="folio-label" style="color: <%= folio.textColor %>;">Folio</div>
-                <div class="folio-number" style="color: <%= folio.textColor %>;"><%= folio.folioNumber %></div>
-            </div>
-        </div>
-
-        <div class="grid-container">
-            <div class="section">
-                <div class="section-title">Cliente</div>
-                <div class="data-item"><span class="data-label">Nombre:</span> <%= folio.client.name %></div>
-                <div class="data-item"><span class="data-label">Teléfono:</span> <%= folio.client.phone %></div>
-                <% if (folio.client.phone2) { %>
-                    <div class="data-item"><span class="data-label">Tel. Adicional:</span> <%= folio.client.phone2 %></div>
-                <% } %>
-                <div class="data-item"><span class="data-label">Entrega:</span> <%= folio.deliveryLocation %></div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Detalles del Pedido</div>
-                <div class="data-item"><span class="data-label">Personas:</span> <%= folio.persons %></div>
-                <div class="data-item"><span class="data-label">Forma:</span> <%= folio.shape %></div>
-                <% if (folio.folioType === 'Normal' || (folio.folioType === 'Base/Especial' && !folio.tiers)) { %>
-                    <div class="data-item"><span class="data-label">Sabor(es):</span> <%= folio.cakeFlavor || 'N/A' %></div>
-                    <div class="data-item"><span class="data-label">Relleno(s):</span> <%= folio.filling || 'N/A' %></div>
-                <% } %>
-                <% if (folio.hasExtraHeight) { %>
-                    <div class="data-item"><span class="data-label">Altura:</span> Sí, lleva altura extra.</div>
-                <% } %>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Cuenta</div>
-                <% 
-                let additionalCost = (folio.additional && Array.isArray(folio.additional)) ? folio.additional.reduce((sum, item) => sum + parseFloat(item.price || 0), 0) : 0;
-                let mainCakeCost = parseFloat(folio.total) - parseFloat(folio.deliveryCost) - additionalCost;
-                %>
-                <div class="account-item"><span class="data-label">Pastel(es):</span> <span>$<%= mainCakeCost.toFixed(2) %></span></div>
-                <% if (additionalCost > 0) { %><div class="account-item"><span class="data-label">Adicionales:</span> <span>$<%= additionalCost.toFixed(2) %></span></div><% } %>
-                <div class="account-item"><span class="data-label">Envío:</span> <span>$<%= parseFloat(folio.deliveryCost).toFixed(2) %></span></div>
-                <div class="account-item account-total"><span class="data-label">Total:</span> <span>$<%= parseFloat(folio.total).toFixed(2) %></span></div>
-                <div class="account-item"><span class="data-label">Anticipo:</span> <span>$<%= parseFloat(folio.advancePayment).toFixed(2) %></span></div>
-                <div class="account-item account-total account-balance"><span class="data-label">Resta:</span> <span>$<%= parseFloat(folio.balance).toFixed(2) %></span></div>
-            </div>
-            
-            <% if (folio.designDescription || (folio.dedication && folio.dedication !== 'N/A')) { %>
-            <div class="section card-alert card-creative full-width">
-                <div class="card-alert-header"><span class="icon">🎨</span> ¡ATENCIÓN! DETALLES CREATIVOS</div>
-                <% if (folio.designDescription) { %>
-                <div class="detail-item-alert">
-                    <label class="detail-label-alert">Decorado:</label>
-                    <div class="detail-value-alert"><%= folio.designDescription %></div>
-                </div>
-                <% } %>
-                <% if (folio.dedication && folio.dedication !== 'N/A') { %>
-                <div class="detail-item-alert">
-                    <label class="detail-label-alert">Dedicatoria:</label>
-                    <div class="detail-value-alert"><%= folio.dedication %></div>
-                </div>
-                <% } %>
-            </div>
+        <% if (folio.isPaid) { %>
+            <div class="paid-watermark">PAGADO</div>
             <% } %>
+                <% if (folio.status==='Cancelado' ) { %>
+                    <div class="cancel-watermark">CANCELADO</div>
+                    <% } %>
+                        <% if (folio.balance> 0 && folio.status !== 'Cancelado' && !folio.isPaid) { %><div
+                                class="balance-watermark">RESTA</div>
+                            <% } %>
 
-            <% if (folio.complements && Array.isArray(folio.complements) && folio.complements.length > 0) { %>
-                <% folio.complements.forEach(function(complement, index) { %>
-                    <div class="section full-width">
-                        <div class="section-title">Pastel Complementario <%= folio.complements.length > 1 ? (index + 1) : '' %></div>
-                        <div class="data-item"><span class="data-label">Personas:</span> <%= complement.persons %></div>
-                        <div class="data-item"><span class="data-label">Forma:</span> <%= complement.shape || 'N/A' %></div>
-                        <div class="data-item"><span class="data-label">Sabor(es):</span> <%= complement.flavor %></div>
-                        <div class="data-item"><span class="data-label">Relleno(s):</span> <%= complement.filling || 'N/A' %></div>
-                        <div class="data-item"><span class="data-label">Descripción:</span> <%= complement.description || 'N/A' %></div>
-                    </div>
-                <% }); %>
-            <% } %>
-            
-            <% 
-            const hasAdditionals = folio.additional && Array.isArray(folio.additional) && folio.additional.length > 0;
-            const hasAccessories = folio.accessories && folio.accessories !== 'N/A';
-            if (hasAdditionals || hasAccessories) { 
-            %>
-            <div class="section card-alert card-addons full-width">
-                <div class="card-alert-header"><span class="icon">🧩</span> ¡REVISAR! COMPLEMENTOS FÍSICOS</div>
-                <% if (hasAdditionals) { %>
-                <div class="detail-item-alert">
-                    <label class="detail-label-alert">Adicionales:</label>
-                    <div class="detail-value-alert">
-                        <ul>
-                            <% folio.additional.forEach(function(item) { %>
-                                <li><%= item.name %> ($<%= parseFloat(item.price).toFixed(2) %>)</li>
-                            <% }); %>
-                        </ul>
-                    </div>
-                </div>
-                <% } %>
-                <% if (hasAccessories) { %>
-                <div class="detail-item-alert">
-                    <label class="detail-label-alert">Accesorios:</label>
-                    <div class="detail-value-alert"><%= folio.accessories %></div>
-                </div>
-                <% } %>
-            </div>
-            <% } %>
-        </div>
+                                <div class="header">
+                                    <div class="header-info">
+                                        <div class="logo">Pastelería La Fiesta</div>
+                                        <div class="header-date">
+                                            <%= folio.formattedDeliveryDate %>
+                                        </div>
+                                        <div class="header-time"><b>Hora: <%= folio.formattedDeliveryTime %></b></div>
+                                    </div>
+                                    <div class="folio-box" style="background-color: <%= folio.dayColor %>;">
+                                        <div class="folio-label" style="color: <%= folio.textColor %>;">Folio</div>
+                                        <div class="folio-number" style="color: <%= folio.textColor %>;">
+                                            <%= folio.folioNumber %>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid-container">
+                                    <div class="section">
+                                        <div class="section-title">Cliente</div>
+                                        <div class="data-item"><span class="data-label">Nombre:</span>
+                                            <%= folio.client.name %>
+                                        </div>
+                                        <div class="data-item"><span class="data-label">Teléfono:</span>
+                                            <%= folio.client.phone %>
+                                        </div>
+                                        <% if (folio.client.phone2) { %>
+                                            <div class="data-item"><span class="data-label">Tel. Adicional:</span>
+                                                <%= folio.client.phone2 %>
+                                            </div>
+                                            <% } %>
+                                                <div class="data-item"><span class="data-label">Entrega:</span>
+                                                    <%= folio.deliveryLocation %>
+                                                </div>
+                                    </div>
+
+                                    <div class="section">
+                                        <div class="section-title">Detalles del Pedido</div>
+                                        <div class="data-item"><span class="data-label">Personas:</span>
+                                            <%= folio.persons %>
+                                        </div>
+                                        <div class="data-item"><span class="data-label">Forma:</span>
+                                            <%= folio.shape %>
+                                        </div>
+                                        <% if (folio.folioType==='Normal' || (folio.folioType==='Base/Especial' &&
+                                            !folio.tiers)) { %>
+                                            <div class="data-item"><span class="data-label">Sabor(es):</span>
+                                                <%= folio.cakeFlavor || 'N/A' %>
+                                            </div>
+                                            <!-- CORRECCIÓN: Manejo robusto de 'filling' para evitar [object Object] -->
+                                            <div class="data-item">
+                                                <span class="data-label">Relleno(s):</span>
+                                                <%= (Array.isArray(folio.filling) ? folio.filling.map(f=> f.name ||
+                                                    f).join(', ') : (folio.filling && folio.filling.name ?
+                                                    folio.filling.name : folio.filling)) || 'N/A' %>
+                                            </div>
+                                            <% } %>
+                                                <% if (folio.hasExtraHeight) { %>
+                                                    <div class="data-item"><span class="data-label">Altura:</span> Sí,
+                                                        lleva altura extra.</div>
+                                                    <% } %>
+                                    </div>
+
+                                    <div class="section">
+                                        <div class="section-title">Cuenta</div>
+                                        <% let additionalCost=(folio.additional && Array.isArray(folio.additional)) ?
+                                            folio.additional.reduce((sum, item)=> sum + parseFloat(item.price || 0), 0)
+                                            : 0;
+                                            let mainCakeCost = parseFloat(folio.total) - parseFloat(folio.deliveryCost)
+                                            - additionalCost;
+                                            %>
+                                            <div class="account-item"><span class="data-label">Pastel(es):</span>
+                                                <span>$<%= mainCakeCost.toFixed(2) %></span></div>
+                                            <% if (additionalCost> 0) { %><div class="account-item"><span
+                                                        class="data-label">Adicionales:</span> <span>$<%=
+                                                            additionalCost.toFixed(2) %></span></div>
+                                                <% } %>
+                                                    <div class="account-item"><span class="data-label">Envío:</span>
+                                                        <span>$<%= parseFloat(folio.deliveryCost).toFixed(2) %></span>
+                                                    </div>
+                                                    <div class="account-item account-total"><span
+                                                            class="data-label">Total:</span> <span>$<%=
+                                                                parseFloat(folio.total).toFixed(2) %></span></div>
+                                                    <div class="account-item"><span class="data-label">Anticipo:</span>
+                                                        <span>$<%= parseFloat(folio.advancePayment).toFixed(2) %></span>
+                                                    </div>
+                                                    <div class="account-item account-total account-balance"><span
+                                                            class="data-label">Resta:</span> <span>$<%=
+                                                                parseFloat(folio.balance).toFixed(2) %></span></div>
+                                    </div>
+
+                                    <% if (folio.designDescription || (folio.dedication && folio.dedication !=='N/A' ))
+                                        { %>
+                                        <div class="section card-alert card-creative full-width">
+                                            <!-- CORRECCIÓN: Eliminado emoji para evitar cuadros blancos -->
+                                            <div class="card-alert-header">¡ATENCIÓN! DETALLES CREATIVOS</div>
+                                            <% if (folio.designDescription) { %>
+                                                <div class="detail-item-alert">
+                                                    <label class="detail-label-alert">Decorado:</label>
+                                                    <div class="detail-value-alert">
+                                                        <%= folio.designDescription %>
+                                                    </div>
+                                                </div>
+                                                <% } %>
+                                                    <% if (folio.dedication && folio.dedication !=='N/A' ) { %>
+                                                        <div class="detail-item-alert">
+                                                            <label class="detail-label-alert">Dedicatoria:</label>
+                                                            <div class="detail-value-alert">
+                                                                <%= folio.dedication %>
+                                                            </div>
+                                                        </div>
+                                                        <% } %>
+                                        </div>
+                                        <% } %>
+
+                                            <% if (folio.complements && Array.isArray(folio.complements) &&
+                                                folio.complements.length> 0) { %>
+                                                <% folio.complements.forEach(function(complement, index) { %>
+                                                    <div class="section full-width">
+                                                        <div class="section-title">Pastel Complementario <%=
+                                                                folio.complements.length> 1 ? (index + 1) : '' %></div>
+                                                        <div class="data-item"><span class="data-label">Personas:</span>
+                                                            <%= complement.persons %>
+                                                        </div>
+                                                        <div class="data-item"><span class="data-label">Forma:</span>
+                                                            <%= complement.shape || 'N/A' %>
+                                                        </div>
+                                                        <div class="data-item"><span
+                                                                class="data-label">Sabor(es):</span>
+                                                            <%= complement.flavor %>
+                                                        </div>
+                                                        <div class="data-item"><span
+                                                                class="data-label">Relleno(s):</span>
+                                                            <%= complement.filling || 'N/A' %>
+                                                        </div>
+                                                        <div class="data-item"><span
+                                                                class="data-label">Descripción:</span>
+                                                            <%= complement.description || 'N/A' %>
+                                                        </div>
+                                                    </div>
+                                                    <% }); %>
+                                                        <% } %>
+
+                                                            <% const hasAdditionals=folio.additional &&
+                                                                Array.isArray(folio.additional) &&
+                                                                folio.additional.length> 0;
+                                                                const hasAccessories = folio.accessories &&
+                                                                folio.accessories !== 'N/A';
+                                                                if (hasAdditionals || hasAccessories) {
+                                                                %>
+                                                                <div class="section card-alert card-addons full-width">
+                                                                    <!-- CORRECCIÓN: Eliminado emoji para evitar cuadros blancos -->
+                                                                    <div class="card-alert-header">¡REVISAR!
+                                                                        COMPLEMENTOS FÍSICOS</div>
+                                                                    <% if (hasAdditionals) { %>
+                                                                        <div class="detail-item-alert">
+                                                                            <label
+                                                                                class="detail-label-alert">Adicionales:</label>
+                                                                            <div class="detail-value-alert">
+                                                                                <ul>
+                                                                                    <% folio.additional.forEach(function(item)
+                                                                                        { %>
+                                                                                        <li>
+                                                                                            <%= item.name %> ($<%=
+                                                                                                    parseFloat(item.price).toFixed(2)
+                                                                                                    %>)
+                                                                                        </li>
+                                                                                        <% }); %>
+                                                                                </ul>
+                                                                            </div>
+                                                                        </div>
+                                                                        <% } %>
+                                                                            <% if (hasAccessories) { %>
+                                                                                <div class="detail-item-alert">
+                                                                                    <label
+                                                                                        class="detail-label-alert">Accesorios:</label>
+                                                                                    <div class="detail-value-alert">
+                                                                                        <%= folio.accessories %>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <% } %>
+                                                                </div>
+                                                                <% } %>
+                                </div>
     </div>
 
-    <% 
-    const hasTiers = (folio.folioType === 'Base/Especial' && folio.tiers && Array.isArray(folio.tiers) && folio.tiers.length > 0);
-    const hasImages = (folio.imageUrls && folio.imageUrls.length > 0);
-    if (hasTiers || hasImages) { 
-    %>
-    <div class="page-break"></div>
-    <div>
-        <% if (hasTiers) { %>
-        <div class="section">
-            <div class="section-title">Estructura por Pisos</div>
-            <table class="table">
-                <thead><tr><th>Personas</th><th>Panes</th><th>Rellenos</th><th>Notas/Forma</th></tr></thead>
-                <tbody>
-                    <% folio.tiers.forEach(function(tier) { %>
-                    <tr>
-                        <td><%= tier.persons || '' %></td>
-                        <td><%= (tier.panes || []).join(', ') %></td>
-                        <td><%= (tier.rellenos || []).join('; ') %></td>
+    <% const hasTiers=(folio.folioType==='Base/Especial' && folio.tiers && Array.isArray(folio.tiers) &&
+        folio.tiers.length> 0);
+        const hasImages = (folio.imageUrls && folio.imageUrls.length > 0);
+        if (hasTiers || hasImages) {
+        %>
+        <div class="page-break"></div>
+        <div>
+            <% if (hasTiers) { %>
+                <div class="section">
+                    <div class="section-title">Estructura por Pisos</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Personas</th>
+                                <th>Panes</th>
+                                <th>Rellenos</th>
+                                <th>Notas/Forma</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% folio.tiers.forEach(function(tier) { %>
+                                <tr>
+                                    <td>
+                                        <%= tier.persons || '' %>
+                                    </td>
+                                    <td>
+                                        <%= (tier.panes || []).join(', ') %></td>
+                        <td><%= (tier.rellenos || []).join(' ; ') %></td>
                         <td><%= tier.notas || '' %></td>
                     </tr>
                     <% }); %>
@@ -234,15 +485,19 @@
             <div class="section-title">Imágenes de Referencia</div>
             <% folio.imageUrls.forEach(function(imageUrl, index) { %>
                 <div class="image-container">
-                    <img src="/<%= imageUrl.replace(/\\/g, '/') %>">
-                    <% if (folio.imageComments && folio.imageComments[index]) { %>
-                        <p class="image-comment"><%= folio.imageComments[index] %></p>
-                    <% } %>
+                    <!-- CORRECCIÓN: Asegurar ruta relativa correcta si es necesario -->
+                    <img src="/<%= imageUrl.replace(/\\/g, ' /') %>">
+                                            <% if (folio.imageComments && folio.imageComments[index]) { %>
+                                                <p class="image-comment">
+                                                    <%= folio.imageComments[index] %>
+                                                </p>
+                                                <% } %>
                 </div>
-            <% }); %>
+                <% }); %>
         </div>
         <% } %>
-    </div>
-    <% } %>
+            </div>
+            <% } %>
 </body>
+
 </html>
