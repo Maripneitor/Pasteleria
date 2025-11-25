@@ -1,21 +1,12 @@
-async function getInitialExtraction(conversationText) {
-    const today = new Date().toLocaleDateString('es-MX', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
 
-    // ===== PROMPT ACTUALIZADO PARA DETECCIÓN Y ESTRUCTURACIÓN DE BASE/ESPECIAL =====
-    const prompt = `
-        Eres un asistente experto para una pastelería llamada "La Fiesta". Tu tarea es analizar la siguiente conversación de WhatsApp
-        y extraer la información clave para generar un folio de pedido en formato JSON. La fecha de hoy es ${today}.
+        ** Instrucciones Generales:**
+    1. ** Analiza la conversación:** Lee todo el texto para entender los detalles del pedido.
+        2. ** Interpreta fechas y horas:** Convierte fechas relativas(ej. "mañana", "el próximo lunes") a formato AAAA - MM - DD.Convierte horas a formato HH: MM:SS de 24 horas.
+        3. ** Formato de Salida:** Responde únicamente con un objeto JSON válido, sin ningún texto adicional antes o después.
 
-        **Instrucciones Generales:**
-        1.  **Analiza la conversación:** Lee todo el texto para entender los detalles del pedido.
-        2.  **Interpreta fechas y horas:** Convierte fechas relativas (ej. "mañana", "el próximo lunes") a formato AAAA-MM-DD. Convierte horas a formato HH:MM:SS de 24 horas.
-        3.  **Formato de Salida:** Responde únicamente con un objeto JSON válido, sin ningún texto adicional antes o después.
-
-        **Instrucciones Específicas para Tipo de Folio y Estructura:**
-        1.  **Detecta el Tipo de Folio:**
-            * Si la conversación menciona explícitamente "pisos", "bases", "pastel especial", "de base", o describe claramente diferentes secciones/pisos del pastel con distintas características (personas, panes, rellenos por sección), establece \`folioType\` como \`"Base/Especial"\`.
+        ** Instrucciones Específicas para Tipo de Folio y Estructura:**
+    1. ** Detecta el Tipo de Folio:**
+            * Si la conversación menciona explícitamente "pisos", "bases", "pastel especial", "de base", o describe claramente diferentes secciones / pisos del pastel con distintas características(personas, panes, rellenos por sección), establece \`folioType\` como \`"Base/Especial"\`.
             * En cualquier otro caso, establece \`folioType\` como \`"Normal"\`.
         2.  **Extrae Datos según el Tipo:**
             * **Si es "Normal":**
@@ -78,93 +69,93 @@ async function getInitialExtraction(conversationText) {
         ---
     `;
 
-    try {
-        console.log("🤖 Iniciando extracción inicial con IA...");
-        const client = getOpenAIClient();
-        const response = await client.chat.completions.create({
-            model: "gpt-4o", // Usamos gpt-4o por su mejor capacidad para seguir instrucciones complejas y estructurar JSON
-            messages: [{ role: "system", content: prompt }],
-            response_format: { type: "json_object" }, // Forzar salida JSON
-        });
+try {
+    console.log("🤖 Iniciando extracción inicial con IA...");
+    const client = getOpenAIClient();
+    const response = await client.chat.completions.create({
+        model: "gpt-4o", // Usamos gpt-4o por su mejor capacidad para seguir instrucciones complejas y estructurar JSON
+        messages: [{ role: "system", content: prompt }],
+        response_format: { type: "json_object" }, // Forzar salida JSON
+    });
 
-        const extractedJsonString = response.choices[0].message.content;
-        console.log("🤖 Datos extraídos por la IA (Extracción Inicial - Raw):", extractedJsonString);
+    const extractedJsonString = response.choices[0].message.content;
+    console.log("🤖 Datos extraídos por la IA (Extracción Inicial - Raw):", extractedJsonString);
 
-        // Validación básica antes de parsear
-        if (!extractedJsonString || !extractedJsonString.trim().startsWith('{') || !extractedJsonString.trim().endsWith('}')) {
-            console.error("Respuesta inválida de OpenAI:", extractedJsonString);
-            throw new Error("La respuesta de la IA no fue un objeto JSON válido.");
-        }
-
-        let extractedData;
-        try {
-            extractedData = JSON.parse(extractedJsonString);
-        } catch (parseError) {
-            console.error("Error al parsear JSON de OpenAI:", parseError, "JSON recibido:", extractedJsonString);
-            throw new Error(`Error al interpretar la respuesta de la IA: ${parseError.message}`);
-        }
-
-
-        // --- Validaciones y Aseguramiento de Tipos ---
-        const requiredKeys = ['folioType', 'persons', 'deliveryDate']; // Campos mínimos esperados
-        for (const key of requiredKeys) {
-            if (!(key in extractedData) || extractedData[key] === null || extractedData[key] === undefined) {
-                console.warn(`Advertencia: La IA no extrajo el campo obligatorio '${key}'. Se intentará continuar, pero puede causar errores.`);
-                // Podrías establecer un valor por defecto o lanzar un error más estricto si lo prefieres
-                // extractedData[key] = null; // Ejemplo: asegurar que exista aunque sea nulo
-            }
-        }
-
-        // Asegurar que 'persons' sea un número
-        if (extractedData.persons && typeof extractedData.persons !== 'number') {
-            const parsedPersons = parseInt(extractedData.persons, 10);
-            extractedData.persons = !isNaN(parsedPersons) ? parsedPersons : null;
-        }
-
-        // Asegurar que folioType sea uno de los valores permitidos, si no, default a Normal
-        if (!['Normal', 'Base/Especial'].includes(extractedData.folioType)) {
-            console.warn(`folioType inválido ('${extractedData.folioType}') recibido de la IA. Se usará 'Normal' por defecto.`);
-            extractedData.folioType = 'Normal';
-        }
-
-        // Limpieza condicional basada en folioType (asegurar consistencia)
-        if (extractedData.folioType === 'Base/Especial') {
-            extractedData.cakeFlavor = null; // O []
-            extractedData.filling = null;    // O []
-            if (!Array.isArray(extractedData.tiers)) {
-                console.warn("folioType es Base/Especial pero 'tiers' no es un array. Se establecerá a [].");
-                extractedData.tiers = [];
-            }
-        } else { // Si es 'Normal'
-            extractedData.tiers = null; // O []
-            if (!Array.isArray(extractedData.cakeFlavor)) extractedData.cakeFlavor = [];
-            if (!Array.isArray(extractedData.filling)) extractedData.filling = [];
-        }
-
-        // --- INICIO CORRECCIÓN: Asegurar que los arrays existan ---
-        if (!Array.isArray(extractedData.complements)) extractedData.complements = [];
-        if (!Array.isArray(extractedData.additional)) extractedData.additional = [];
-        // --- FIN CORRECCIÓN ---
-
-
-        // Convertir campos numéricos que puedan venir como string
-        ['deliveryCost', 'total', 'advancePayment'].forEach(key => {
-            if (extractedData[key] && typeof extractedData[key] === 'string') {
-                const num = parseFloat(extractedData[key]);
-                extractedData[key] = isNaN(num) ? null : num;
-            } else if (extractedData[key] === undefined) {
-                extractedData[key] = null;
-            }
-        });
-
-        console.log("✅ Datos extraídos y procesados:", JSON.stringify(extractedData, null, 2));
-        return extractedData;
-
-    } catch (error) {
-        console.error("❌ Error en getInitialExtraction:", error);
-        // Devolver un objeto de error estructurado podría ser útil para el controlador
-        throw new Error(`Error durante la extracción inicial con IA: ${error.message}`);
+    // Validación básica antes de parsear
+    if (!extractedJsonString || !extractedJsonString.trim().startsWith('{') || !extractedJsonString.trim().endsWith('}')) {
+        console.error("Respuesta inválida de OpenAI:", extractedJsonString);
+        throw new Error("La respuesta de la IA no fue un objeto JSON válido.");
     }
+
+    let extractedData;
+    try {
+        extractedData = JSON.parse(extractedJsonString);
+    } catch (parseError) {
+        console.error("Error al parsear JSON de OpenAI:", parseError, "JSON recibido:", extractedJsonString);
+        throw new Error(`Error al interpretar la respuesta de la IA: ${parseError.message}`);
+    }
+
+
+    // --- Validaciones y Aseguramiento de Tipos ---
+    const requiredKeys = ['folioType', 'persons', 'deliveryDate']; // Campos mínimos esperados
+    for (const key of requiredKeys) {
+        if (!(key in extractedData) || extractedData[key] === null || extractedData[key] === undefined) {
+            console.warn(`Advertencia: La IA no extrajo el campo obligatorio '${key}'. Se intentará continuar, pero puede causar errores.`);
+            // Podrías establecer un valor por defecto o lanzar un error más estricto si lo prefieres
+            // extractedData[key] = null; // Ejemplo: asegurar que exista aunque sea nulo
+        }
+    }
+
+    // Asegurar que 'persons' sea un número
+    if (extractedData.persons && typeof extractedData.persons !== 'number') {
+        const parsedPersons = parseInt(extractedData.persons, 10);
+        extractedData.persons = !isNaN(parsedPersons) ? parsedPersons : null;
+    }
+
+    // Asegurar que folioType sea uno de los valores permitidos, si no, default a Normal
+    if (!['Normal', 'Base/Especial'].includes(extractedData.folioType)) {
+        console.warn(`folioType inválido ('${extractedData.folioType}') recibido de la IA. Se usará 'Normal' por defecto.`);
+        extractedData.folioType = 'Normal';
+    }
+
+    // Limpieza condicional basada en folioType (asegurar consistencia)
+    if (extractedData.folioType === 'Base/Especial') {
+        extractedData.cakeFlavor = null; // O []
+        extractedData.filling = null;    // O []
+        if (!Array.isArray(extractedData.tiers)) {
+            console.warn("folioType es Base/Especial pero 'tiers' no es un array. Se establecerá a [].");
+            extractedData.tiers = [];
+        }
+    } else { // Si es 'Normal'
+        extractedData.tiers = null; // O []
+        if (!Array.isArray(extractedData.cakeFlavor)) extractedData.cakeFlavor = [];
+        if (!Array.isArray(extractedData.filling)) extractedData.filling = [];
+    }
+
+    // --- INICIO CORRECCIÓN: Asegurar que los arrays existan ---
+    if (!Array.isArray(extractedData.complements)) extractedData.complements = [];
+    if (!Array.isArray(extractedData.additional)) extractedData.additional = [];
+    // --- FIN CORRECCIÓN ---
+
+
+    // Convertir campos numéricos que puedan venir como string
+    ['deliveryCost', 'total', 'advancePayment'].forEach(key => {
+        if (extractedData[key] && typeof extractedData[key] === 'string') {
+            const num = parseFloat(extractedData[key]);
+            extractedData[key] = isNaN(num) ? null : num;
+        } else if (extractedData[key] === undefined) {
+            extractedData[key] = null;
+        }
+    });
+
+    console.log("✅ Datos extraídos y procesados:", JSON.stringify(extractedData, null, 2));
+    return extractedData;
+
+} catch (error) {
+    console.error("❌ Error en getInitialExtraction:", error);
+    // Devolver un objeto de error estructurado podría ser útil para el controlador
+    throw new Error(`Error durante la extracción inicial con IA: ${error.message}`);
+}
 }
 
 module.exports = { getInitialExtraction };
