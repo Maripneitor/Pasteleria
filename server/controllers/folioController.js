@@ -604,14 +604,31 @@ exports.generateFolioPdf = async (req, res) => {
         folioDataForPdf.responsibleUser = folio.responsibleUser ? { username: folio.responsibleUser.username } : { username: 'Desconocido' };
         folioDataForPdf.client = folio.client ? folio.client.toJSON() : { name: 'N/A', phone: 'N/A', phone2: null };
 
-        // --- CORRECCIÓN: Rutas absolutas para imágenes en PDF ---
+        // --- CORRECCIÓN FINAL: Convertir imágenes a Base64 para incrustar ---
         if (folioDataForPdf.imageUrls && Array.isArray(folioDataForPdf.imageUrls)) {
-            folioDataForPdf.imageUrls = folioDataForPdf.imageUrls.map(url => {
-                const relativePath = url.startsWith('/') ? url.slice(1) : url;
-                const absolutePath = path.resolve(__dirname, '..', '..', relativePath);
-                return `file://${absolutePath.replace(/\\/g, '/')}`;
-            });
-            console.log('📸 [PDF DEBUG] Imágenes procesadas para PDF:', folioDataForPdf.imageUrls);
+            const base64Images = await Promise.all(folioDataForPdf.imageUrls.map(async (url) => {
+                try {
+                    // 1. Obtener ruta absoluta del archivo
+                    const relativePath = url.startsWith('/') ? url.slice(1) : url;
+                    const absolutePath = path.resolve(__dirname, '..', '..', relativePath);
+
+                    // 2. Leer el archivo del disco
+                    const imageBuffer = await fs.readFile(absolutePath);
+
+                    // 3. Detectar tipo (PNG o JPEG)
+                    const mimeType = path.extname(absolutePath).toLowerCase() === '.png' ? 'image/png' : 'image/jpeg';
+
+                    // 4. Retornar cadena Base64 lista para el HTML
+                    return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+                } catch (err) {
+                    console.error(`❌ Error leyendo imagen para PDF (${url}):`, err.message);
+                    return null;
+                }
+            }));
+
+            // Filtrar imágenes que fallaron (null) y actualizar el array
+            folioDataForPdf.imageUrls = base64Images.filter(img => img !== null);
+            console.log(`📸 [PDF DEBUG] ${folioDataForPdf.imageUrls.length} imágenes convertidas a Base64.`);
         } else {
             console.log('ℹ️ [PDF DEBUG] El folio no tiene imágenes para el PDF.');
         }
