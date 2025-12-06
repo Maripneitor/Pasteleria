@@ -1820,7 +1820,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const wrapper = document.createElement('div');
             wrapper.className = 'relative border rounded-md overflow-hidden shadow'; // Estilo
             wrapper.innerHTML = `
-                <img src="http://localhost:3000/${imgData.url.replace(/\\/g, '/')}" alt="Imagen existente ${index + 1}" class="block w-full h-32 object-cover">
+                <img src="/${imgData.url.replace(/\\/g, '/')}" alt="Imagen existente ${index + 1}" class="block w-full h-32 object-cover">
                 <button type="button" class="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold delete-image-btn existing" data-index="${index}">&times;</button>
                 <textarea placeholder="Comentario..." class="w-full text-xs p-1 border-t existing-comment" data-index="${index}" rows="2">${imgData.comment || ''}</textarea>
             `;
