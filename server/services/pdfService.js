@@ -13,7 +13,7 @@ exports.createPdf = async (folioData) => {
         const html = await ejs.renderFile(templatePath, { folio: folioData });
 
         // 1. Creamos el texto del pie de página dinámicamente
-        const footerText = `Pedido capturado por: ${folioData.responsibleUser.username} el ${new Date(folioData.createdAt).toLocaleString('es-MX')}`;
+        const footerText = `Pedido capturado por: ${folioData.responsibleUser.username} el ${new Date(folioData.createdAt).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
 
         // 2. Modificamos las opciones del PDF
         const options = {
