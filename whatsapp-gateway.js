@@ -11,7 +11,7 @@ console.log('🚀 Iniciando Mini-Gateway de WhatsApp (Modo Pro)...');
 const client = new Client({
     // 1. ASIGNAMOS UN ID ÚNICO PARA QUE LA CARPETA DE SESIÓN NO SE MEZCLE
     authStrategy: new LocalAuth({ 
-        clientId: "bot-pasteleria" 
+        clientId: "bot-pasteleria-v1" 
     }),
     puppeteer: {
         // --- CAMBIO IMPORTANTE ---
