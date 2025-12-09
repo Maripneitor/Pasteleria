@@ -3,7 +3,7 @@ const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 
 // --- CONFIGURACIÓN ---
-const WEBHOOK_URL = 'https://prueba-pasteleria.fly.dev/api/webhooks/whatsapp';
+const WEBHOOK_URL = 'https://pasteleria-la-fiesta.up.railway.app/api/webhooks/whatsapp';
 const TRIGGER_COMMAND = 'generar folio'; // Comando simplificado
 
 console.log('🚀 Iniciando Mini-Gateway de WhatsApp (Modo Pro)...');
@@ -11,13 +11,24 @@ console.log('🚀 Iniciando Mini-Gateway de WhatsApp (Modo Pro)...');
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        // --- CAMBIO IMPORTANTE ---
+        // 'false' hace que se abra la ventana visible de Google Chrome
+        // 'true' haría que fuera invisible (como estaba antes)
+        headless: false, 
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu' // Recomendado para mayor estabilidad en Windows
+        ]
     }
 });
 
 client.on('qr', (qr) => {
-    console.log('📸 Escanea este código QR con tu WhatsApp:');
+    console.log('📸 Escanea este código QR con tu WhatsApp (Mira la ventana de Chrome):');
     qrcode.generate(qr, { small: true });
 });
 

@@ -1,4 +1,6 @@
 const OpenAI = require('openai');
+// 1. IMPORTAMOS LOS MODELOS DE LA BASE DE DATOS
+const { Flavor, Filling } = require('../models');
 
 // La clave de la API se carga automáticamente desde las variables de entorno (process.env.OPENAI_API_KEY)
 let openai;
@@ -18,10 +20,39 @@ async function getInitialExtraction(conversationText) {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
-    // ===== PROMPT ACTUALIZADO PARA DETECCIÓN Y ESTRUCTURACIÓN DE BASE/ESPECIAL =====
+    // 2. OBTENER DATOS FRESCOS DE LA BASE DE DATOS
+    let flavorsTxt = "Cualquiera mencionado en el texto";
+    let fillingsTxt = "Cualquiera mencionado en el texto";
+
+    try {
+        // Consultamos solo los activos
+        const dbFlavors = await Flavor.findAll({ where: { isActive: true } });
+        const dbFillings = await Filling.findAll({ where: { isActive: true } });
+
+        // Convertimos a string separado por comas para el Prompt
+        if (dbFlavors.length > 0) {
+            flavorsTxt = dbFlavors.map(f => f.name).join(', ');
+        }
+        if (dbFillings.length > 0) {
+            fillingsTxt = dbFillings.map(f => f.name).join(', ');
+        }
+        console.log("📝 Catálogos cargados para IA:", { flavorsCount: dbFlavors.length, fillingsCount: dbFillings.length });
+        
+    } catch (dbError) {
+        console.error("⚠️ Advertencia: No se pudieron cargar los catálogos de la BD para la IA. Se continuará sin ellos.", dbError.message);
+        // No lanzamos error fatal para que el servicio siga funcionando aunque falle la BD momentáneamente
+    }
+
+    // ===== PROMPT ACTUALIZADO CON DATOS DINÁMICOS =====
     const prompt = `
         Eres un asistente experto para una pastelería llamada "La Fiesta". Tu tarea es analizar la siguiente conversación de WhatsApp
         y extraer la información clave para generar un folio de pedido en formato JSON. La fecha de hoy es ${today}.
+
+        **CONTEXTO DEL MENÚ (IMPORTANTE):**
+        Para los campos de \`cakeFlavor\` (Sabor Pan) y \`filling\` (Relleno), intenta ajustar lo que dice el usuario a las siguientes listas oficiales. Si el usuario dice algo muy similar (ej. "Choco" en vez de "Chocolate"), usa el nombre oficial. Si pide algo totalmente diferente que no está en la lista, respeta el texto original del usuario.
+        
+        * **LISTA DE SABORES DE PAN OFICIALES:** ${flavorsTxt}
+        * **LISTA DE RELLENOS OFICIALES:** ${fillingsTxt}
 
         **Instrucciones Generales:**
         1.  **Analiza la conversación:** Lee todo el texto para entender los detalles del pedido.
