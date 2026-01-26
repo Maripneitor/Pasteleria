@@ -2,6 +2,11 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const Commission = sequelize.define('Commission', {
+  id: {
+    type: DataTypes.BIGINT,
+    autoIncrement: true,
+    primaryKey: true
+  },
   // ==================== INICIO DE LA MODIFICACIÓN ====================
   folioNumber: {
     type: DataTypes.STRING,
@@ -21,9 +26,9 @@ const Commission = sequelize.define('Commission', {
     comment: 'Indica si la comisión redondeada fue agregada al costo del cliente.'
   },
   roundedAmount: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: true,
-      comment: 'Almacena el valor redondeado que se le cobró al cliente, si aplica.'
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    comment: 'Almacena el valor redondeado que se le cobró al cliente, si aplica.'
   }
 }, {
   tableName: 'commissions',

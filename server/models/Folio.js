@@ -2,6 +2,11 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const Folio = sequelize.define('Folio', {
+  id: {
+    type: DataTypes.BIGINT,
+    autoIncrement: true,
+    primaryKey: true
+  },
   folioNumber: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -29,7 +34,7 @@ const Folio = sequelize.define('Folio', {
   },
   cakeFlavor: {
     type: DataTypes.JSON,
-    allowNull: true 
+    allowNull: true
   },
   filling: {
     type: DataTypes.JSON,
@@ -93,8 +98,8 @@ const Folio = sequelize.define('Folio', {
     allowNull: true
   },
   complements: {
-      type: DataTypes.JSON,
-      allowNull: true
+    type: DataTypes.JSON,
+    allowNull: true
   },
   isPaid: {
     type: DataTypes.BOOLEAN,
@@ -102,24 +107,24 @@ const Folio = sequelize.define('Folio', {
     defaultValue: false
   },
   hasExtraHeight: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false, 
-      defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   },
   isPrinted: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   },
   fondantChecked: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   },
   dataChecked: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, { tableName: 'folios' });
 

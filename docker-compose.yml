@@ -1,0 +1,74 @@
+services:
+  # 1. BASE DE DATOS
+  db:
+    image: mysql:8.0
+    container_name: pasteleria-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Ajusta la ruta a donde moviste el backup dentro de server o raíz
+      - ./server/RESPALDOS_BD/backup_2025-09-30.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # 2. BACKEND (API)
+  server:
+    build: ./server
+    container_name: pasteleria-server
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_HOST=db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - WEBHOOK_URL=http://server:3000/api/webhooks/whatsapp
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    networks:
+      - default
+
+  # 3. FRONTEND (React Dev)
+  client:
+    build: ./client
+    container_name: pasteleria-client
+    restart: always
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000/api
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    # Comando para mantener el servidor de desarrollo activo
+    command: npm run dev -- --host
+
+  # 4. WHATSAPP BOT
+  whatsapp:
+    build: ./server
+    container_name: pasteleria-whatsapp
+    restart: always
+    depends_on:
+      - server
+    command: node whatsapp-gateway.js
+    environment:
+      - WEBHOOK_URL=http://server:3000/api/webhooks/whatsapp
+      # Se asume que whatsapp-gateway usa las mismas credenciales o lógica
+      # Si necesita conectar a BD, añadir las ENVs correspondientes
+    volumes:
+      - ./server/.wwebjs_auth:/app/.wwebjs_auth
+      - ./server/.wwebjs_cache:/app/.wwebjs_cache
+
+volumes:
+  mysql_data:

@@ -2,6 +2,11 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.BIGINT,
+    autoIncrement: true,
+    primaryKey: true
+  },
   // Sequelize crea el 'id' automáticamente
   username: {
     type: DataTypes.STRING,
@@ -20,10 +25,10 @@ const User = sequelize.define('User', {
     allowNull: false
   },
   // ==================== INICIO DE LA MODIFICACIÓN ====================
-  role: {
-    type: DataTypes.ENUM('Administrador', 'Usuario'), // Se elimina 'Decorador'
+  globalRole: {
+    type: DataTypes.ENUM('ADMIN', 'USER'),
     allowNull: false,
-    defaultValue: 'Usuario'
+    defaultValue: 'USER'
   }
   // ===================== FIN DE LA MODIFICACIÓN ======================
 }, {

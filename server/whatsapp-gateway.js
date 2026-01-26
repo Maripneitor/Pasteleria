@@ -3,25 +3,26 @@ const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 
 // --- CONFIGURACIÓN ---
-const WEBHOOK_URL = 'https://pasteleria-la-fiesta.up.railway.app/api/webhooks/whatsapp';
+const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://pasteleria-la-fiesta.up.railway.app/api/webhooks/whatsapp';
 const TRIGGER_COMMAND = 'generar folio'; // Comando simplificado
 
 console.log('🚀 Iniciando Mini-Gateway de WhatsApp (Modo Pro)...');
 
 const client = new Client({
     // 1. ASIGNAMOS UN ID ÚNICO PARA QUE LA CARPETA DE SESIÓN NO SE MEZCLE
-    authStrategy: new LocalAuth({ 
-        clientId: "bot-pasteleria-v1" 
+    authStrategy: new LocalAuth({
+        clientId: "bot-pasteleria-v1"
     }),
     puppeteer: {
         // --- CAMBIO IMPORTANTE ---
         // 'false' hace que se abra la ventana visible de Google Chrome
         // 'true' haría que fuera invisible (como estaba antes)
-        headless: false, 
+        headless: true, // <--- CAMBIO IMPORTANTE: Debe ser true en Docker
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null, // Usa el Chromium de Docker
         args: [
-            '--no-sandbox', 
+            '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
+            '--disable-dev-shm-usage', // Vital para evitar crashes de memoria en Docker
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',

@@ -1,4 +1,13 @@
-node_modules/
+node_modules
+/server/node_modules
+/client/node_modules
 .env
-.wwebjs_auth/
-.wwebjs_cache/
+/server/.env
+.DS_Store
+dist
+build
+folios.json
+folios_final.json
+output_folios.json
+pdf
+folio_1.json
