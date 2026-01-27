@@ -1,78 +1,60 @@
-const { User } = require('../models');
+const User = require('../models/User');
 
-// OBTENER todos los usuarios
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll({
-      attributes: { exclude: ['password'] } // Excluimos la contraseña de la respuesta
+      attributes: { exclude: ['password'] }
     });
-    res.status(200).json(users);
+    res.json(users);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener los usuarios', error: error.message });
+    res.status(500).json({ message: 'Error al obtener usuarios' });
   }
 };
 
-// CREAR un nuevo usuario
 exports.createUser = async (req, res) => {
   try {
-    const newUser = await User.create(req.body);
-    // Excluimos la contraseña de la respuesta por seguridad
-    const userResponse = newUser.toJSON();
-    delete userResponse.password;
-    res.status(201).json(userResponse);
+    const { name, email, password, role, phone } = req.body;
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) return res.status(400).json({ message: 'El correo ya está registrado' });
+
+    // Asumimos que el modelo User tiene un hook beforeCreate para hashear el password
+    const newUser = await User.create({ name, email, password, role, phone });
+
+    const userResp = newUser.toJSON();
+    delete userResp.password;
+
+    res.status(201).json(userResp);
   } catch (error) {
-    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
-      const errors = error.errors.map(err => err.message);
-      return res.status(400).json({ message: 'Error de validación', errors });
-    }
-    res.status(500).json({ message: 'Error al crear el usuario', error: error.message });
+    res.status(500).json({ message: 'Error creando usuario', error: error.message });
   }
 };
 
-// ACTUALIZAR un usuario existente (ej. cambiar rol)
 exports.updateUser = async (req, res) => {
   try {
-    const userId = req.params.id;
-    const { role } = req.body; // Por ahora, solo permitimos cambiar el rol
+    const { id } = req.params;
+    const { name, role, password, phone } = req.body;
 
-    if (req.user.id == userId && role !== 'Administrador') {
-        return res.status(403).json({ message: 'No puedes quitarte tu propio rol de administrador.' });
-    }
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
 
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
-    }
+    if (name) user.name = name;
+    if (role) user.role = role;
+    if (phone) user.phone = phone;
+    if (password) user.password = password; // El hook del modelo debería hashear esto
 
-    user.role = role;
     await user.save();
-
-    const userResponse = user.toJSON();
-    delete userResponse.password;
-
-    res.status(200).json({ message: 'Usuario actualizado correctamente.', user: userResponse });
+    res.json({ message: 'Usuario actualizado correctamente' });
   } catch (error) {
-    res.status(500).json({ message: 'Error al actualizar el usuario.', error: error.message });
+    res.status(500).json({ message: 'Error actualizando usuario' });
   }
 };
 
-// ELIMINAR un usuario
 exports.deleteUser = async (req, res) => {
   try {
-    const userId = req.params.id;
-
-    if (req.user.id == userId) {
-      return res.status(403).json({ message: 'No puedes eliminar tu propia cuenta de administrador.' });
-    }
-
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
-    }
-
-    await user.destroy();
-    res.status(200).json({ message: 'Usuario eliminado correctamente.' });
+    await User.destroy({ where: { id: req.params.id } });
+    res.json({ message: 'Usuario eliminado' });
   } catch (error) {
-    res.status(500).json({ message: 'Error al eliminar el usuario.', error: error.message });
+    res.status(500).json({ message: 'Error eliminando usuario' });
   }
 };

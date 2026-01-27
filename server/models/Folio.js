@@ -3,129 +3,44 @@ const { sequelize } = require('../config/database');
 
 const Folio = sequelize.define('Folio', {
   id: {
-    type: DataTypes.BIGINT,
-    autoIncrement: true,
-    primaryKey: true
-  },
-  folioNumber: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
-  },
-  folioType: {
-    type: DataTypes.ENUM('Normal', 'Base/Especial'),
-    allowNull: false
-  },
-  deliveryDate: {
-    type: DataTypes.DATEONLY,
-    allowNull: false
-  },
-  deliveryTime: {
-    type: DataTypes.TIME,
-    allowNull: false
-  },
-  persons: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    primaryKey: true,
+    autoIncrement: true
   },
-  shape: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  cakeFlavor: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
-  filling: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
-  designDescription: {
-    type: DataTypes.TEXT,
-    allowNull: false
-  },
-  dedication: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  deliveryLocation: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  deliveryCost: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    defaultValue: 0.00
-  },
-  total: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false
-  },
-  advancePayment: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
-    defaultValue: 0
-  },
-  balance: {
-    type: DataTypes.DECIMAL(10, 2),
-    allowNull: false
-  },
-  // --- MODIFICACIÓN APLICADA ---
-  // Se añade el nuevo estado 'Pendiente' para los folios generados por la IA
-  // que están esperando confirmación humana.
-  status: {
-    type: DataTypes.ENUM('Pendiente', 'Nuevo', 'En Producción', 'Listo para Entrega', 'Entregado', 'Cancelado'),
-    defaultValue: 'Nuevo'
-  },
-  imageUrls: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
-  imageComments: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
-  tiers: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
-  accessories: {
-    type: DataTypes.TEXT,
-    allowNull: true
-  },
-  additional: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
-  complements: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
-  isPaid: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  hasExtraHeight: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  isPrinted: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  fondantChecked: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
-  dataChecked: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  }
-}, { tableName: 'folios' });
+  // Datos del Cliente (Snapshot para no perder info si el cliente cambia)
+  cliente_nombre: { type: DataTypes.STRING, allowNull: false },
+  cliente_telefono: { type: DataTypes.STRING, allowNull: false },
+  cliente_telefono_extra: { type: DataTypes.STRING },
+
+  // Detalles Generales
+  fecha_entrega: { type: DataTypes.DATEONLY, allowNull: false },
+  hora_entrega: { type: DataTypes.STRING, allowNull: false }, // Ej: "14:30"
+  tipo_folio: { type: DataTypes.ENUM('Normal', 'Especial'), defaultValue: 'Normal' },
+
+  // Especificaciones del Pastel (JSON para flexibilidad)
+  forma: { type: DataTypes.STRING },
+  numero_personas: { type: DataTypes.INTEGER },
+  sabores_pan: { type: DataTypes.JSON }, // Ej: ["Vainilla", "Chocolate"]
+  rellenos: { type: DataTypes.JSON },    // Ej: ["Fresa", "Nuez"]
+  complementos: { type: DataTypes.JSON }, // Ej: ["Cupcakes", "Gelatina"]
+
+  // Diseño
+  descripcion_diseno: { type: DataTypes.TEXT },
+  imagen_referencia_url: { type: DataTypes.STRING }, // Ruta del archivo subido
+  diseno_metadata: { type: DataTypes.JSON }, // Ej: { altura_extra: true, dedicatoria: "Felicidades" }
+
+  // Económicos
+  costo_base: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  costo_envio: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  anticipo: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  estatus_pago: { type: DataTypes.ENUM('Pendiente', 'Pagado'), defaultValue: 'Pendiente' },
+
+  // Control
+  estatus_produccion: { type: DataTypes.ENUM('Pendiente', 'Horneado', 'Decorado', 'Entregado'), defaultValue: 'Pendiente' }
+}, {
+  tableName: 'folios',
+  timestamps: true
+});
 
 module.exports = Folio;

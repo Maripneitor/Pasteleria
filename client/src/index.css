@@ -1,56 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  --font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  
-  /* Light Theme (Default) */
-  --bg-primary: #f8f9fa;
-  --bg-secondary: #ffffff;
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --accent-color: #646cff;
-  --accent-hover: #535bf2;
-  --border-color: #dee2e6;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-
-  --success-color: #28a745;
-  --warning-color: #ffc107;
-  --danger-color: #dc3545;
-  --info-color: #17a2b8;
-}
-
-[data-theme='dark'] {
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #242424;
-  --text-primary: #f8f9fa;
-  --text-secondary: #adb5bd;
-  --accent-color: #646cff; /* Keep or adjust for dark mode */
-  --accent-hover: #7b81ff;
-  --border-color: #495057;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --primary: #ec4899;
+  --primary-dark: #be185d;
+  --secondary: #8b5cf6;
+  --bg-app: #f3f4f6;
+  /* Gris muy suave para el fondo */
+  --sidebar-width: 260px;
+  --header-height: 70px;
 }
 
 body {
-  margin: 0;
-  font-family: var(--font-family);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  transition: background-color 0.3s, color 0.3s;
-  min-height: 100vh;
+  background-color: var(--bg-app);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  /* Previene scroll horizontal indeseado */
 }
 
-* {
-  box-sizing: border-box;
+/* Scrollbar Personalizado (Estilo Mac/Moderno) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-a {
-  color: var(--accent-color);
-  text-decoration: none;
-}
-a:hover {
-  color: var(--accent-hover);
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-button {
-  cursor: pointer;
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Utilidades Responsive Manuales (Por si Tailwind falla) */
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .show-on-mobile {
+    display: block !important;
+  }
+
+  .grid-mobile-1 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .padding-mobile {
+    padding: 1rem !important;
+  }
+
+  .sidebar-collapsed {
+    transform: translateX(-100%);
+  }
+}
+
+/* Efecto Glassmorphism para Modales y Footers */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Animación de Carga (Skeleton) */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }

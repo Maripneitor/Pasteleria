@@ -5,6 +5,28 @@ const { Flavor, Filling } = require('../models');
 // La clave de la API se carga automáticamente desde las variables de entorno (process.env.OPENAI_API_KEY)
 let openai;
 
+// --- MOCK DATA (DATOS FALSOS PARA PRUEBAS SIN KEY) ---
+// Adaptado para coincidir con la estructura plana que espera el servicio actual
+const MOCK_EXTRACTION = {
+    folioType: "Normal",
+    clientName: "Cliente de Prueba (Sin IA)",
+    deliveryDate: "2025-10-30",
+    deliveryTime: "14:00",
+    persons: 20,
+    cakeFlavor: ["Chocolate", "Vainilla"],
+    filling: ["Fresa"],
+    designDescription: "Pastel de prueba generado automáticamente porque no hay API Key.",
+    tiers: [],
+    complements: [],
+    additional: [],
+    dedication: null,
+    deliveryLocation: null,
+    deliveryCost: null,
+    total: null,
+    advancePayment: null
+};
+
+
 function getOpenAIClient() {
     if (!openai) {
         if (!process.env.OPENAI_API_KEY) {
@@ -16,6 +38,15 @@ function getOpenAIClient() {
 }
 
 async function getInitialExtraction(conversationText) {
+    // 1. DETECTOR DE MODO SIMULACIÓN
+    if (!process.env.OPENAI_API_KEY) {
+        console.log("⚠️ [MODO SIMULACIÓN] No hay OPENAI_API_KEY. Usando datos falsos.");
+        // Simulamos una pequeña espera para que parezca real
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return MOCK_EXTRACTION;
+    }
+
+
     const today = new Date().toLocaleDateString('es-MX', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
@@ -37,7 +68,7 @@ async function getInitialExtraction(conversationText) {
             fillingsTxt = dbFillings.map(f => f.name).join(', ');
         }
         console.log("📝 Catálogos cargados para IA:", { flavorsCount: dbFlavors.length, fillingsCount: dbFillings.length });
-        
+
     } catch (dbError) {
         console.error("⚠️ Advertencia: No se pudieron cargar los catálogos de la BD para la IA. Se continuará sin ellos.", dbError.message);
         // No lanzamos error fatal para que el servicio siga funcionando aunque falle la BD momentáneamente

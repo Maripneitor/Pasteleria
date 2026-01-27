@@ -22,7 +22,10 @@ RUN apt-get update -qq && \
 
 # Install node modules
 COPY package-lock.json package.json ./
-RUN npm ci
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+# 👇 AGREGA ESTO TEMPORALMENTE
+RUN npm install qrcode
 
 # Copy application code
 COPY . .
