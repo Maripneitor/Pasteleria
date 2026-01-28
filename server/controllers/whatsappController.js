@@ -3,6 +3,7 @@ const { getInitialExtraction } = require('../services/aiExtractorService');
 const { AISession } = require('../models'); // Asegúrate de importar el modelo
 const fs = require('fs');
 const path = require('path');
+const gateway = require('../whatsapp-gateway'); // Importar gateway completo
 
 // El comando que el empleado usará en WhatsApp para activar la IA
 const TRIGGER_COMMAND = 'generar folio';
@@ -116,5 +117,21 @@ exports.handleWebhook = async (req, res) => {
   } catch (error) {
     console.error("❌ Error procesando el webhook para crear sesión de IA:", error.message);
     res.status(500).send('ERROR_PROCESSING_WEBHOOK');
+  }
+};
+
+/**
+ * Endpoint para obtener el código QR de WhatsApp
+ */
+exports.getQR = (req, res) => {
+  try {
+    const data = gateway.getStatus();
+    res.json(data);
+  } catch (error) {
+    console.error("❌ Error obteniendo QR:", error.message);
+    res.status(500).json({
+      status: 'error',
+      qr: null
+    });
   }
 };

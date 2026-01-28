@@ -9,6 +9,7 @@ import DashboardPage from './pages/DashboardPage';
 import NewOrderPage from './pages/NewOrderPage';
 import CalendarPage from './pages/CalendarPage';
 import UsersPage from './pages/admin/UsersPage';
+import ConnectPage from './pages/ConnectPage';
 
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -43,6 +44,7 @@ function App() {
         {/* Rutas Públicas */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<RegisterPage />} />
+        <Route path="/conectar" element={<ConnectPage />} />
 
         {/* 🔒 Rutas Protegidas */}
         {/* Si no hay token, ProtectedRoute te manda a /login */}
