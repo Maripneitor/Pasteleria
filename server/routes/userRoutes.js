@@ -5,9 +5,9 @@ const authMiddleware = require('../middleware/authMiddleware');
 const roleMiddleware = require('../middleware/roleMiddleware');
 
 // Rutas protegidas: Solo ADMIN
-router.get('/', authMiddleware, roleMiddleware(['admin']), userController.getAllUsers);
-router.post('/', authMiddleware, roleMiddleware(['admin']), userController.createUser);
-router.put('/:id', authMiddleware, roleMiddleware(['admin']), userController.updateUser);
-router.delete('/:id', authMiddleware, roleMiddleware(['admin']), userController.deleteUser);
+router.get('/', authMiddleware, roleMiddleware(['ADMIN']), userController.getAllUsers);
+router.post('/', authMiddleware, roleMiddleware(['ADMIN']), userController.createUser);
+router.put('/:id', authMiddleware, roleMiddleware(['ADMIN']), userController.updateUser);
+router.delete('/:id', authMiddleware, roleMiddleware(['ADMIN']), userController.deleteUser);
 
 module.exports = router;

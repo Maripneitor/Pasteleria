@@ -9,7 +9,7 @@ const AnimatedText = ({ text, className }) => {
         hidden: { opacity: 0 },
         visible: (i = 1) => ({
             opacity: 1,
-            transition: { staggerChildren: 0.03, delayChildren: 0.04 * i },
+            transition: { staggerChildren: 0.05, delayChildren: 0.1 * i }, // Más suave
         }),
     };
 
@@ -17,9 +17,9 @@ const AnimatedText = ({ text, className }) => {
         visible: {
             opacity: 1,
             y: 0,
-            transition: { type: "spring", damping: 12, stiffness: 100 },
+            transition: { type: "spring", damping: 15, stiffness: 80 }, // Más relajado
         },
-        hidden: { opacity: 0, y: 20, transition: { type: "spring", damping: 12, stiffness: 100 } },
+        hidden: { opacity: 0, y: 15, transition: { type: "spring", damping: 15, stiffness: 80 } },
     };
 
     return (

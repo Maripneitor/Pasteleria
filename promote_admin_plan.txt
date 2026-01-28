@@ -1,0 +1,44 @@
+$updateUrl = "http://localhost:3000/api/users/8"
+# We need a token to update, but we are currently USER.
+# However, usually admin routes require ADMIN token.
+# BUT, since I can't login as ADMIN yet, I can't use the API to promote myself if the API is secured!
+#
+# ALTERNATIVE: Use the fallback "fix_db_schema.js" idea, basically a Node script that uses the Model directly, bypassing API.
+
+$nodeScript = @"
+const { Sequelize, DataTypes } = require('sequelize');
+const sequelize = new Sequelize('pasteleria_db', 'user', 'password', {
+  host: 'localhost',
+  dialect: 'mysql',
+  port: 3307
+});
+
+const User = sequelize.define('User', {
+  globalRole: { type: DataTypes.ENUM('ADMIN', 'USER') }
+}, { tableName: 'users', timestamps: false });
+
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Connected to DB');
+    await User.update({ globalRole: 'ADMIN' }, { where: { id: 8 } });
+    console.log('User 8 promoted to ADMIN');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error:', error);
+    process.exit(1);
+  }
+})();
+"@
+
+$nodeScript | Out-File promote_admin.js -Encoding UTF8
+
+# Need to install mysql2 locally or run inside container?
+# Running inside container is safer/easier as environment is set.
+# But I can't easily run a one-off script inside container unless I exec into it.
+# Let's try creating a "superuser" via API IF there is any open route... No.
+
+# Plan B: Fix authController FIRST, then create NEW user 'superadmin2' properly?
+# That's cleaner.
+
+Write-Host "Plan: Fix code, then register superadmin2."

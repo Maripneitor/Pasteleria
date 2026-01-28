@@ -5,11 +5,35 @@ const path = require('path');
 const puppeteer = require('puppeteer');
 const QRCode = require('qrcode');
 
+const FolioEditHistory = require('../models/FolioEditHistory'); // Asegúrate de importar el modelo
+
 // 1. Crear Nuevo Folio
 exports.createFolio = async (req, res) => {
     try {
-        // req.body ya vendrá estructurado desde el frontend
-        const nuevoFolio = await Folio.create(req.body);
+        const { clientId, ...folioData } = req.body;
+
+        // Validación básica
+        if (!clientId) {
+            return res.status(400).json({ success: false, message: 'El cliente es obligatorio' });
+        }
+
+        // Asignar responsable (Usuario logueado)
+        const responsibleUserId = req.user ? req.user.id : null;
+
+        const nuevoFolio = await Folio.create({
+            ...folioData,
+            clientId,
+            responsibleUserId
+        });
+
+        // Registrar creación en historial
+        await FolioEditHistory.create({
+            tenantId: req.user?.tenantId || 1, // Asumiendo multi-tenant o default 1
+            folioId: nuevoFolio.id,
+            editorUserId: responsibleUserId,
+            eventType: 'CREATE',
+            changedFields: { created: true }
+        });
 
         res.status(201).json({
             success: true,
@@ -19,6 +43,87 @@ exports.createFolio = async (req, res) => {
     } catch (error) {
         console.error("Error al crear folio:", error);
         res.status(500).json({ success: false, message: 'Error al guardar el pedido' });
+    }
+};
+
+// 1.5 Actualizar Folio con Auditoría
+exports.updateFolio = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+        const editorUserId = req.user ? req.user.id : null;
+
+        const folio = await Folio.findByPk(id);
+        if (!folio) {
+            return res.status(404).json({ message: 'Folio no encontrado' });
+        }
+
+        // Detectar cambios para el historial
+        const changes = {};
+        Object.keys(updateData).forEach(key => {
+            if (folio[key] != updateData[key]) {
+                changes[key] = { old: folio[key], new: updateData[key] };
+            }
+        });
+
+        // Actualizar
+        await folio.update(updateData);
+
+        // Guardar historial si hubo cambios significativos
+        if (Object.keys(changes).length > 0) {
+            await FolioEditHistory.create({
+                tenantId: req.user?.tenantId || 1,
+                folioId: folio.id,
+                editorUserId: editorUserId,
+                eventType: 'UPDATE',
+                changedFields: changes
+            });
+        }
+
+        res.json({ success: true, message: 'Folio actualizado', data: folio });
+
+    } catch (error) {
+        console.error("Error actualizando folio:", error);
+        res.status(500).json({ success: false, message: 'Error al actualizar el folio' });
+    }
+};
+
+// 1.8 KDS: Actualizar Estatus (Cocina)
+exports.updateFolioStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // Nuevo estatus: 'Horneado', 'Decorado', etc.
+        const editorUserId = req.user ? req.user.id : null;
+
+        const folio = await Folio.findByPk(id);
+        if (!folio) {
+            return res.status(404).json({ message: 'Folio no encontrado' });
+        }
+
+        const oldStatus = folio.estatus_produccion;
+
+        // Actualizamos estatus y responsable (quien lo movió)
+        await folio.update({
+            estatus_produccion: status,
+            responsibleUserId: editorUserId
+        });
+
+        // Historial
+        await FolioEditHistory.create({
+            tenantId: req.user?.tenantId || 1,
+            folioId: folio.id,
+            editorUserId: editorUserId,
+            eventType: 'STATUS_CHANGE',
+            changedFields: {
+                status: { old: oldStatus, new: status }
+            }
+        });
+
+        res.json({ success: true, message: `Folio movido a ${status}`, data: folio });
+
+    } catch (error) {
+        console.error("Error actualizando estatus:", error);
+        res.status(500).json({ success: false, message: 'Error al cambiar estatus' });
     }
 };
 

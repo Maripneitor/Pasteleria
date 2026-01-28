@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { LogIn, Mail, Lock, ArrowRight } from 'lucide-react';
@@ -11,6 +11,31 @@ import InputGroup from '../components/InputGroup';
 const LoginPage = () => {
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
     const navigate = useNavigate();
+
+    // Paso 2: Health Check al montar el componente
+    useEffect(() => {
+        const checkServer = async () => {
+            try {
+                await axios.get('/'); // Verifica la ruta raíz '/' definida en server.js
+            } catch (error) {
+                // Si es un 404, significa que el server responde (está vivo), aunque no tenga la ruta '/'.
+                // No alarmamos al usuario en este caso.
+                if (error.response && error.response.status === 404) {
+                    console.log("Health Check: Servidor online (respondió 404, ruta no encontrada).");
+                    return;
+                }
+
+                // Solo mostramos error si es falla de red (server apagado) o error interno grave (500)
+                if (error.code === 'ERR_NETWORK' || (error.response && error.response.status >= 500)) {
+                    toast.error("El servidor de la pastelería no está disponible 🍰", {
+                        duration: 5000,
+                        position: 'top-center'
+                    });
+                }
+            }
+        };
+        checkServer();
+    }, []);
 
     const onSubmit = async (data) => {
         try {
@@ -35,23 +60,15 @@ const LoginPage = () => {
             }
 
         } catch (error) {
-            // 6. MANEJO DE ERRORES (Para evitar el Crash)
             console.error("Error en login:", error);
 
-            if (error.response) {
-                // El servidor respondió con un error (404, 401, 500)
-                if (error.response.status === 404) {
-                    toast.error("Error de conexión: Ruta no encontrada.");
-                } else if (error.response.status === 401) {
-                    toast.error("Contraseña o correo incorrectos.");
-                } else {
-                    toast.error(error.response.data.message || "Error al iniciar sesión");
-                }
-            } else if (error.request) {
-                // El servidor no responde (está apagado)
-                toast.error("No se puede conectar con el servidor ⚠️");
+            // Paso 3: Manejo específico de ERR_EMPTY_RESPONSE o Network Error
+            if (error.code === 'ERR_NETWORK' || !error.response) {
+                toast.error('Error de red: El servidor no responde o está apagado');
+            } else if (error.response?.status === 401) {
+                toast.error("Contraseña o correo incorrectos.");
             } else {
-                toast.error("Error desconocido");
+                toast.error(error.response?.data?.message || "Error al iniciar sesión");
             }
         }
     };

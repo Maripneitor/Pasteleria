@@ -55,7 +55,11 @@ const initializeWhatsApp = () => {
     client.on('disconnected', (reason) => {
         console.log('❌ WhatsApp desconectado:', reason);
         status = 'disconnected';
-        client.initialize(); // Reintentar conectar
+        // Evitar bucle de reinicio inmediato
+        setTimeout(() => {
+            console.log('🔄 Reintentando conexión WhatsApp...');
+            client.initialize().catch(err => console.error('Error re-init:', err.message));
+        }, 5000);
     });
 
     // Usamos 'message_create' para detectar mensajes tanto del CLIENTE como del EMPLEADO (tú)
@@ -136,7 +140,10 @@ const initializeWhatsApp = () => {
         }
     });
 
-    client.initialize();
+    client.initialize().catch(err => {
+        console.error('❌ Error fatal al iniciar WhatsApp:', err.message);
+        status = 'error';
+    });
 };
 
 // 🟢 EXPORTAR FUNCIONES PARA EL CONTROLADOR

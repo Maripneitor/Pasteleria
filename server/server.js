@@ -6,7 +6,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: 'http://localhost:5173', // Puerto por defecto de Vite
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Permitir ambas variantes
   credentials: true
 }));
 app.use(express.json());
@@ -34,6 +34,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/FOLIOS_GENERADOS', express.static(path.join(__dirname, 'FOLIOS_GENERADOS')));
 
 // 👇 RUTAS MAESTRAS (Prefijo sagrado '/api')
+app.get('/api', (req, res) => res.json({ status: 'online', message: 'API Pastelería v2.0' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/folios', folioRoutes);
 app.use('/api/users', userRoutes);
@@ -42,7 +43,7 @@ app.use('/api/webhooks', whatsappRoutes);
 app.use('/api/ai-sessions', aiSessionRoutes);
 
 // Ruta de Salud (Para verificar que el server vive)
-app.get('/', (req, res) => res.send('API Pastelería Funcionando 🍰'));
+app.get('/api/', (req, res) => res.send('API Pastelería Funcionando 🍰'));
 
 // 👇 MANEJADOR DE ERRORES GLOBAL (Evita que el server muera en silencio)
 app.use((err, req, res, next) => {

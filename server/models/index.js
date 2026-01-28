@@ -11,10 +11,10 @@ const Filling = require('./Filling');
 
 // --- Relaciones Principales ---
 User.hasMany(Folio, { foreignKey: 'responsibleUserId' });
-Folio.belongsTo(User, { as: 'responsibleUser', foreignKey: 'responsibleUserId' });
+Folio.belongsTo(User, { as: 'responsibleUser', foreignKey: 'responsibleUserId', onDelete: 'SET NULL' });
 
 Client.hasMany(Folio, { foreignKey: 'clientId' });
-Folio.belongsTo(Client, { as: 'client', foreignKey: 'clientId' });
+Folio.belongsTo(Client, { as: 'client', foreignKey: 'clientId', onDelete: 'SET NULL' });
 
 // --- Relación para Comisiones ---
 Folio.hasOne(Commission, { foreignKey: 'folioId', as: 'commission' });

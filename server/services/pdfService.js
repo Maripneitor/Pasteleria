@@ -3,6 +3,9 @@ const ejs = require('ejs');
 const path = require('path');
 
 // --- FUNCIÓN EXISTENTE PARA PDF INDIVIDUAL (SIN CAMBIOS) ---
+const fs = require('fs'); // Import fs
+
+// --- FUNCIÓN EXISTENTE PARA PDF INDIVIDUAL ---
 exports.createPdf = async (folioData) => {
     try {
         console.log('📄 [PDF SERVICE] Generando PDF para folio:', folioData.folioNumber);
@@ -19,14 +22,8 @@ exports.createPdf = async (folioData) => {
         const options = {
             format: 'Letter',
             printBackground: true,
-            displayHeaderFooter: true, // <-- Habilita el pie de página
-            margin: {
-                top: '25px',
-                right: '25px',
-                bottom: '40px', // <-- Espacio para el pie de página
-                left: '25px'
-            },
-            // 3. Añadimos la plantilla del pie de página
+            displayHeaderFooter: true,
+            margin: { top: '25px', right: '25px', bottom: '40px', left: '25px' },
             footerTemplate: `
           <div style="width: 100%; font-size: 9pt; text-align: center; padding: 10px 25px 0 25px; border-top: 1px solid #f0f0f0; box-sizing: border-box;">
             ${footerText}
@@ -36,8 +33,14 @@ exports.createPdf = async (folioData) => {
 
         const file = { content: html };
         const pdfBuffer = await pdf.generatePdf(file, options);
-        console.log('✅ PDF de folio individual generado con pie de página.');
-        return pdfBuffer;
+
+        // Guardar en disco (FOLIOS_GENERADOS)
+        const filename = `Folio-${folioData.folioNumber}.pdf`;
+        const savePath = path.join(__dirname, '../FOLIOS_GENERADOS', filename);
+        fs.writeFileSync(savePath, pdfBuffer);
+        console.log(`✅ PDF guardado en: ${savePath}`);
+
+        return pdfBuffer; // Retornamos buffer por si el controlador lo quiere enviar directo
 
     } catch (error) {
         console.error('❌ Error durante la creación del PDF individual:', error);

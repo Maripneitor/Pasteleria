@@ -44,5 +44,34 @@ cron.schedule('0 21 * * *', async () => {
     }
 }, {
     scheduled: true,
-    timezone: "America/Mexico_City" // Aseguramos la zona horaria correcta
+    timezone: "America/Mexico_City"
+});
+
+// Tarea de Limpieza: Elimina PDFs de FOLIOS_GENERADOS antiguos (ej. > 7 días)
+cron.schedule('0 4 * * 0', async () => { // Cada Domingo a las 4 AM
+    console.log('🧹 Eliminando PDFs antiguos...');
+    const fs = require('fs');
+    const path = require('path');
+    const directory = path.join(__dirname, 'FOLIOS_GENERADOS');
+
+    fs.readdir(directory, (err, files) => {
+        if (err) return console.error("Error leyendo directorio de folios:", err);
+
+        files.forEach(file => {
+            const filePath = path.join(directory, file);
+            fs.stat(filePath, (err, stats) => {
+                if (err) return;
+
+                const now = new Date().getTime();
+                const endTime = new Date(stats.mtime).getTime() + (7 * 24 * 60 * 60 * 1000); // 7 días
+
+                if (now > endTime) {
+                    fs.unlink(filePath, (err) => {
+                        if (err) return console.error(`Error borrando ${file}`, err);
+                        console.log(`🗑️ Archivo borrado: ${file}`);
+                    });
+                }
+            });
+        });
+    });
 });

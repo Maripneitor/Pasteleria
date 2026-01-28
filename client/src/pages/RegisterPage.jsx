@@ -11,13 +11,42 @@ const RegisterPage = () => {
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
     const navigate = useNavigate();
 
+    // Health Check al montar (Consistencia con Login)
+    React.useEffect(() => {
+        const checkServer = async () => {
+            try {
+                await axios.get('/');
+            } catch (error) {
+                if (error.response && error.response.status === 404) return; // Server online
+                if (error.code === 'ERR_NETWORK' || (error.response && error.response.status >= 500)) {
+                    toast.error("El servidor de la pastelería no está disponible 🍰", {
+                        duration: 5000,
+                        position: 'top-center'
+                    });
+                }
+            }
+        };
+        checkServer();
+    }, []);
+
     const onSubmit = async (data) => {
         try {
-            await axios.post('/auth/register', data);
+            // Mapeamos 'name' -> 'username' para que coincida con el backend
+            const payload = {
+                ...data,
+                username: data.name
+            };
+
+            await axios.post('/auth/register', payload);
             toast.success('¡Cuenta creada! Por favor inicia sesión.', { duration: 5000 });
             navigate('/login');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error al registrarse');
+            console.error("Error en registro:", error);
+            if (error.code === 'ERR_NETWORK' || !error.response) {
+                toast.error('Error de red: El servidor no responde');
+            } else {
+                toast.error(error.response?.data?.message || 'Error al registrarse');
+            }
         }
     };
 

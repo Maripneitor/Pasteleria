@@ -14,7 +14,7 @@ exports.register = async (req, res) => {
       username,
       email,
       password: hashedPassword, // Guardamos la contraseña encriptada
-      role: globalRole
+      globalRole: globalRole
     });
 
     // Excluimos la contraseña de la respuesta por seguridad

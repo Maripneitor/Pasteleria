@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../models/user');
 
 exports.getAllUsers = async (req, res) => {
   try {
@@ -13,13 +13,13 @@ exports.getAllUsers = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role, phone } = req.body;
+    const { username, email, password, globalRole } = req.body;
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) return res.status(400).json({ message: 'El correo ya está registrado' });
 
     // Asumimos que el modelo User tiene un hook beforeCreate para hashear el password
-    const newUser = await User.create({ name, email, password, role, phone });
+    const newUser = await User.create({ username, email, password, globalRole });
 
     const userResp = newUser.toJSON();
     delete userResp.password;
