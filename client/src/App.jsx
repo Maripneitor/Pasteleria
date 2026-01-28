@@ -45,16 +45,18 @@ function App() {
         <Route path="/registro" element={<RegisterPage />} />
 
         {/* 🔒 Rutas Protegidas */}
+        {/* Si no hay token, ProtectedRoute te manda a /login */}
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/pedidos/nuevo" element={<NewOrderPage />} />
-            <Route path="/calendario" element={<CalendarPage />} />
-            <Route path="/admin/usuarios" element={<UsersPage />} />
+            {/* La ruta "/" carga el Dashboard dentro del Outlet de MainLayout */}
+            <Route index element={<DashboardPage />} />
+            <Route path="pedidos/nuevo" element={<NewOrderPage />} />
+            <Route path="calendario" element={<CalendarPage />} />
+            <Route path="admin/usuarios" element={<UsersPage />} />
           </Route>
         </Route>
 
-        {/* Redirección por defecto */}
+        {/* Redirección Catch-all: Si la ruta no existe, ir al inicio (que a su vez verificará el token) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

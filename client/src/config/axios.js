@@ -19,16 +19,16 @@ client.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
-// 🛡️ INTERCEPTOR (El Portero de Entrada)
-// Si el token expiró (Error 401), cerramos sesión automáticamente.
-client.interceptors.response.use((response) => {
-    return response;
-}, (error) => {
-    if (error.response && error.response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = '/login'; // Expulsar al usuario
+// Interceptor: Si el server dice "401 No Autorizado", nos saca
+client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
     }
-    return Promise.reject(error);
-});
+);
 
 export default client;
