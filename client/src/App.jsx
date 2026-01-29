@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
-// 👇 ESTAS SON LAS IMPORTACIONES QUE FALTABAN
+// Páginas Existentes
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -11,34 +11,25 @@ import CalendarPage from './pages/CalendarPage';
 import UsersPage from './pages/admin/UsersPage';
 import ConnectPage from './pages/ConnectPage';
 
+// 🆕 Páginas Nuevas (Routing Repair)
+import OrdersPage from './pages/OrdersPage'; // Asegúrate de crear/renombrar este archivo
+import CashRegister from './pages/CashRegister';
+import ProductionCalendar from './pages/ProductionCalendar';
+import AuditLog from './pages/AuditLog';
+import NotFound from './pages/NotFound';
+
+// 🆕 Módulos Operativos (UI Forms)
+import LocalSettings from './pages/LocalSettings';
+import CashCountForm from './pages/ops/CashCountForm'; // Sugerencia de carpeta: pages/ops
+import ExpenseForm from './pages/ops/ExpenseForm';
+
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <>
-      {/* Configuración de Notificaciones Estilo "Pastelería" */}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          className: '',
-          style: {
-            border: '1px solid #fbcfe8',
-            padding: '16px',
-            color: '#831843',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '12px',
-            boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-          },
-          success: {
-            iconTheme: {
-              primary: '#db2777',
-              secondary: '#fff',
-            },
-          },
-        }}
-      />
+      <Toaster position="top-right" toastOptions={{ className: '', style: { border: '1px solid #fbcfe8', padding: '16px', color: '#831843' } }} />
 
       <Routes>
         {/* Rutas Públicas */}
@@ -47,19 +38,29 @@ function App() {
         <Route path="/conectar" element={<ConnectPage />} />
 
         {/* 🔒 Rutas Protegidas */}
-        {/* Si no hay token, ProtectedRoute te manda a /login */}
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            {/* La ruta "/" carga el Dashboard dentro del Outlet de MainLayout */}
             <Route index element={<DashboardPage />} />
+
+            {/* 🛠 Wizard de Pedidos Refactorizado */}
             <Route path="pedidos/nuevo" element={<NewOrderPage />} />
-            <Route path="calendario" element={<CalendarPage />} />
-            <Route path="admin/usuarios" element={<UsersPage />} />
+
+            {/* 🔗 Rutas Reparadas (Spanish URLs) */}
+            <Route path="pedidos" element={<OrdersPage />} />
+            <Route path="caja" element={<CashRegister />} />
+            <Route path="produccion" element={<ProductionCalendar />} />
+            <Route path="usuarios" element={<UsersPage />} /> {/* Antes /admin/usuarios */}
+            <Route path="auditoria" element={<AuditLog />} />
+
+            {/* ⚙️ Nuevas Rutas Operativas */}
+            <Route path="caja/arqueo" element={<CashCountForm />} />
+            <Route path="caja/gastos" element={<ExpenseForm />} />
+            <Route path="configuracion" element={<LocalSettings />} />
           </Route>
         </Route>
 
-        {/* Redirección Catch-all: Si la ruta no existe, ir al inicio (que a su vez verificará el token) */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* 404 - Catch All */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
