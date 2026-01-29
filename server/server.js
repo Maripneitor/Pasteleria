@@ -35,7 +35,10 @@ app.use('/FOLIOS_GENERADOS', express.static(path.join(__dirname, 'FOLIOS_GENERAD
 
 // 👇 RUTAS MAESTRAS (Prefijo sagrado '/api')
 app.get('/api', (req, res) => res.json({ status: 'online', message: 'API Pastelería v2.0' }));
+
+// ✅ Paso 1: Registrar rutas de autenticación
 app.use('/api/auth', authRoutes);
+
 app.use('/api/folios', folioRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/clients', clientRoutes);

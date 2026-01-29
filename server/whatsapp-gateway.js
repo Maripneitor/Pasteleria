@@ -152,3 +152,8 @@ module.exports = {
     getClient: () => client,
     getStatus: () => ({ status, qr: qrCodeData })
 };
+
+// 🟢 AUTO-ARRANQUE SI SE EJECUTA DESDE DOCKER/COMANDE (node whatsapp-gateway.js)
+if (require.main === module) {
+    initializeWhatsApp();
+}

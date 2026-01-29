@@ -17,6 +17,24 @@ const OrderCard = ({ order }) => {
         ? `${baseUrl}${order.imagen_referencia_url.startsWith('/') ? '' : '/'}${order.imagen_referencia_url}`
         : null;
 
+    const handlePrintPdf = () => {
+        // Validación: Si el ID no es numérico, es un Mock
+        if (isNaN(order.id)) {
+            // Usamos un alert simple o toast si estuviera importado, 
+            // pero para seguir la instrucción estricta de "Alert Window" o similar:
+            alert("⚠️ Modo Demo: Los pedidos simulados no generan PDF fiscal. Solo vista en pantalla.");
+            return;
+        }
+
+        try {
+            const pdfUrl = `${apiUrl}/folios/${order.id}/pdf`;
+            window.open(pdfUrl, '_blank');
+        } catch (error) {
+            console.error("Error al abrir PDF:", error);
+            alert("Error al intentar abrir el PDF. Verifique la conexión con el servidor.");
+        }
+    };
+
     return (
         <div className={styles.card}>
             {imageUrl && (
@@ -44,10 +62,13 @@ const OrderCard = ({ order }) => {
             <div className={styles.body}>
                 <h3>{order.clientName}</h3>
                 <p className={styles.details}>{order.description}</p>
-                <p className={styles.date}>Entrega: {order.deliveryDate}</p>
+                <div className={styles.meta}>
+                    <p className={styles.date}>📅 {order.deliveryDate}</p>
+                    <p className={styles.total}>💰 ${parseFloat(order.total).toFixed(2)}</p>
+                </div>
             </div>
             <div className={styles.footer}>
-                <button className={styles.btnPdf} onClick={() => alert(`Generando PDF para #${order.id}`)}>
+                <button className={styles.btnPdf} onClick={handlePrintPdf}>
                     📄 PDF
                 </button>
                 <button className={styles.btnEdit} onClick={() => alert(`Editando #${order.id}`)}>

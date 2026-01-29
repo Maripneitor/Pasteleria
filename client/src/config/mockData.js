@@ -1,6 +1,7 @@
-import { cakeFlavors, fillings, cakeTypes, designs } from './mockData';
+// ==========================================
+// 1. DATA PARA EL WIZARD (CATÁLOGO)
+// ==========================================
 
-// Generate more realistic product data related to a bakery
 export const products = [
     {
         id: 1,
@@ -65,7 +66,67 @@ export const flavorOptions = [
     { id: 'queso', name: 'Queso Crema', type: 'relleno' }
 ];
 
-// Helper to keep the existing imports happy if they were used elsewhere, 
-// though we usually just export what we need. 
-// Re-exporting empty/simple mocks for specific named imports if needed by original code:
-export { flavorOptions as cakeFlavors, flavorOptions as fillings }; 
+export const cakeTypes = [
+    { id: 'tres_leches', name: 'Tres Leches', priceModifier: 0 },
+    { id: 'seco', name: 'Pan Seco / Americano', priceModifier: 0 },
+    { id: 'imposible', name: 'Chocoflan / Imposible', priceModifier: 50 }
+];
+
+export const designs = [
+    { id: 'tradicional', name: 'Tradicional (Merengue)', priceModifier: 0 },
+    { id: 'fondant', name: 'Fondant 2D', priceModifier: 150 },
+    { id: 'chantilly', name: 'Chantilly Premium', priceModifier: 50 },
+    { id: 'impresion', name: 'Oblea Comestible', priceModifier: 80 }
+];
+
+// Aliases para compatibilidad con código existente
+export const cakeFlavors = flavorOptions.filter(f => f.type === 'pan');
+export const fillings = flavorOptions.filter(f => f.type === 'relleno');
+
+
+// ==========================================
+// 2. DATA PARA LA PANTALLA DE PEDIDOS (ORDERS PAGE)
+// ==========================================
+
+export const MOCK_ORDERS = [
+    {
+        id: "temp-101",
+        clientName: "Maria Gonzalez",
+        status: "pending", // pendiente
+        total: 850.00,
+        deliveryDate: "2026-02-01T14:00:00",
+        itemsDescription: "Pastel 3 Leches (Grande) + 12 Cupcakes"
+    },
+    {
+        id: 1045, // ID Numérico (Simula uno real para probar PDF)
+        clientName: "Juan Perez",
+        status: "production", // en producción
+        total: 450.00,
+        deliveryDate: "2026-02-02T10:00:00",
+        itemsDescription: "Cheesecake Frutos Rojos"
+    },
+    {
+        id: "temp-102",
+        clientName: "Ana Lopez",
+        status: "ready", // listo
+        total: 1200.00,
+        deliveryDate: "2026-01-30T18:00:00",
+        itemsDescription: "Pastel Personalizado (Fondant)"
+    },
+    {
+        id: 1046,
+        clientName: "Carlos Ruiz",
+        status: "delivered", // entregado
+        total: 350.00,
+        deliveryDate: "2026-01-28T12:00:00",
+        itemsDescription: "Pastel Chocolate"
+    },
+    {
+        id: "temp-103",
+        clientName: "Sofía Castro",
+        status: "paid", // pagado
+        total: 500.00,
+        deliveryDate: "2026-02-03T16:00:00",
+        itemsDescription: "Tarta de Limón"
+    }
+];

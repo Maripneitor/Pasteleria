@@ -1,5 +1,5 @@
 services:
-  # 1. BASE DE DATOS
+  # 1. BASE DE DATOS (Con Healthcheck para evitar errores rojos)
   db:
     image: mysql:8.0
     container_name: pasteleria-db
@@ -13,16 +13,23 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      # Ajusta la ruta a donde moviste el backup dentro de server o raíz
       - ./server/RESPALDOS_BD/backup_2025-09-30.sql:/docker-entrypoint-initdb.d/init.sql
+    # SALUD: Verifica cada 10s si MySQL responde
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DB_PASSWORD}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  # 2. BACKEND (API)
+  # 2. BACKEND (Espera a que la DB esté lista)
   server:
     build: ./server
     container_name: pasteleria-server
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy # <--- LA MAGIA: Espera al healthcheck
     ports:
       - "3000:3000"
     environment:
@@ -39,7 +46,7 @@ services:
     networks:
       - default
 
-  # 3. FRONTEND (React Dev)
+  # 3. FRONTEND
   client:
     build: ./client
     container_name: pasteleria-client
@@ -51,24 +58,32 @@ services:
     volumes:
       - ./client:/app
       - /app/node_modules
-    # Comando para mantener el servidor de desarrollo activo
     command: npm run dev -- --host
 
-  # 4. WHATSAPP BOT
+  # 4. WHATSAPP BOT (Configurado para Docker)
   whatsapp:
     build: ./server
     container_name: pasteleria-whatsapp
     restart: always
     depends_on:
       - server
-    command: node whatsapp-gateway.js
+    # IMPORTANTE: Forzamos la ruta de Chromium y argumentos de Puppeteer
     environment:
       - WEBHOOK_URL=http://server:3000/api/webhooks/whatsapp
-      # Se asume que whatsapp-gateway usa las mismas credenciales o lógica
-      # Si necesita conectar a BD, añadir las ENVs correspondientes
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    # Mantenemos vivo el contenedor para debuggear si el script falla
+    command: node whatsapp-gateway.js
     volumes:
+      - ./server:/app
+      - /app/node_modules
       - ./server/.wwebjs_auth:/app/.wwebjs_auth
       - ./server/.wwebjs_cache:/app/.wwebjs_cache
 
 volumes:
   mysql_data:
+
+
+networks:
+  default:
+    driver: bridge

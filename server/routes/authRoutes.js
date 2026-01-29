@@ -6,6 +6,7 @@ const authController = require('../controllers/authController');
 router.post('/register', authController.register);
 
 // Ruta para iniciar sesión
+// URL Final: /api/auth/login
 router.post('/login', authController.login);
 
 module.exports = router;

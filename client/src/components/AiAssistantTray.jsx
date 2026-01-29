@@ -1,24 +1,48 @@
-import React, { useState } from 'react';
-import { Bot, X, Send, Sparkles } from 'lucide-react';
+import { Bot, X, Send, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
+import aiService from '../services/aiService';
+import toast from 'react-hot-toast';
 
 const AiAssistantTray = ({ isOpen, onClose }) => {
+    const location = useLocation();
     const [messages, setMessages] = useState([
         { role: 'ai', text: '¡Hola! Soy tu asistente de pastelería. ¿En qué te ayudo hoy?' }
     ]);
     const [input, setInput] = useState('');
+    const [isThinking, setIsThinking] = useState(false);
+    const [error, setError] = useState(null);
 
-    const handleSend = (e) => {
+    const handleSend = async (e) => {
         e.preventDefault();
-        if (!input.trim()) return;
+        if (!input.trim() || isThinking) return;
 
-        setMessages(prev => [...prev, { role: 'user', text: input }]);
+        const userMessage = input;
+        setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
         setInput('');
+        setIsThinking(true);
+        setError(null);
 
-        // Simulación de respuesta
-        setTimeout(() => {
-            setMessages(prev => [...prev, { role: 'ai', text: 'Entendido, estoy procesando tu solicitud...' }]);
-        }, 800);
+        try {
+            // Context injection
+            const contextData = {
+                currentPath: location.pathname
+            };
+
+            const response = await aiService.sendMessageToAi(userMessage, contextData);
+
+            // Assuming response structure: { response: "AI text", ... }
+            // Adjust property name if backend differs (e.g. response.text or response.message)
+            const aiText = response.response || "Entendido.";
+
+            setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
+        } catch (err) {
+            console.error(err);
+            setError("No pude conectar con el cerebro. Intenta de nuevo.");
+            toast.error("Error de conexión con la IA");
+        } finally {
+            setIsThinking(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -69,6 +93,24 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                                     </div>
                                 </div>
                             ))}
+
+                            {/* Loading Indicator */}
+                            {isThinking && (
+                                <div className="flex justify-start">
+                                    <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm flex items-center gap-2 text-gray-400 text-xs">
+                                        <Loader2 size={14} className="animate-spin" /> Escribiendo...
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Error Indicator */}
+                            {error && (
+                                <div className="flex justify-center">
+                                    <div className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs flex items-center gap-1">
+                                        <AlertCircle size={12} /> {error}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Input Area */}
@@ -84,7 +126,7 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                                 <button
                                     type="submit"
                                     className="absolute right-2 p-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition shadow-sm disabled:opacity-50"
-                                    disabled={!input.trim()}
+                                    disabled={!input.trim() || isThinking}
                                 >
                                     <Send size={16} />
                                 </button>

@@ -33,6 +33,7 @@ exports.register = async (req, res) => {
 // Función para INICIAR SESIÓN
 exports.login = async (req, res) => {
   try {
+    console.log("📨 Recibida petición de login:", req.body);
     const { email, password } = req.body;
 
     // 1. Buscar al usuario por su email
@@ -53,6 +54,8 @@ exports.login = async (req, res) => {
       username: user.username,
       role: user.globalRole
     };
+
+    console.log("✅ Login Exitoso para:", email);
 
     // --- CORRECCIÓN APLICADA ---
     // Se utiliza la variable de entorno JWT_SECRET para firmar el token,
