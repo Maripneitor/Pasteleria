@@ -19,6 +19,7 @@ const userRoutes = require('./routes/userRoutes');
 const clientRoutes = require('./routes/clientRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const aiSessionRoutes = require('./routes/aiSessionRoutes');
+const dictationRoutes = require('./routes/dictationRoutes');
 
 // Conectar DB
 const { conectarDB } = require('./config/database');
@@ -44,6 +45,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/webhooks', whatsappRoutes);
 app.use('/api/ai-sessions', aiSessionRoutes);
+app.use('/api/dictation', dictationRoutes);
+app.use('/api/catalog', require('./routes/catalogRoutes'));
+app.use('/api/ingredients', require('./routes/ingredientRoutes'));
+app.use('/api/commissions', require('./routes/commissionRoutes'));
 
 // Ruta de Salud (Para verificar que el server vive)
 app.get('/api/', (req, res) => res.send('API Pastelería Funcionando 🍰'));
@@ -56,7 +61,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 // Sincronización DB y arranque
-sequelize.sync({ force: false }).then(() => {
+sequelize.sync({ alter: true }).then(() => {
   console.log('🔄 BD Sincronizada');
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);

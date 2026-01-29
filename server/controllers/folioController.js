@@ -1,226 +1,316 @@
-const Folio = require('../models/Folio');
 const { Op } = require('sequelize');
-const ejs = require('ejs');
-const path = require('path');
-const puppeteer = require('puppeteer');
-const QRCode = require('qrcode');
+const Folio = require('../models/Folio');
+const pdfService = require('../services/pdfService');
 
-const FolioEditHistory = require('../models/FolioEditHistory'); // Asegúrate de importar el modelo
+// Genera folio_numero secuencial simple
+async function nextFolioNumero() {
+    const last = await Folio.findOne({ order: [['id', 'DESC']] });
+    const next = (last?.id || 0) + 1;
+    return `FOL-${String(next).padStart(6, '0')}`;
+}
 
-// 1. Crear Nuevo Folio
+function computeWatermark(folio) {
+    // Cancelación gana siempre
+    if (folio.estatus_folio === 'Cancelado') return 'CANCELADO';
+    if (folio.estatus_pago === 'Pagado') return 'PAGADO';
+    return 'PENDIENTE';
+}
+
+// ✅ LIST
+exports.listFolios = async (req, res) => {
+    try {
+        const q = (req.query.q || '').trim();
+
+        const where = {};
+        if (q) {
+            where[Op.or] = [
+                { folio_numero: { [Op.like]: `%${q}%` } },
+                { cliente_nombre: { [Op.like]: `%${q}%` } },
+                { cliente_telefono: { [Op.like]: `%${q}%` } },
+            ];
+        }
+
+        const rows = await Folio.findAll({
+            where,
+            order: [['createdAt', 'DESC']],
+        });
+
+        res.json(rows);
+    } catch (e) {
+        console.error('listFolios:', e);
+        res.status(500).json({ message: 'Error listando folios' });
+    }
+};
+
+// ✅ GET ONE
+exports.getFolioById = async (req, res) => {
+    try {
+        const row = await Folio.findByPk(req.params.id);
+        if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
+        res.json(row);
+    } catch (e) {
+        console.error('getFolioById:', e);
+        res.status(500).json({ message: 'Error consultando folio' });
+    }
+};
+
+// ✅ CREATE (recibe tu wizard gigante y guarda claves en columnas)
 exports.createFolio = async (req, res) => {
     try {
-        const { clientId, ...folioData } = req.body;
+        const { clientId = null, ...folioData } = req.body;
 
-        // Validación básica
-        if (!clientId) {
-            return res.status(400).json({ success: false, message: 'El cliente es obligatorio' });
+        // Requeridos mínimos (snapshot priority)
+        if (!folioData.cliente_nombre || !folioData.cliente_telefono) {
+            return res.status(400).json({ message: 'Falta: cliente_nombre y/o cliente_telefono' });
         }
 
-        // Asignar responsable (Usuario logueado)
-        const responsibleUserId = req.user ? req.user.id : null;
+        const required = ['fecha_entrega', 'hora_entrega'];
+        for (const k of required) {
+            if (!folioData[k]) return res.status(400).json({ message: `Falta campo requerido: ${k}` });
+        }
 
-        const nuevoFolio = await Folio.create({
+        // folio_numero si no viene
+        const folioNumero = folioData.folio_numero || await nextFolioNumero();
+
+        // Económicos
+        const costo_base = Number(folioData.costo_base || 0);
+        const costo_envio = Number(folioData.costo_envio || 0);
+        const anticipo = Number(folioData.anticipo || 0);
+
+        const total = Number(folioData.total ?? (costo_base + costo_envio)) || 0;
+
+        const estatus_pago =
+            (folioData.estatus_pago) ||
+            (total - anticipo <= 0 ? 'Pagado' : 'Pendiente');
+
+        const row = await Folio.create({
+            // Spread keys that match model directly
             ...folioData,
-            clientId,
-            responsibleUserId
+
+            folio_numero: folioNumero,
+            clientId, // Optional / Fallback
+            responsibleUserId: req.user?.id || null,
+
+            // Explicit overrides / sanitization if needed
+            cliente_nombre: folioData.cliente_nombre,
+            cliente_telefono: folioData.cliente_telefono,
+            cliente_telefono_extra: folioData.cliente_telefono_extra || null,
+
+            fecha_entrega: folioData.fecha_entrega,
+            hora_entrega: folioData.hora_entrega,
+            ubicacion_entrega: folioData.ubicacion_entrega || 'En Sucursal',
+
+            tipo_folio: folioData.tipo_folio || 'Normal',
+
+            forma: folioData.forma || null,
+            numero_personas: folioData.numero_personas || null,
+            sabores_pan: folioData.sabores_pan || [],
+            rellenos: folioData.rellenos || [],
+            complementos: folioData.complementos || [],
+
+            descripcion_diseno: folioData.descripcion_diseno || null,
+            imagen_referencia_url: folioData.imagen_referencia_url || null,
+            diseno_metadata: folioData.diseno_metadata || {},
+
+            costo_base,
+            costo_envio,
+            anticipo,
+            total,
+            estatus_pago,
+
+            estatus_produccion: folioData.estatus_produccion || 'Pendiente',
+            estatus_folio: folioData.estatus_folio || 'Activo',
+
+            tenantId: req.user?.tenantId || 1
         });
 
-        // Registrar creación en historial
-        await FolioEditHistory.create({
-            tenantId: req.user?.tenantId || 1, // Asumiendo multi-tenant o default 1
-            folioId: nuevoFolio.id,
-            editorUserId: responsibleUserId,
-            eventType: 'CREATE',
-            changedFields: { created: true }
-        });
-
-        res.status(201).json({
-            success: true,
-            message: 'Folio creado exitosamente',
-            data: nuevoFolio
-        });
-    } catch (error) {
-        console.error("Error al crear folio:", error);
-        res.status(500).json({ success: false, message: 'Error al guardar el pedido' });
+        res.status(201).json(row);
+    } catch (e) {
+        console.error('createFolio:', e);
+        res.status(500).json({ message: 'Error creando folio', error: e.message });
     }
 };
 
-// 1.5 Actualizar Folio con Auditoría
+// ✅ UPDATE (edición)
 exports.updateFolio = async (req, res) => {
     try {
-        const { id } = req.params;
-        const updateData = req.body;
-        const editorUserId = req.user ? req.user.id : null;
+        const row = await Folio.findByPk(req.params.id);
+        if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
 
-        const folio = await Folio.findByPk(id);
-        if (!folio) {
-            return res.status(404).json({ message: 'Folio no encontrado' });
-        }
+        const p = req.body;
 
-        // Detectar cambios para el historial
-        const changes = {};
-        Object.keys(updateData).forEach(key => {
-            if (folio[key] != updateData[key]) {
-                changes[key] = { old: folio[key], new: updateData[key] };
-            }
+        // Actualiza columnas clave + JSONs
+        await row.update({
+            cliente_nombre: p.cliente_nombre ?? row.cliente_nombre,
+            cliente_telefono: p.cliente_telefono ?? row.cliente_telefono,
+            cliente_telefono_extra: p.cliente_telefono_extra ?? row.cliente_telefono_extra,
+
+            fecha_entrega: p.fecha_entrega ?? row.fecha_entrega,
+            hora_entrega: p.hora_entrega ?? row.hora_entrega,
+
+            tipo_folio: p.tipo_folio ?? row.tipo_folio,
+            forma: p.forma ?? row.forma,
+            numero_personas: p.numero_personas ?? row.numero_personas,
+
+            sabores_pan: p.sabores_pan ?? row.sabores_pan,
+            rellenos: p.rellenos ?? row.rellenos,
+            complementos: p.complementos ?? row.complementos,
+
+            descripcion_diseno: p.descripcion_diseno ?? row.descripcion_diseno,
+            imagen_referencia_url: p.imagen_referencia_url ?? row.imagen_referencia_url,
+            diseno_metadata: p.diseno_metadata ?? row.diseno_metadata,
+
+            costo_base: p.costo_base ?? row.costo_base,
+            costo_envio: p.costo_envio ?? row.costo_envio,
+            anticipo: p.anticipo ?? row.anticipo,
+            total: p.total ?? row.total,
+
+            estatus_pago: p.estatus_pago ?? row.estatus_pago,
+            estatus_produccion: p.estatus_produccion ?? row.estatus_produccion,
         });
 
-        // Actualizar
-        await folio.update(updateData);
-
-        // Guardar historial si hubo cambios significativos
-        if (Object.keys(changes).length > 0) {
-            await FolioEditHistory.create({
-                tenantId: req.user?.tenantId || 1,
-                folioId: folio.id,
-                editorUserId: editorUserId,
-                eventType: 'UPDATE',
-                changedFields: changes
-            });
-        }
-
-        res.json({ success: true, message: 'Folio actualizado', data: folio });
-
-    } catch (error) {
-        console.error("Error actualizando folio:", error);
-        res.status(500).json({ success: false, message: 'Error al actualizar el folio' });
+        res.json(row);
+    } catch (e) {
+        console.error('updateFolio:', e);
+        res.status(500).json({ message: 'Error actualizando folio' });
     }
 };
 
-// 1.8 KDS: Actualizar Estatus (Cocina)
+// ✅ CANCEL (con registro)
+exports.cancelFolio = async (req, res) => {
+    try {
+        const row = await Folio.findByPk(req.params.id);
+        if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
+
+        await row.update({
+            estatus_folio: 'Cancelado',
+            cancelado_en: new Date(),
+            motivo_cancelacion: req.body?.motivo || null,
+        });
+
+        res.json({ message: 'Folio cancelado', folio: row });
+    } catch (e) {
+        console.error('cancelFolio:', e);
+        res.status(500).json({ message: 'Error cancelando folio' });
+    }
+};
+
+// Status update patch (added for production flow)
 exports.updateFolioStatus = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { status } = req.body; // Nuevo estatus: 'Horneado', 'Decorado', etc.
-        const editorUserId = req.user ? req.user.id : null;
+        const row = await Folio.findByPk(req.params.id);
+        if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
 
-        const folio = await Folio.findByPk(id);
-        if (!folio) {
-            return res.status(404).json({ message: 'Folio no encontrado' });
-        }
-
-        const oldStatus = folio.estatus_produccion;
-
-        // Actualizamos estatus y responsable (quien lo movió)
-        await folio.update({
-            estatus_produccion: status,
-            responsibleUserId: editorUserId
+        await row.update({
+            estatus_produccion: req.body.status ?? row.estatus_produccion
         });
-
-        // Historial
-        await FolioEditHistory.create({
-            tenantId: req.user?.tenantId || 1,
-            folioId: folio.id,
-            editorUserId: editorUserId,
-            eventType: 'STATUS_CHANGE',
-            changedFields: {
-                status: { old: oldStatus, new: status }
-            }
-        });
-
-        res.json({ success: true, message: `Folio movido a ${status}`, data: folio });
-
-    } catch (error) {
-        console.error("Error actualizando estatus:", error);
-        res.status(500).json({ success: false, message: 'Error al cambiar estatus' });
+        res.json(row);
+    } catch (e) {
+        console.error("updateStatus:", e);
+        res.status(500).json({ message: 'Error' });
     }
 };
 
-// 2. Estadísticas para el Dashboard
+// ✅ DELETE
+exports.deleteFolio = async (req, res) => {
+    try {
+        const row = await Folio.findByPk(req.params.id);
+        if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
+
+        await row.destroy();
+        res.json({ message: 'Eliminado' });
+    } catch (e) {
+        console.error('deleteFolio:', e);
+        res.status(500).json({ message: 'Error eliminando folio' });
+    }
+};
+
+// ✅ CALENDAR (rango por fecha_entrega)
+exports.getCalendarEvents = async (req, res) => {
+    try {
+        const { start, end } = req.query; // YYYY-MM-DD
+        // If no start/end provided, default to current month or similar to prevent error?
+        // User code says "if !start return 400".
+        const where = {};
+        if (start && end) {
+            where.fecha_entrega = { [Op.between]: [start, end] };
+        }
+
+        const rows = await Folio.findAll({
+            where,
+            order: [['fecha_entrega', 'ASC'], ['hora_entrega', 'ASC']],
+        });
+
+        const events = rows.map(f => ({
+            id: String(f.id),
+            title: `${f.folio_numero} • ${f.cliente_nombre}`,
+            start: `${f.fecha_entrega}T${f.hora_entrega}`,
+            extendedProps: f.toJSON(),
+            // Add color logic if desired
+            color: f.estatus_folio === 'Cancelado' ? '#ef4444' : f.estatus_pago === 'Pagado' ? '#10b981' : '#f59e0b'
+        }));
+
+        res.json(events);
+    } catch (e) {
+        console.error('getCalendarEvents:', e);
+        res.status(500).json({ message: 'Error calendario' });
+    }
+};
+
+// ✅ DASHBOARD (sumatorias por columna)
 exports.getDashboardStats = async (req, res) => {
     try {
-        // Mockup inteligente: En producción haríamos un count() real sobre los campos JSON
-        // Por ahora devolvemos datos calculados básicos
+        const totalCount = await Folio.count();
+        const pendingCount = await Folio.count({ where: { estatus_pago: 'Pendiente' } });
+        const cancelledCount = await Folio.count({ where: { estatus_folio: 'Cancelado' } });
 
-        const totalFolios = await Folio.count();
-        const ventasHoy = await Folio.sum('total', {
-            where: { createdAt: { [Op.gt]: new Date(new Date() - 24 * 60 * 60 * 1000) } }
+        const sumTotal = await Folio.sum('total') || 0;
+        const sumAnticipo = await Folio.sum('anticipo') || 0;
+
+        // Recientes (top 5)
+        const recientes = await Folio.findAll({
+            limit: 5,
+            order: [['createdAt', 'DESC']]
         });
 
         res.json({
+            totalCount,
+            pendingCount,
+            cancelledCount,
+            sumTotal: Number(sumTotal),
+            sumAnticipo: Number(sumAnticipo),
+            recientes: recientes, // Array de folios reales
+            // Mock de populares si no hay tabla de detalle de productos aun
             populares: [
                 { name: 'Chocolate', value: 45 },
                 { name: 'Vainilla', value: 30 },
                 { name: 'Red Velvet', value: 25 },
-            ],
-            comisiones: [
-                { name: 'Juan', comision: 1200 },
-                { name: 'Ana', comision: 950 },
-            ],
-            resumen: {
-                total_folios: totalFolios,
-                ventas_hoy: ventasHoy || 0
-            }
+            ]
         });
-    } catch (error) {
-        res.status(500).json({ error: 'Error obteniendo estadísticas' });
+    } catch (e) {
+        console.error('getDashboardStats:', e);
+        res.status(500).json({ message: 'Error stats' });
     }
 };
 
-// 3. Generar PDF del Folio
+// ✅ PDF (usa watermark)
 exports.generarPDF = async (req, res) => {
     try {
-        const { id } = req.params;
-        const folio = await Folio.findByPk(id);
+        const folio = await Folio.findByPk(req.params.id);
+        if (!folio) return res.status(404).json({ message: 'Folio no encontrado' });
 
-        if (!folio) {
-            return res.status(404).json({ message: 'Folio no encontrado' });
-        }
+        const watermark = computeWatermark(folio);
 
-        // Generar QR Code
-        const qrUrl = await QRCode.toDataURL(`http://localhost:5173/folios/${id}`); // Ajustar URL real
-
-        // Renderizar EJS a HTML
-        const filePath = path.join(__dirname, '../templates/folio-pdf.ejs');
-        const html = await ejs.renderFile(filePath, { folio, qrCode: qrUrl });
-
-        // Iniciar Puppeteer
-        const browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox'] // Vital para Docker
-        });
-        const page = await browser.newPage();
-
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            margin: { top: '2cm', right: '2cm', bottom: '2cm', left: '2cm' },
-            printBackground: true
+        const buffer = await pdfService.renderFolioPdf({
+            folio: folio.toJSON(),
+            watermark,
         });
 
-        await browser.close();
-
-        // Enviar PDF
-        res.set({
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename=folio-${id}.pdf`,
-            'Content-Length': pdfBuffer.length
-        });
-        res.send(pdfBuffer);
-
-    } catch (error) {
-        console.error("Error generando PDF:", error);
-        res.status(500).json({ message: 'Error al generar el PDF' });
-    }
-};
-
-exports.getCalendarEvents = async (req, res) => {
-    try {
-        const { start, end } = req.query; // Esperamos formato YYYY-MM-DD
-
-        const folios = await Folio.findAll({
-            where: {
-                fecha_entrega: {
-                    [Op.between]: [start, end]
-                }
-            },
-            attributes: ['id', 'fecha_entrega', 'hora_entrega', 'cliente_nombre', 'tipo_folio', 'estatus_produccion'],
-            order: [['hora_entrega', 'ASC']]
-        });
-
-        res.json(folios);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error obteniendo calendario' });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${folio.folio_numero}.pdf"`);
+        res.send(buffer);
+    } catch (e) {
+        console.error('generarPDF:', e);
+        res.status(500).json({ message: 'Error PDF' });
     }
 };

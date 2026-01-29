@@ -25,7 +25,11 @@ const AISession = sequelize.define('AISession', {
   status: {
     type: DataTypes.ENUM('active', 'completed', 'cancelled'),
     defaultValue: 'active'
-  }
+  },
+  needsHuman: { type: DataTypes.BOOLEAN, defaultValue: false },
+  priority: { type: DataTypes.ENUM('normal', 'alta', 'urgente'), defaultValue: 'normal' },
+  customerPhone: { type: DataTypes.STRING, allowNull: true },
+  customerName: { type: DataTypes.STRING, allowNull: true },
 }, { tableName: 'ai_sessions' });
 
 module.exports = AISession;

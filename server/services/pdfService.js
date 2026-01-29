@@ -1,127 +1,41 @@
-const pdf = require('html-pdf-node');
 const ejs = require('ejs');
 const path = require('path');
+const puppeteer = require('puppeteer');
+const QRCode = require('qrcode');
 
-// --- FUNCIÓN EXISTENTE PARA PDF INDIVIDUAL (SIN CAMBIOS) ---
-const fs = require('fs'); // Import fs
-
-// --- FUNCIÓN EXISTENTE PARA PDF INDIVIDUAL ---
-exports.createPdf = async (folioData) => {
+exports.renderFolioPdf = async ({ folio, watermark }) => {
     try {
-        console.log('📄 [PDF SERVICE] Generando PDF para folio:', folioData.folioNumber);
-        if (folioData.imageUrls) {
-            console.log('   🖼️ Imágenes recibidas en servicio PDF:', folioData.imageUrls);
-        }
-        const templatePath = path.join(__dirname, '../templates/folioTemplate.ejs');
-        const html = await ejs.renderFile(templatePath, { folio: folioData });
+        const tpl = path.join(__dirname, '..', 'templates', 'folio-pdf.ejs');
 
-        // 1. Creamos el texto del pie de página dinámicamente
-        const footerText = `Pedido capturado por: ${folioData.responsibleUser.username} el ${new Date(folioData.createdAt).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })}`;
+        // Generar QR (lo movemos aquí para mantener el controller limpio o lo pasamos desde allá)
+        // En la propuesta del usuario, el controller parece pasar datos ya listos, pero el template original usaba qrCode
+        const qrUrl = await QRCode.toDataURL(`http://localhost:5173/folios/${folio.id}`);
 
-        // 2. Modificamos las opciones del PDF
-        const options = {
-            format: 'Letter',
-            printBackground: true,
-            displayHeaderFooter: true,
-            margin: { top: '25px', right: '25px', bottom: '40px', left: '25px' },
-            footerTemplate: `
-          <div style="width: 100%; font-size: 9pt; text-align: center; padding: 10px 25px 0 25px; border-top: 1px solid #f0f0f0; box-sizing: border-box;">
-            ${footerText}
-          </div>
-        `
-        };
+        const html = await ejs.renderFile(tpl, {
+            folio,
+            watermarkText: watermark, // Mapeamos 'watermark' a 'watermarkText' que usa el EJS actual
+            qrCode: qrUrl
+        });
 
-        const file = { content: html };
-        const pdfBuffer = await pdf.generatePdf(file, options);
-
-        // Guardar en disco (FOLIOS_GENERADOS)
-        const filename = `Folio-${folioData.folioNumber}.pdf`;
-        const savePath = path.join(__dirname, '../FOLIOS_GENERADOS', filename);
-        fs.writeFileSync(savePath, pdfBuffer);
-        console.log(`✅ PDF guardado en: ${savePath}`);
-
-        return pdfBuffer; // Retornamos buffer por si el controlador lo quiere enviar directo
-
+        const browser = await puppeteer.launch({
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+        const buffer = await page.pdf({
+            format: 'A4',
+            margin: { top: '2cm', right: '2cm', bottom: '2cm', left: '2cm' },
+            printBackground: true
+        });
+        await browser.close();
+        return buffer;
     } catch (error) {
-        console.error('❌ Error durante la creación del PDF individual:', error);
+        console.error("Error en pdfService:", error);
         throw error;
     }
 };
 
-/**
- * Función genérica para crear PDFs masivos (etiquetas y comandas).
- * @param {string} templateName - El nombre del archivo de plantilla EJS (sin la extensión).
- * @param {Array} data - Un array de objetos (folios, comisiones, etc.).
- * @param {string} date - La fecha para el título del reporte (opcional).
- */
-async function generateBulkPdf(templateName, data, date = null) {
-    try {
-        const templatePath = path.join(__dirname, `../templates/${templateName}.ejs`);
-        const html = await ejs.renderFile(templatePath, { folios: data, date: date, commissions: data }); // Pasamos los datos con diferentes nombres por si acaso
-
-        const options = {
-            format: 'Letter',
-            printBackground: true,
-            margin: {
-                top: '20px',
-                right: '20px',
-                bottom: '20px',
-                left: '20px'
-            }
-        };
-
-        const file = { content: html };
-        const pdfBuffer = await pdf.generatePdf(file, options);
-        console.log(`✅ PDF masivo de ${templateName} generado.`);
-        return pdfBuffer;
-
-    } catch (error) {
-        console.error(`❌ Error durante la creación del PDF de ${templateName}:`, error);
-        throw error;
-    }
-}
-
-/**
- * Crea un PDF con las etiquetas de producción para un conjunto de folios.
- * @param {Array} folios - Un array de objetos de folio.
- */
-exports.createLabelsPdf = async (folios) => {
-    return generateBulkPdf('labelsTemplate', folios);
+exports.renderDaySummaryPdf = async ({ type, date, folios }) => {
+    // Placeholder para futuro uso si calendar.js lo pide
+    return null;
 };
-
-/**
- * Crea un PDF con las comandas de envío para un conjunto de folios.
- * @param {Array} folios - Un array de objetos de folio.
- */
-exports.createOrdersPdf = async (folios) => {
-    return generateBulkPdf('ordersTemplate', folios);
-};
-
-// ==================== INICIO DE LA MODIFICACIÓN ====================
-/**
- * Crea un PDF con el reporte de comisiones para una fecha específica.
- * @param {Array} commissions - Un array de objetos de comisión con su folio asociado.
- * @param {string} date - La fecha del reporte en formato YYYY-MM-DD.
- */
-exports.createCommissionReportPdf = async (commissions, date) => {
-    try {
-        const templatePath = path.join(__dirname, '../templates/commissionReportTemplate.ejs');
-        const html = await ejs.renderFile(templatePath, { commissions, date });
-
-        const options = {
-            format: 'Letter',
-            printBackground: true,
-            margin: { top: '25px', right: '25px', bottom: '25px', left: '25px' }
-        };
-
-        const file = { content: html };
-        const pdfBuffer = await pdf.generatePdf(file, options);
-        console.log(`✅ PDF de reporte de comisiones generado para la fecha ${date}.`);
-        return pdfBuffer;
-
-    } catch (error) {
-        console.error(`❌ Error durante la creación del PDF de comisiones:`, error);
-        throw error;
-    }
-};
-// ===================== FIN DE LA MODIFICACIÓN ====================== 

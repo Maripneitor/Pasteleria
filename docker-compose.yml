@@ -39,6 +39,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
       - JWT_SECRET=${JWT_SECRET}
+      - DB_PORT=3306 # Force internal port, ignoring local .env
       - WEBHOOK_URL=http://server:3000/api/webhooks/whatsapp
     volumes:
       - ./server:/app
@@ -54,7 +55,8 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:3000/api
+      - VITE_API_URL=/api
+      - VITE_PROXY_TARGET=http://server:3000
     volumes:
       - ./client:/app
       - /app/node_modules

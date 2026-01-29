@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
+// FullCalendar v6 does not require manual CSS imports (files verified missing in node_modules)
 
 // Filtro para limpiar logs de React DevTools en desarrollo/pruebas
 const originalConsoleError = console.error;

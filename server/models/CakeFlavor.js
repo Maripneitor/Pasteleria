@@ -1,13 +1,13 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
-const Filling = sequelize.define('Filling', {
+const CakeFlavor = sequelize.define('CakeFlavor', {
     tenantId: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
     name: { type: DataTypes.STRING, allowNull: false },
     isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
 }, {
-    tableName: 'fillings',
+    tableName: 'cake_flavors',
     timestamps: true
 });
 
-module.exports = Filling;
+module.exports = CakeFlavor;

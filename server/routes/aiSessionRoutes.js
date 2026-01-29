@@ -18,6 +18,10 @@ router.route('/:id/chat')
 // ===== INICIO DE LA MODIFICACIÓN =====
 // Ruta para descartar (marcar como 'cancelled') una sesión de IA
 router.delete('/:id', aiSessionController.discardSession);
-// ===== FIN DE LA MODIFICACIÓN =====
+
+// ===== Nuevas Rutas Inbox =====
+router.get('/inbox/list', aiSessionController.listInbox);
+router.patch('/:id/needs-human', aiSessionController.setNeedsHuman);
+router.patch('/:id/priority', aiSessionController.setPriority);
 
 module.exports = router;

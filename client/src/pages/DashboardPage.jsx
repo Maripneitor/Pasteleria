@@ -136,63 +136,81 @@ const DashboardPage = () => {
       </section>
 
       {/* 3.5. Gráficas de Estadísticas */}
-      <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 h-80">
-        <h3 className="text-lg font-bold mb-4 text-gray-700 dark:text-gray-200">Sabores Populares</h3>
-        <ResponsiveContainer width="100%" height="100%">
-          <RechartsPieChart>
-            <Pie
-              data={stats?.populares || []}
-              dataKey="value"
-              nameKey="name"
-              cx="50%" cy="50%"
-              outerRadius={80}
-              fill="#8884d8"
-              label
-            >
-              {stats?.populares?.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={['#ec4899', '#8b5cf6', '#f59e0b', '#10b981'][index % 4]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </RechartsPieChart>
-        </ResponsiveContainer>
+      <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+        <h3 className="text-lg font-bold mb-4 text-gray-700 dark:text-gray-200">
+          Sabores Populares
+        </h3>
+
+        <div className="w-full h-[240px] min-h-[240px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsPieChart>
+              <Pie
+                data={stats?.populares || []}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                label
+              >
+                {(stats?.populares || []).map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={["#ec4899", "#8b5cf6", "#f59e0b", "#10b981"][index % 4]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+            </RechartsPieChart>
+          </ResponsiveContainer>
+        </div>
       </section>
 
-      {/* 4. Resumen Rápido (Tabla Mockup) */}
+      {/* 4. Resumen Rápido (Tabla REAL) */}
       <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
         <h3 className="text-lg font-bold mb-4">Pedidos Recientes</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="text-gray-400 border-b dark:border-gray-700">
-                <th className="pb-2">Folio</th>
-                <th className="pb-2">Cliente</th>
-                <th className="pb-2">Entrega</th>
-                <th className="pb-2">Estado</th>
-                <th className="pb-2">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y dark:divide-gray-700">
-              {/* Mock Data */}
-              {[1, 2, 3].map(i => (
-                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="py-3 font-mono text-pink-500">#F-{202500 + i}</td>
-                  <td className="py-3">María Pérez</td>
-                  <td className="py-3">Hoy, 14:00 PM</td>
-                  <td className="py-3"><span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Producción</span></td>
-                  <td className="py-3">
-                    <button
-                      onClick={() => handleDownloadPDF(i)}
-                      className="p-2 text-gray-500 hover:text-pink-500 hover:bg-pink-50 rounded-full transition"
-                      title="Imprimir Folio"
-                    >
-                      <Printer size={18} />
-                    </button>
-                  </td>
+          {!stats?.recientes?.length ? (
+            <p className="text-gray-500 text-sm italic">No hay pedidos recientes.</p>
+          ) : (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="text-gray-400 border-b dark:border-gray-700">
+                  <th className="pb-2">Folio</th>
+                  <th className="pb-2">Cliente</th>
+                  <th className="pb-2">Entrega</th>
+                  <th className="pb-2">Estado</th>
+                  <th className="pb-2">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y dark:divide-gray-700">
+                {stats.recientes.map(f => (
+                  <tr key={f.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="py-3 font-mono text-pink-500">{f.folio_numero}</td>
+                    <td className="py-3">{f.cliente_nombre}</td>
+                    <td className="py-3">{f.fecha_entrega} {f.hora_entrega}</td>
+                    <td className="py-3">
+                      <span className={`px-2 py-1 rounded text-xs ${f.estatus_folio === 'Cancelado' ? 'bg-red-100 text-red-600' :
+                          f.estatus_produccion === 'Terminado' ? 'bg-green-100 text-green-600' :
+                            'bg-yellow-100 text-yellow-700'
+                        }`}>
+                        {f.estatus_folio === 'Cancelado' ? 'Cancelado' : f.estatus_produccion}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      <button
+                        onClick={() => handleDownloadPDF(f.id)}
+                        className="p-2 text-gray-500 hover:text-pink-500 hover:bg-pink-50 rounded-full transition"
+                        title="Imprimir Folio"
+                      >
+                        <Printer size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
     </div>

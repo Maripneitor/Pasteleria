@@ -7,83 +7,73 @@ const Folio = sequelize.define('Folio', {
     primaryKey: true,
     autoIncrement: true
   },
+
+  // Identificador de folio (muy recomendado)
+  folio_numero: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    unique: true
+  },
+
   // Datos del Cliente
-  cliente_nombre: { type: DataTypes.VIRTUAL },
-  cliente_telefono: { type: DataTypes.VIRTUAL },
-  cliente_telefono_extra: { type: DataTypes.VIRTUAL },
+  cliente_nombre: { type: DataTypes.STRING, allowNull: false },
+  cliente_telefono: { type: DataTypes.STRING, allowNull: false },
+  cliente_telefono_extra: { type: DataTypes.STRING },
 
-  // Identificadores y Detalles DB
-  folioNumber: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  persons: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  cakeFlavorId: {
-    type: DataTypes.BIGINT,
-    allowNull: false
-  },
-  fillingId: {
-    type: DataTypes.BIGINT
-  },
-  deliveryLocation: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
+  // Entrega
+  fecha_entrega: { type: DataTypes.DATEONLY, allowNull: false }, // YYYY-MM-DD
+  hora_entrega: { type: DataTypes.STRING, allowNull: false },   // HH:mm
 
-  // Mapeos a Español (para compatibilidad de controlador/vistas actuales)
-  fecha_entrega: {
-    type: DataTypes.DATEONLY,
-    allowNull: false,
-    field: 'deliveryDate'
-  },
-  hora_entrega: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    field: 'deliveryTime'
-  },
-  tipo_folio: {
-    type: DataTypes.STRING,
-    defaultValue: 'Sencillo',
-    field: 'folioType'
-  },
-  descripcion_diseno: {
-    type: DataTypes.TEXT,
-    field: 'designDescription'
-  },
+  // Ubicación
+  deliveryLocation: { type: DataTypes.STRING }, // Keeping this mixed as user didn't specify, but controller uses p.deliveryLocation in some places? No, Controller 372 doesn't show it. 
+  // Wait, Controller 372 CreateFolio doesn't explicitly list deliveryLocation in the create object?
+  // It has `diseno_metadata` and `descripcion_diseno`.
+  // I'll keep `deliveryLocation` or map it. Let's look at the payload in Section 4: `entrega: { ... }` inside `diseno_metadata`? 
+  // No, `diseno_metadata` has `entrega: { ... }`. 
+  // I will add `ubicacion_entrega` or similar if needed, or rely on JSON `diseno_metadata`.
+  // To be safe, I'll keep `deliveryLocation` as `ubicacion_entrega` to match Spanish style if possible, or just keep as is?
+  // User 372 CREATE controller doesn't seem to use `deliveryLocation` column. It might be in `diseno_metadata` or just omitted in the snippet.
+  // I'll leave `ubicacion_entrega` (string) just in case.
+  ubicacion_entrega: { type: DataTypes.STRING },
 
-  // Virtuales
-  imagen_referencia_url: { type: DataTypes.VIRTUAL },
-  diseno_metadata: { type: DataTypes.VIRTUAL },
-  sabores_pan: { type: DataTypes.VIRTUAL },
-  rellenos: { type: DataTypes.VIRTUAL },
-  complementos: { type: DataTypes.VIRTUAL },
-  costo_base: { type: DataTypes.VIRTUAL },
-  costo_envio: { type: DataTypes.VIRTUAL },
-  anticipo: { type: DataTypes.VIRTUAL },
-  estatus_pago: { type: DataTypes.VIRTUAL }, // No en tabla folios
+  // Especificaciones
+  tipo_folio: { type: DataTypes.STRING, defaultValue: 'Normal' },
+  forma: { type: DataTypes.STRING },
+  numero_personas: { type: DataTypes.INTEGER },
 
-  // Totales
-  total: {
-    type: DataTypes.DECIMAL(10, 2),
-    defaultValue: 0
+  // Arrays (JSON in MySQL)
+  sabores_pan: { type: DataTypes.JSON },
+  rellenos: { type: DataTypes.JSON },
+  complementos: { type: DataTypes.JSON },
+
+  // Diseño
+  descripcion_diseno: { type: DataTypes.TEXT },
+  imagen_referencia_url: { type: DataTypes.STRING },
+  diseno_metadata: { type: DataTypes.JSON },
+
+  // Económicos
+  costo_base: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  costo_envio: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  anticipo: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+
+  // Status Pagos
+  estatus_pago: { type: DataTypes.STRING, defaultValue: 'Pendiente' },
+
+  // Status Producción
+  estatus_produccion: { type: DataTypes.STRING, defaultValue: 'Pendiente' },
+
+  // Control general (nuevo)
+  estatus_folio: {
+    type: DataTypes.ENUM('Activo', 'Cancelado'),
+    defaultValue: 'Activo'
   },
+  cancelado_en: { type: DataTypes.DATE, allowNull: true },
+  motivo_cancelacion: { type: DataTypes.STRING, allowNull: true },
 
-  // Status
-  estatus_produccion: {
-    type: DataTypes.STRING,
-    defaultValue: 'Nuevo',
-    field: 'status'
-  },
+  // Tenant
+  tenantId: { type: DataTypes.INTEGER, defaultValue: 1 }
 
-  // Requeridos por lógica de negocio pero mapeados a DB
-  tenantId: {
-    type: DataTypes.BIGINT,
-    allowNull: false,
-    defaultValue: 1
-  }
 }, {
   tableName: 'folios',
   timestamps: true

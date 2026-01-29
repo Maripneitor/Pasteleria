@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { Bot, X, Send, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
