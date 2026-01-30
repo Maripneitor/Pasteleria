@@ -1,6 +1,6 @@
 git add .
 
- git commit -m "v.2.005" 
+ git commit -m "v.2.006" 
 
  git push -u origin main  
 

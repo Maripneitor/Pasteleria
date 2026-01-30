@@ -87,8 +87,9 @@ const StepPayment = () => {
                         <input
                             type="number"
                             name="total"
-                            value={orderData.total}
-                            onChange={handleChange}
+                            value={orderData.total || ''} // Si es 0 o null, muestra vacío para facilitar edición
+                            onChange={(e) => updateOrder({ [e.target.name]: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                            placeholder="0.00"
                             className="w-full pl-10 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-lg font-bold text-gray-800"
                         />
                     </div>
@@ -100,8 +101,9 @@ const StepPayment = () => {
                         <input
                             type="number"
                             name="advance"
-                            value={orderData.advance}
-                            onChange={handleChange}
+                            value={orderData.advance || ''} // Si es 0 o null, muestra vacío
+                            onChange={(e) => updateOrder({ [e.target.name]: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                            placeholder="0.00"
                             className="w-full pl-10 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-bold text-blue-600"
                         />
                     </div>

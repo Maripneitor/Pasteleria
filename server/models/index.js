@@ -9,6 +9,9 @@ const Flavor = require('./Flavor');
 const Filling = require('./Filling');
 
 
+const AuditLog = require('./AuditLog');
+const { CashCut, CashMovement } = require('./CashModels');
+
 // --- Relaciones Principales ---
 User.hasMany(Folio, { foreignKey: 'responsibleUserId' });
 Folio.belongsTo(User, { as: 'responsibleUser', foreignKey: 'responsibleUserId', onDelete: 'SET NULL' });
@@ -27,6 +30,21 @@ FolioEditHistory.belongsTo(Folio, { foreignKey: 'folioId' });
 User.hasMany(FolioEditHistory, { foreignKey: 'editorUserId' });
 FolioEditHistory.belongsTo(User, { as: 'editor', foreignKey: 'editorUserId' });
 
+// --- Relaciones Auditoría ---
+User.hasMany(AuditLog, { foreignKey: 'actorUserId', as: 'auditLogs' });
+AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
+
+// --- Relaciones Caja ---
+CashMovement.belongsTo(CashCut, { foreignKey: 'cashCutId' });
+CashCut.hasMany(CashMovement, { foreignKey: 'cashCutId' });
+
+User.hasMany(CashMovement, { foreignKey: 'performedByUserId' });
+CashMovement.belongsTo(User, { as: 'performer', foreignKey: 'performedByUserId' });
+
+// --- Relaciones AI Session ---
+User.hasMany(AISession, { foreignKey: 'userId', as: 'aiSessions' });
+AISession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 // --- Exportación de todos los modelos ---
 module.exports = {
   sequelize,
@@ -37,6 +55,8 @@ module.exports = {
   Commission,
   AISession,
   Flavor,
-  Filling
-
+  Filling,
+  AuditLog,
+  CashCut,
+  CashMovement
 };

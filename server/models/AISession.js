@@ -9,7 +9,7 @@ const AISession = sequelize.define('AISession', {
   },
   extractedData: {
     type: DataTypes.JSON,
-    allowNull: false,
+    allowNull: true,
     comment: 'Objeto JSON con los datos del folio, que se irá actualizando.'
   },
   imageUrls: {

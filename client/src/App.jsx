@@ -14,7 +14,7 @@ import ConnectPage from './pages/ConnectPage';
 // 🆕 Páginas Nuevas (Routing Repair)
 import OrdersPage from './pages/OrdersPage'; // Asegúrate de crear/renombrar este archivo
 import CashRegister from './pages/CashRegister';
-import ProductionCalendar from './pages/ProductionCalendar';
+import ProductionPage from './pages/ProductionPage'; // Nuevo Kanban
 import AuditLog from './pages/AuditLog';
 import NotFound from './pages/NotFound';
 
@@ -48,10 +48,11 @@ function App() {
             {/* 🔗 Rutas Reparadas (Spanish URLs) */}
             <Route path="pedidos" element={<OrdersPage />} />
             <Route path="caja" element={<CashRegister />} />
-            <Route path="produccion" element={<ProductionCalendar />} />
+            <Route path="produccion" element={<ProductionPage />} />
             <Route path="usuarios" element={<UsersPage />} /> {/* Antes /admin/usuarios */}
             <Route path="auditoria" element={<AuditLog />} />
             <Route path="calendario" element={<CalendarPage />} />
+            <Route path="calendar" element={<Navigate to="/calendario" replace />} />
 
             {/* ⚙️ Nuevas Rutas Operativas */}
             <Route path="caja/arqueo" element={<CashCountForm />} />

@@ -58,6 +58,9 @@ app.use('/api/dictation', dictationRoutes);
 app.use('/api/catalog', require('./routes/catalogRoutes'));
 app.use('/api/ingredients', require('./routes/ingredientRoutes'));
 app.use('/api/commissions', require('./routes/commissionRoutes'));
+app.use('/api/production', require('./routes/productionRoutes'));
+app.use('/api/cash', require('./routes/cashRoutes')); // Caja
+app.use('/api/audit', require('./routes/auditRoutes')); // Auditoría
 
 // Ruta de Salud (Para verificar que el server vive)
 // Ruta de Salud (Health Check Standard)

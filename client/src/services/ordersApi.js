@@ -42,7 +42,28 @@ export const ordersApi = {
 
     // Actualizar (put completo)
     update: async (id, data) => {
-        return await client.put(`/folios/${id}`, data);
+        const toFormData = (data) => {
+            const form = new FormData();
+            Object.entries(data).forEach(([key, value]) => {
+                if (value === undefined || value === null) return;
+                if (key === 'referenceImages') return;
+
+                if (typeof value === 'object') form.append(key, JSON.stringify(value));
+                else form.append(key, String(value));
+            });
+            if (data.referenceImages?.length) {
+                data.referenceImages.forEach((file) => form.append('referenceImages', file));
+            }
+            return form;
+        };
+
+        const hasFiles = data.referenceImages?.length > 0;
+        if (!hasFiles) {
+            return await client.put(`/folios/${id}`, data);
+        }
+
+        const form = toFormData(data);
+        return await client.put(`/folios/${id}`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
     },
 
     // Actualizar status (patch)

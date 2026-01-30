@@ -55,9 +55,14 @@ exports.getFolioById = async (req, res) => {
 };
 
 // ✅ CREATE (recibe tu wizard gigante y guarda claves en columnas)
+// ✅ CREATE (recibe tu wizard gigante y guarda claves en columnas)
 exports.createFolio = async (req, res) => {
     try {
-        const { clientId = null, ...folioData } = req.body;
+        const { normalizeBody } = require('../utils/parseMaybeJson');
+        const body = normalizeBody(req.body); // ✅ Soporta JSON-string en multipart
+        const files = req.files || [];
+
+        const { clientId = null, ...folioData } = body;
 
         // Requeridos mínimos (snapshot priority)
         if (!folioData.cliente_nombre || !folioData.cliente_telefono) {
@@ -82,6 +87,18 @@ exports.createFolio = async (req, res) => {
         const estatus_pago =
             (folioData.estatus_pago) ||
             (total - anticipo <= 0 ? 'Pagado' : 'Pendiente');
+
+        // Procesar imágenes (ejemplo básico, ajustar según almacenamiento real)
+        const referenceImages = files.map(f => ({
+            originalName: f.originalname,
+            mimeType: f.mimetype,
+            size: f.size,
+            // TODO: Usar servicio de upload real (S3/Local) y guardar URL
+            // Por ahora, solo guardamos metadata
+        }));
+
+        // Si tienes campo para URLs de imágenes, asignarlo aquí.
+        // Ej: body.imagen_referencia_url = stored_url
 
         const row = await Folio.create({
             // Spread keys that match model directly
@@ -258,34 +275,44 @@ exports.getCalendarEvents = async (req, res) => {
 };
 
 // ✅ DASHBOARD (sumatorias por columna)
+// ✅ DASHBOARD (sumatorias por columna)
 exports.getDashboardStats = async (req, res) => {
     try {
-        const totalCount = await Folio.count();
-        const pendingCount = await Folio.count({ where: { estatus_pago: 'Pendiente' } });
-        const cancelledCount = await Folio.count({ where: { estatus_folio: 'Cancelado' } });
+        const today = new Date().toISOString().split('T')[0];
 
-        const sumTotal = await Folio.sum('total') || 0;
-        const sumAnticipo = await Folio.sum('anticipo') || 0;
+        const totalCount = await Folio.count({ where: { estatus_folio: { [Op.ne]: 'Cancelado' } } });
+        const pendingCount = await Folio.count({ where: { estatus_produccion: 'Pendiente', estatus_folio: { [Op.ne]: 'Cancelado' } } });
+        const todayCount = await Folio.count({ where: { fecha_entrega: today, estatus_folio: { [Op.ne]: 'Cancelado' } } });
 
-        // Recientes (top 5)
+        // Sumas financieras
+        const sumTotal = await Folio.sum('total', { where: { estatus_folio: { [Op.ne]: 'Cancelado' } } }) || 0;
+        const sumAnticipo = await Folio.sum('anticipo', { where: { estatus_folio: { [Op.ne]: 'Cancelado' } } }) || 0;
+
+        // Recientes
         const recientes = await Folio.findAll({
             limit: 5,
             order: [['createdAt', 'DESC']]
         });
 
+        // Sabores populares (mock mejorado o real si existiera relación)
+        // Por ahora mantenemos mock pero consistente
+        const populares = [
+            { name: 'Chocolate', value: 45 },
+            { name: 'Vainilla', value: 30 },
+            { name: 'Red Velvet', value: 25 },
+            { name: 'Zanahoria', value: 15 },
+        ];
+
         res.json({
-            totalCount,
-            pendingCount,
-            cancelledCount,
-            sumTotal: Number(sumTotal),
-            sumAnticipo: Number(sumAnticipo),
-            recientes: recientes, // Array de folios reales
-            // Mock de populares si no hay tabla de detalle de productos aun
-            populares: [
-                { name: 'Chocolate', value: 45 },
-                { name: 'Vainilla', value: 30 },
-                { name: 'Red Velvet', value: 25 },
-            ]
+            metrics: {
+                totalOrders: totalCount,
+                pendingOrders: pendingCount,
+                todayOrders: todayCount,
+                totalSales: Number(sumTotal),
+                totalAdvance: Number(sumAnticipo)
+            },
+            recientes,
+            populares
         });
     } catch (e) {
         console.error('getDashboardStats:', e);
@@ -312,5 +339,50 @@ exports.generarPDF = async (req, res) => {
     } catch (e) {
         console.error('generarPDF:', e);
         res.status(500).json({ message: 'Error PDF' });
+    }
+};
+
+// ✅ ETIQUETA
+exports.generarEtiqueta = async (req, res) => {
+    try {
+        const folio = await Folio.findByPk(req.params.id);
+        if (!folio) return res.status(404).json({ message: 'Folio no encontrado' });
+
+        const buffer = await pdfService.renderLabelPdf({ folio: folio.toJSON() });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="label-${folio.folio_numero}.pdf"`);
+        res.send(buffer);
+    } catch (e) {
+        console.error('generarEtiqueta:', e);
+        res.status(500).json({ message: 'Error Etiqueta' });
+    }
+};
+
+// ✅ RESUMEN DIA
+exports.generarResumenDia = async (req, res) => {
+    try {
+        const { date, type } = req.query; // date=YYYY-MM-DD
+        if (!date) return res.status(400).json({ message: 'Fecha requerida' });
+
+        // Buscar folios del día (entrega)
+        const folios = await Folio.findAll({
+            where: { fecha_entrega: date },
+            order: [['hora_entrega', 'ASC']]
+        });
+
+        // Si type == 'labels', generar todas las etiquetas
+        // Por ahora, asumimos reporte lista
+        const buffer = await pdfService.renderOrdersPdf({
+            folios: folios.map(f => f.toJSON()),
+            date
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="resumen-${date}.pdf"`);
+        res.send(buffer);
+    } catch (e) {
+        console.error('generarResumenDia:', e);
+        res.status(500).json({ message: 'Error Reporte' });
     }
 };

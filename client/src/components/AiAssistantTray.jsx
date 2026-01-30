@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Bot, X, Send, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { Bot, X, Send, Sparkles, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import aiService from '../services/aiService';
 import toast from 'react-hot-toast';
+import useDictation from '../hooks/useDictation';
 
 const AiAssistantTray = ({ isOpen, onClose }) => {
     const location = useLocation();
@@ -14,6 +15,20 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
     const [isThinking, setIsThinking] = useState(false);
     const [error, setError] = useState(null);
 
+    const { isListening, transcript, startListening, stopListening, resetTranscript, supported } = useDictation();
+
+    // Sync dictation to input
+    useEffect(() => {
+        if (transcript) {
+            setInput(prev => {
+                // Si el transcript es nuevo, lo agregamos. 
+                // Pero como transcript se acumula, mejor reemplazamos o concatenamos inteligentemente.
+                // ResetTranscript se maneja manualmente tras envío.
+                return transcript; // Simple replace for now, or ensure user edits.
+            });
+        }
+    }, [transcript]);
+
     const handleSend = async (e) => {
         e.preventDefault();
         if (!input.trim() || isThinking) return;
@@ -21,21 +36,14 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
         const userMessage = input;
         setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
         setInput('');
+        resetTranscript(); // Clear dictation buffer
         setIsThinking(true);
         setError(null);
 
         try {
-            // Context injection
-            const contextData = {
-                currentPath: location.pathname
-            };
-
+            const contextData = { currentPath: location.pathname };
             const response = await aiService.sendMessageToAi(userMessage, contextData);
-
-            // Assuming response structure: { response: "AI text", ... }
-            // Adjust property name if backend differs (e.g. response.text or response.message)
             const aiText = response.response || "Entendido.";
-
             setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
         } catch (err) {
             console.error(err);
@@ -44,6 +52,11 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
         } finally {
             setIsThinking(false);
         }
+    };
+
+    const toggleDictation = () => {
+        if (isListening) stopListening();
+        else startListening();
     };
 
     if (!isOpen) return null;
@@ -116,20 +129,32 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
 
                         {/* Input Area */}
                         <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-100">
-                            <div className="relative flex items-center">
+                            <div className="relative flex items-center gap-2">
                                 <input
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="Pregúntame algo..."
-                                    className="w-full pl-4 pr-12 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 transition text-sm"
+                                    placeholder={isListening ? "Escuchando..." : "Pregúntame algo..."}
+                                    className={`w-full pl-4 pr-12 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 transition text-sm ${isListening ? 'ring-2 ring-red-400 bg-red-50' : ''}`}
                                 />
+
+                                {supported && (
+                                    <button
+                                        type="button"
+                                        onClick={toggleDictation}
+                                        className={`absolute right-14 p-2 rounded-full transition ${isListening ? 'text-red-500 hover:bg-red-100' : 'text-gray-400 hover:bg-gray-200'}`}
+                                        title="Dictar"
+                                    >
+                                        {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                                    </button>
+                                )}
+
                                 <button
                                     type="submit"
-                                    className="absolute right-2 p-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition shadow-sm disabled:opacity-50"
+                                    className="p-3 bg-violet-600 text-white rounded-xl hover:bg-violet-700 transition shadow-sm disabled:opacity-50"
                                     disabled={!input.trim() || isThinking}
                                 >
-                                    <Send size={16} />
+                                    <Send size={18} />
                                 </button>
                             </div>
                         </form>

@@ -1,39 +1,38 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import client from '../config/axios';
 import {
   PlusCircle, Mic, Users, PieChart, DollarSign,
-  Calendar, LogOut, Cake, ChefHat, Search
+  Calendar, LogOut, Cake, ChefHat, Search, Printer,
+  ArrowRight, Activity
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useEffect, useState } from 'react';
-import client from '../config/axios';
-import { Printer } from 'lucide-react'; // Import Printer icon
-import ChartCard from '../components/common/ChartCard';
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip } from 'recharts';
+
+import PageHeader from '../components/common/PageHeader';
+import Card from '../components/common/Card';
+import Button from '../components/common/Button';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../components/common/Table';
+import Badge from '../components/common/Badge';
+import EmptyState from '../components/common/EmptyState';
+
+// Helper for currency
+const formatMoney = (amount) => `$${Number(amount || 0).toLocaleString()}`;
 
 const DashboardPage = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Cargar estadísticas reales al montar
     const loadStats = async () => {
       try {
-        // const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        // Nota: Si se requiere auth token, debería ir aquí o en un interceptor.
-        // Asumimos que axios está configurado o el usuario arreglará auth.
         const res = await client.get('/folios/stats/dashboard');
         setStats(res.data);
       } catch (e) {
-        console.error("Error cargando stats", e);
-        // Fallback mock data para demo visual si falla backend
-        setStats({
-          populares: [
-            { name: 'Chocolate', value: 45 },
-            { name: 'Vainilla', value: 30 },
-            { name: 'Red Velvet', value: 25 },
-          ]
-        });
+        console.error("Error loading stats", e);
+      } finally {
+        setLoading(false);
       }
     };
     loadStats();
@@ -41,11 +40,7 @@ const DashboardPage = () => {
 
   const handleDownloadPDF = async (id) => {
     try {
-      const response = await client.get(`/folios/${id}/pdf`, {
-        responseType: 'blob', // Importante para manejar binarios
-      });
-
-      // Crear Blob y Link de descarga
+      const response = await client.get(`/folios/${id}/pdf`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -54,158 +49,163 @@ const DashboardPage = () => {
       link.click();
       link.remove();
     } catch (error) {
-      console.error("Error descargando PDF", error);
       alert('Error al descargar el PDF');
     }
   };
 
-  // Configuración de Tarjetas de Acción Rápida
   const actions = [
-    { title: 'Nuevo Folio', icon: PlusCircle, color: 'bg-pink-500', path: '/pedidos/nuevo', delay: 0.1 },
-    { title: 'Dictar Pedido', icon: Mic, color: 'bg-violet-600', path: '/pedidos/dictar', delay: 0.2 },
-    { title: 'Ver Calendario', icon: Calendar, color: 'bg-blue-500', path: '/calendario', delay: 0.3 },
+    { title: 'Nuevo Folio', icon: PlusCircle, bg: 'bg-pink-600', path: '/pedidos/nuevo' },
+    { title: 'Dictar Pedido', icon: Mic, bg: 'bg-violet-600', path: '/pedidos/dictar' },
+    { title: 'Ver Calendario', icon: Calendar, bg: 'bg-blue-500', path: '/calendario' },
   ];
 
-  // Configuración de Módulos Admin
   const adminModules = [
-    { title: 'Admin Usuarios', icon: Users, color: 'text-blue-600', bg: 'bg-blue-100', path: '/admin/usuarios' },
-    { title: 'Sabores y Rellenos', icon: ChefHat, color: 'text-pink-600', bg: 'bg-pink-100', path: '/admin/sabores' },
-    { title: 'Estadísticas', icon: PieChart, color: 'text-purple-600', bg: 'bg-purple-100', path: '/admin/stats' },
-    { title: 'Rep. Comisiones', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-100', path: '/admin/comisiones' },
+    { title: 'Usuarios', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', path: '/usuarios' },
+    { title: 'Sabores', icon: ChefHat, color: 'text-pink-600', bg: 'bg-pink-50', path: '/admin/sabores' },
+    { title: 'Reportes', icon: PieChart, color: 'text-purple-600', bg: 'bg-purple-50', path: '/admin/stats' },
+    { title: 'Comisiones', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50', path: '/admin/comisiones' },
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8 fade-in">
+    <div className="p-6 max-w-7xl mx-auto space-y-8 fade-in pb-20">
 
-      {/* 1. Header de Bienvenida */}
-      <header className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-            Pastelería <span className="text-pink-500">"La Fiesta"</span>
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400">¡Hola! ¿Qué vamos a hornear hoy?</p>
-        </div>
-        <div className="flex gap-2">
-          <button className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 dark:bg-gray-700">
-            <Search size={20} />
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition">
-            <LogOut size={18} /> Salir
-          </button>
-        </div>
-      </header>
+      {/* 1. Header */}
+      <PageHeader
+        title={<span>Pastelería <span className="text-pink-600">"La Fiesta"</span></span>}
+        subtitle="Panel de Control General"
+        actions={
+          <div className="flex gap-2">
+            <Button variant="secondary" icon={Search} onClick={() => { }} className="hidden md:flex">Buscar</Button>
+            <Button variant="danger" icon={LogOut} onClick={() => { }}>Salir</Button>
+          </div>
+        }
+      />
 
-      {/* 2. Acciones Principales (Animadas) */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {actions.map((action, index) => (
-          <motion.button
-            key={index}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: action.delay }}
-            onClick={() => navigate(action.path)}
-            className={`${action.color} text-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center gap-3 h-40 cursor-pointer border-none`}
-          >
-            <action.icon size={48} strokeWidth={1.5} />
-            <span className="text-xl font-semibold">{action.title}</span>
-          </motion.button>
-        ))}
+      {/* 2. KPI Cards */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="flex flex-col gap-1 border-l-4 border-l-pink-500">
+          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span>
+          <span className="text-2xl font-bold text-gray-900">{formatMoney(stats?.metrics?.totalSales)}</span>
+        </Card>
+        <Card className="flex flex-col gap-1 border-l-4 border-l-purple-500">
+          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Pedidos Hoy</span>
+          <span className="text-2xl font-bold text-gray-900">{stats?.metrics?.todayOrders || 0}</span>
+        </Card>
+        <Card className="flex flex-col gap-1 border-l-4 border-l-yellow-500">
+          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Pendientes</span>
+          <span className="text-2xl font-bold text-gray-900">{stats?.metrics?.pendingOrders || 0}</span>
+        </Card>
+        <Card className="flex flex-col gap-1 border-l-4 border-l-blue-500">
+          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Histórico</span>
+          <span className="text-2xl font-bold text-gray-900">{stats?.metrics?.totalOrders || 0}</span>
+        </Card>
       </section>
 
-      {/* 3. Panel de Administración (Grid Pequeño) */}
-      <section>
-        <h2 className="text-xl font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-          <Users size={20} /> Administración
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {adminModules.map((mod, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ y: -5 }}
-              className={`${mod.bg} p-4 rounded-xl cursor-pointer shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center gap-2`}
-              onClick={() => navigate(mod.path)}
-            >
-              <div className={`p-3 rounded-full bg-white ${mod.color}`}>
-                <mod.icon size={24} />
-              </div>
-              <span className={`font-medium ${mod.color.replace('text-', 'text-opacity-80-')}`}>{mod.title}</span>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* LEFT COLUMN: Actions & Recents */}
+        <div className="lg:col-span-2 space-y-8">
 
-      {/* 3.5. Gráficas de Estadísticas */}
-      <ChartCard title="Sabores Populares" height="h-[240px]">
-        <RechartsPieChart>
-          <Pie
-            data={stats?.populares || []}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={80}
-            label
-          >
-            {(stats?.populares || []).map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={["#ec4899", "#8b5cf6", "#f59e0b", "#10b981"][index % 4]}
-              />
+          {/* Quick Actions */}
+          <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {actions.map((action, idx) => (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={idx}>
+                <div
+                  onClick={() => navigate(action.path)}
+                  className={`${action.bg} text-white p-6 rounded-2xl shadow-lg cursor-pointer flex flex-col items-center justify-center gap-3 h-32 hover:opacity-90 transition`}
+                >
+                  <action.icon size={32} />
+                  <span className="font-bold text-lg">{action.title}</span>
+                </div>
+              </motion.div>
             ))}
-          </Pie>
-          <Tooltip />
-        </RechartsPieChart>
-      </ChartCard>
+          </section>
 
-      {/* 4. Resumen Rápido (Tabla REAL) */}
-      <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
-        <h3 className="text-lg font-bold mb-4">Pedidos Recientes</h3>
-        <div className="overflow-x-auto">
-          {!stats?.recientes?.length ? (
-            <p className="text-gray-500 text-sm italic">No hay pedidos recientes.</p>
-          ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-gray-400 border-b dark:border-gray-700">
-                  <th className="pb-2">Folio</th>
-                  <th className="pb-2">Cliente</th>
-                  <th className="pb-2">Entrega</th>
-                  <th className="pb-2">Estado</th>
-                  <th className="pb-2">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y dark:divide-gray-700">
-                {stats.recientes.map(f => (
-                  <tr key={f.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-3 font-mono text-pink-500">{f.folio_numero}</td>
-                    <td className="py-3">{f.cliente_nombre}</td>
-                    <td className="py-3">{f.fecha_entrega} {f.hora_entrega}</td>
-                    <td className="py-3">
-                      <span className={`px-2 py-1 rounded text-xs ${f.estatus_folio === 'Cancelado' ? 'bg-red-100 text-red-600' :
-                        f.estatus_produccion === 'Terminado' ? 'bg-green-100 text-green-600' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                        {f.estatus_folio === 'Cancelado' ? 'Cancelado' : f.estatus_produccion}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <button
-                        onClick={() => handleDownloadPDF(f.id)}
-                        className="p-2 text-gray-500 hover:text-pink-500 hover:bg-pink-50 rounded-full transition"
-                        title="Imprimir Folio"
-                      >
-                        <Printer size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          {/* Recents Table */}
+          <Card title="Pedidos Recientes" action={<Button variant="ghost" size="sm" onClick={() => navigate('/pedidos')}>Ver Todos &rarr;</Button>}>
+            {!stats?.recientes?.length ? (
+              <EmptyState title="Sin pedidos recientes" description="Empieza creando un nuevo folio." />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Folio</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Entrega</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stats.recientes.map(f => (
+                    <TableRow key={f.id} onClick={() => navigate(`/pedidos/${f.id}/editar`)} className="cursor-pointer">
+                      <TableCell className="font-mono font-bold text-pink-600">{f.folio_numero}</TableCell>
+                      <TableCell>{f.cliente_nombre}</TableCell>
+                      <TableCell>{f.fecha_entrega} <span className="text-gray-400 text-xs">{f.hora_entrega}</span></TableCell>
+                      <TableCell>
+                        <Badge variant={f.estatus_folio === 'Cancelado' ? 'danger' : f.estatus_produccion === 'Terminado' ? 'success' : 'warning'}>
+                          {f.estatus_folio === 'Cancelado' ? 'Cancelado' : f.estatus_produccion}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDownloadPDF(f.id); }}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                          title="PDF"
+                        >
+                          <Printer size={16} />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
         </div>
-      </section>
+
+        {/* RIGHT COLUMN: Admin & Chats */}
+        <div className="space-y-8">
+          {/* Admin Grid */}
+          <Card title="Administración">
+            <div className="grid grid-cols-2 gap-3">
+              {adminModules.map((mod, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => navigate(mod.path)}
+                  className={`${mod.bg} p-4 rounded-xl cursor-pointer hover:shadow-md transition flex flex-col items-center gap-2 text-center`}
+                >
+                  <mod.icon className={mod.color} size={24} />
+                  <span className={`text-xs font-bold ${mod.color.replace('text-', 'text-opacity-80-')}`}>{mod.title}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Popular Chart */}
+          <Card title="Sabores Top">
+            <div className="h-[200px] w-full items-center justify-center flex">
+              <RechartsPieChart width={200} height={200}>
+                <Pie
+                  data={stats?.populares || []}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={70}
+                  paddingAngle={5}
+                >
+                  {(stats?.populares || []).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={["#ec4899", "#8b5cf6", "#f59e0b", "#10b981"][index % 4]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </RechartsPieChart>
+            </div>
+            <div className="text-center text-xs text-gray-400 mt-2">Basado en últimos pedidos</div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

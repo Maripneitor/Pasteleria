@@ -1,0 +1,126 @@
+{
+    "apiEndpoints": [
+        {
+            "name": "health_check",
+            "method": "GET",
+            "path": "/api/health",
+            "auth": "public"
+        },
+        {
+            "name": "auth_login",
+            "method": "POST",
+            "path": "/api/auth/login",
+            "auth": "public"
+        },
+        {
+            "name": "auth_register",
+            "method": "POST",
+            "path": "/api/auth/register",
+            "auth": "public"
+        },
+        {
+            "name": "dashboard_stats",
+            "method": "GET",
+            "path": "/api/folios/stats/dashboard",
+            "auth": "required"
+        },
+        {
+            "name": "calendar_events",
+            "method": "GET",
+            "path": "/api/folios/calendar",
+            "auth": "required"
+        },
+        {
+            "name": "folio_list",
+            "method": "GET",
+            "path": "/api/folios",
+            "auth": "required"
+        },
+        {
+            "name": "folio_create",
+            "method": "POST",
+            "path": "/api/folios",
+            "auth": "required"
+        },
+        {
+            "name": "folio_pdf",
+            "method": "GET",
+            "path": "/api/folios/:id/pdf",
+            "auth": "required"
+        },
+        {
+            "name": "folio_label",
+            "method": "GET",
+            "path": "/api/folios/:id/label-pdf",
+            "auth": "required"
+        },
+        {
+            "name": "folio_day_summary",
+            "method": "GET",
+            "path": "/api/folios/day-summary-pdf",
+            "auth": "required"
+        },
+        {
+            "name": "user_list",
+            "method": "GET",
+            "path": "/api/users",
+            "auth": "required"
+        },
+        {
+            "name": "client_list",
+            "method": "GET",
+            "path": "/api/clients",
+            "auth": "required"
+        },
+        {
+            "name": "whatsapp_webhook",
+            "method": "POST",
+            "path": "/api/webhooks/whatsapp",
+            "auth": "public"
+        },
+        {
+            "name": "ai_legacy_message",
+            "method": "POST",
+            "path": "/api/ai/session/message",
+            "auth": "required"
+        },
+        {
+            "name": "cash_status",
+            "method": "GET",
+            "path": "/api/cash/status",
+            "auth": "required"
+        },
+        {
+            "name": "audit_logs",
+            "method": "GET",
+            "path": "/api/audit",
+            "auth": "required"
+        }
+    ],
+    "dbTables": [
+        "users",
+        "folios",
+        "clients",
+        "cash_cuts",
+        "cash_movements",
+        "audit_logs",
+        "ai_sessions",
+        "commissions",
+        "ingredients",
+        "flavors",
+        "fillings",
+        "cake_flavors"
+    ],
+    "frontendRoutes": [
+        "/login",
+        "/conectar",
+        "/",
+        "/pedidos/nuevo",
+        "/pedidos",
+        "/caja",
+        "/produccion",
+        "/usuarios",
+        "/auditoria",
+        "/calendario"
+    ]
+}

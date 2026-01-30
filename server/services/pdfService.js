@@ -13,7 +13,7 @@ exports.renderFolioPdf = async ({ folio, watermark }) => {
 
         const html = await ejs.renderFile(tpl, {
             folio,
-            watermarkText: watermark, // Mapeamos 'watermark' a 'watermarkText' que usa el EJS actual
+            watermark,
             qrCode: qrUrl
         });
 
@@ -35,7 +35,77 @@ exports.renderFolioPdf = async ({ folio, watermark }) => {
     }
 };
 
-exports.renderDaySummaryPdf = async ({ type, date, folios }) => {
-    // Placeholder para futuro uso si calendar.js lo pide
-    return null;
+exports.renderLabelPdf = async ({ folio }) => {
+    try {
+        // Usa labelsTemplate pero adaptado para uno solo o lista
+        // Si el template espera array, envolvemos.
+        const tpl = path.join(__dirname, '..', 'templates', 'labelsTemplate.ejs');
+
+        // Generar QR para el label también
+        const qrUrl = await QRCode.toDataURL(`http://localhost:5173/folios/${folio.id}`);
+
+        const mappedFolio = {
+            id: folio.id,
+            folioNumber: folio.folio_numero || folio.id,
+            deliveryDate: folio.fecha_entrega,
+            deliveryTime: folio.hora_entrega,
+            shape: folio.tipo_folio,
+            persons: folio.numero_personas,
+            hasExtraHeight: false,
+            labelType: 'normal',
+            qrCode: qrUrl
+        };
+
+        const html = await ejs.renderFile(tpl, {
+            folios: [mappedFolio],
+            date: new Date().toLocaleDateString()
+        });
+
+        const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        // Formato etiqueta térmica estándar (o mitad carta)
+        const buffer = await page.pdf({
+            width: '10cm',
+            height: '15cm',
+            printBackground: true,
+            margin: { top: '0.5cm', right: '0.5cm', bottom: '0.5cm', left: '0.5cm' }
+        });
+
+        await browser.close();
+        return buffer;
+    } catch (e) {
+        console.error("Error renderLabelPdf:", e);
+        throw e;
+    }
+};
+
+exports.renderOrdersPdf = async ({ folios, date }) => {
+    try {
+        const tpl = path.join(__dirname, '..', 'templates', 'ordersTemplate.ejs');
+
+        const html = await ejs.renderFile(tpl, {
+            orders: folios,
+            date,
+            reportType: 'Resumen del Día'
+        });
+
+        const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const buffer = await page.pdf({
+            format: 'A4',
+            landscape: true,
+            printBackground: true,
+            margin: { top: '1cm', right: '1cm', bottom: '1cm', left: '1cm' }
+        });
+
+        await browser.close();
+        return buffer;
+    } catch (e) {
+        console.error("Error renderOrdersPdf:", e);
+        throw e;
+    }
 };
