@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const AuditLog = sequelize.define('AuditLog', {
-    tenantId: { type: DataTypes.INTEGER, allowNull: true },
+    tenantId: { type: DataTypes.BIGINT, allowNull: true },
     entity: { type: DataTypes.STRING(30), allowNull: false }, // 'FOLIO'
     entityId: { type: DataTypes.BIGINT, allowNull: false },
     action: { type: DataTypes.STRING(30), allowNull: false }, // CREATE/UPDATE/CANCEL/DELETE

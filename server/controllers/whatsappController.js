@@ -122,10 +122,18 @@ exports.handleWebhook = async (req, res) => {
 
 /**
  * Endpoint para obtener el código QR de WhatsApp
+ * Convierte el raw string a DataURL para que el frontend no necesite librerías.
  */
-exports.getQR = (req, res) => {
+exports.getQR = async (req, res) => {
   try {
     const data = gateway.getStatus();
+
+    // Si hay QR (raw string), lo convertimos a imagen base64
+    if (data.qr) {
+      const qrcode = require('qrcode');
+      data.qr = await qrcode.toDataURL(data.qr);
+    }
+
     res.json(data);
   } catch (error) {
     console.error("❌ Error obteniendo QR:", error.message);

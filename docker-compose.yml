@@ -41,6 +41,13 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - DB_PORT=3306 # Force internal port, ignoring local .env
       - WEBHOOK_URL=http://server:3000/api/webhooks/whatsapp
+      - DB_SYNC_MODE=none # 🛡️ Safe Mode for Docker: No schema changes on boot
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     volumes:
       - ./server:/app
       - /app/node_modules
@@ -56,7 +63,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=/api
-      - VITE_PROXY_TARGET=http://server:3000
+      - VITE_PROXY_TARGET=http://pasteleria-server:3000
     volumes:
       - ./client:/app
       - /app/node_modules

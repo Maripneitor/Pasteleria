@@ -11,8 +11,8 @@ const Folio = sequelize.define('Folio', {
   // Identificador de folio (muy recomendado)
   folio_numero: {
     type: DataTypes.STRING(50),
-    allowNull: false,
-    unique: true
+    allowNull: true,
+    unique: false
   },
 
   // Datos del Cliente
@@ -20,9 +20,13 @@ const Folio = sequelize.define('Folio', {
   cliente_telefono: { type: DataTypes.STRING, allowNull: false },
   cliente_telefono_extra: { type: DataTypes.STRING },
 
+  // Referencias (Foreign Keys explícitas para evitar desajustes de tipo)
+  clientId: { type: DataTypes.BIGINT, allowNull: true },
+  responsibleUserId: { type: DataTypes.BIGINT, allowNull: true },
+
   // Entrega
-  fecha_entrega: { type: DataTypes.DATEONLY, allowNull: false }, // YYYY-MM-DD
-  hora_entrega: { type: DataTypes.STRING, allowNull: false },   // HH:mm
+  fecha_entrega: { type: DataTypes.DATEONLY, allowNull: true }, // YYYY-MM-DD
+  hora_entrega: { type: DataTypes.STRING, allowNull: true },   // HH:mm
 
   // Ubicación
   deliveryLocation: { type: DataTypes.STRING }, // Keeping this mixed as user didn't specify, but controller uses p.deliveryLocation in some places? No, Controller 372 doesn't show it. 
@@ -72,7 +76,7 @@ const Folio = sequelize.define('Folio', {
   motivo_cancelacion: { type: DataTypes.STRING, allowNull: true },
 
   // Tenant
-  tenantId: { type: DataTypes.INTEGER, defaultValue: 1 }
+  tenantId: { type: DataTypes.BIGINT, defaultValue: 1 }
 
 }, {
   tableName: 'folios',

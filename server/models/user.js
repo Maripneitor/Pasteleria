@@ -26,7 +26,7 @@ const User = sequelize.define('User', {
   },
   // ==================== INICIO DE LA MODIFICACIÓN ====================
   globalRole: {
-    type: DataTypes.ENUM('ADMIN', 'USER'),
+    type: DataTypes.ENUM('ADMIN', 'USER', 'Administrador', 'Usuario'),
     allowNull: false,
     defaultValue: 'USER'
   }

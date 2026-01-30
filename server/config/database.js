@@ -13,6 +13,9 @@ const sequelize = new Sequelize(
     logging: false, // Se mantiene desactivado para no llenar la consola con logs de SQL.
     dialectOptions: {
       charset: 'utf8mb4',
+      // Soporte para BIGINT (evita bugs de string vs number en IDs)
+      supportBigNumbers: true,
+      bigNumberStrings: false
     }
   }
 );

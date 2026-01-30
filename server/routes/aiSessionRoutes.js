@@ -3,6 +3,24 @@ const router = express.Router();
 const aiSessionController = require('../controllers/aiSessionController');
 const authMiddleware = require('../middleware/authMiddleware');
 
+// Guard: Validate Controller Exports
+const requiredHandlers = [
+    'getActiveSessions',
+    'getSessionById',
+    'handleLegacyMessage',
+    'postChatMessage',
+    'discardSession',
+    'listInbox',
+    'setNeedsHuman',
+    'setPriority'
+];
+
+requiredHandlers.forEach(handler => {
+    if (typeof aiSessionController[handler] !== 'function') {
+        throw new Error(`CRITICAL: aiSessionController.${handler} is undefined in routes/aiSessionRoutes.js`);
+    }
+});
+
 // Protegemos todas las rutas de sesiones con autenticación
 router.use(authMiddleware);
 
@@ -11,6 +29,9 @@ router.route('/')
 
 router.route('/:id')
     .get(aiSessionController.getSessionById);
+
+// Ruta Legacy (compatible con frontend actual)
+router.post('/message', aiSessionController.handleLegacyMessage);
 
 router.route('/:id/chat')
     .post(aiSessionController.postChatMessage);

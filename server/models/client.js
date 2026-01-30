@@ -13,17 +13,27 @@ const Client = sequelize.define('Client', {
   },
   phone: {
     type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+    allowNull: false
+    // Removed unique: true here, will define composite unique below
   },
-  // ==================== INICIO DE LA CORRECCIÓN ====================
   phone2: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  tenantId: {
+    type: DataTypes.BIGINT,
+    defaultValue: 1,
+    allowNull: false
   }
-  // ===================== FIN DE LA CORRECCIÓN ======================
 }, {
-  tableName: 'clients'
+  tableName: 'clients',
+  indexes: [
+    {
+      unique: true,
+      fields: ['tenantId', 'phone'],
+      name: 'uq_clients_tenant_phone' // Explicit name to match DB
+    }
+  ]
 });
 
 module.exports = Client;

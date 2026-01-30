@@ -51,6 +51,7 @@ function App() {
             <Route path="produccion" element={<ProductionCalendar />} />
             <Route path="usuarios" element={<UsersPage />} /> {/* Antes /admin/usuarios */}
             <Route path="auditoria" element={<AuditLog />} />
+            <Route path="calendario" element={<CalendarPage />} />
 
             {/* ⚙️ Nuevas Rutas Operativas */}
             <Route path="caja/arqueo" element={<CashCountForm />} />

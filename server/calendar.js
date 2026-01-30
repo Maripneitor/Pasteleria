@@ -1,5 +1,5 @@
 // Esta función se encarga de inicializar y controlar todo el calendario.
-function initializeCalendar(authToken, userRole) {
+function initializeCalendar(token, userRole) {
     const calendarEl = document.getElementById('calendar');
     if (!calendarEl) return;
 
@@ -16,7 +16,7 @@ function initializeCalendar(authToken, userRole) {
 
         fetch(url, {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${authToken}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(response => {
                 if (!response.ok) throw new Error('Error al cargar los folios');
@@ -219,7 +219,7 @@ function initializeCalendar(authToken, userRole) {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ isPrinted, fondantChecked, dataChecked })
                 });
@@ -301,7 +301,7 @@ function initializeCalendar(authToken, userRole) {
         }
 
         try {
-            const response = await fetch(`/api/folios?q=${query}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const response = await fetch(`/api/folios?q=${query}`, { headers: { 'Authorization': `Bearer ${token}` } });
             const folios = await response.json();
 
             searchResultsContainer.innerHTML = '';
@@ -341,7 +341,7 @@ function initializeCalendar(authToken, userRole) {
                 searchInput.value = '';
 
                 try {
-                    const response = await fetch(`/api/folios/${folioId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+                    const response = await fetch(`/api/folios/${folioId}`, { headers: { 'Authorization': `Bearer ${token}` } });
                     const folioData = await response.json();
 
                     dailyFoliosCache = [];
@@ -373,7 +373,7 @@ function initializeCalendar(authToken, userRole) {
         printLabelButton.addEventListener('click', () => {
             const currentFolio = window.currentEditingFolio;
             if (currentFolio) {
-                const currentToken = localStorage.getItem('authToken');
+                const currentToken = localStorage.getItem('token');
                 const url = `/api/folios/${currentFolio.id}/label-pdf?token=${currentToken}`;
                 window.open(url, '_blank');
             }
@@ -389,7 +389,7 @@ function initializeCalendar(authToken, userRole) {
                 try {
                     const response = await fetch(`/api/folios/${currentFolio.id}/cancel`, {
                         method: 'PATCH',
-                        headers: { 'Authorization': `Bearer ${authToken}` }
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.message);
@@ -456,7 +456,7 @@ function initializeCalendar(authToken, userRole) {
                     try {
                         const response = await fetch(`/api/folios/${folioId}`, {
                             method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${authToken}` }
+                            headers: { 'Authorization': `Bearer ${token}` }
                         });
 
                         const result = await response.json();
@@ -485,7 +485,7 @@ function initializeCalendar(authToken, userRole) {
         printLabelsButton.addEventListener('click', () => {
             const date = document.getElementById('dailyFoliosModal').dataset.date;
             if (date) {
-                const currentToken = localStorage.getItem('authToken');
+                const currentToken = localStorage.getItem('token');
                 const url = `/api/folios/day-summary-pdf?type=labels&date=${date}&token=${currentToken}`;
                 window.open(url, '_blank');
             }
@@ -496,7 +496,7 @@ function initializeCalendar(authToken, userRole) {
         printOrdersButton.addEventListener('click', () => {
             const date = document.getElementById('dailyFoliosModal').dataset.date;
             if (date) {
-                const currentToken = localStorage.getItem('authToken');
+                const currentToken = localStorage.getItem('token');
                 const url = `/api/folios/day-summary-pdf?type=orders&date=${date}&token=${currentToken}`;
                 window.open(url, '_blank');
             }

@@ -14,7 +14,30 @@ export const ordersApi = {
 
     // Crear nuevo
     create: async (data) => {
-        return await client.post('/folios', data);
+        const form = new FormData();
+
+        Object.entries(data).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            if (key === 'referenceImages') return; // Se maneja aparte
+
+            // Si es objeto/array, lo mandamos como JSON string
+            if (typeof value === 'object') {
+                form.append(key, JSON.stringify(value));
+            } else {
+                form.append(key, String(value));
+            }
+        });
+
+        // Manejo de imágenes (File objects)
+        if (data.referenceImages && data.referenceImages.length > 0) {
+            data.referenceImages.forEach((file) => {
+                form.append('referenceImages', file);
+            });
+        }
+
+        return await client.post('/folios', form, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
     },
 
     // Actualizar (put completo)

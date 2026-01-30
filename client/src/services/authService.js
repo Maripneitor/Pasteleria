@@ -1,15 +1,16 @@
-import api from './api';
+import client from '../config/axios';
+import { setToken, clearToken } from '../utils/auth';
 
 // URL base del backend. En desarrollo con Vimte, normalmente se usa un proxy o la URL directa.
 // Si usamos docker-compose, el navegador del cliente no ve "server", ve localhost:3000.
 
 const login = async (email, password) => {
     try {
-        const response = await api.post('/auth/login', { email, password });
+        const response = await client.post('/auth/login', { email, password });
         if (response.data.token) {
             localStorage.setItem('user', JSON.stringify(response.data));
-            // Guardar token por separado también para el interceptor si se desea
-            localStorage.setItem('token', response.data.token);
+            // Guardar token y limpiar legacy
+            setToken(response.data.token);
         }
         return response.data;
     } catch (error) {
@@ -18,8 +19,7 @@ const login = async (email, password) => {
 };
 
 const logout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    clearToken();
 };
 
 const getCurrentUser = () => {

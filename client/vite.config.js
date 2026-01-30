@@ -4,7 +4,10 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const target = env.VITE_PROXY_TARGET || 'http://localhost:3000'
+  // Prioritize system env (Docker) over .env files, fallback to localhost for local dev
+  const target = process.env.VITE_PROXY_TARGET || env.VITE_PROXY_TARGET || 'http://localhost:3000'
+
+  console.log(`[Vite] Proxy Configuration: Target -> ${target}`);
 
   return {
     plugins: [react()],

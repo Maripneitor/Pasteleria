@@ -9,6 +9,7 @@ import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip }
 import { useEffect, useState } from 'react';
 import client from '../config/axios';
 import { Printer } from 'lucide-react'; // Import Printer icon
+import ChartCard from '../components/common/ChartCard';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -136,35 +137,27 @@ const DashboardPage = () => {
       </section>
 
       {/* 3.5. Gráficas de Estadísticas */}
-      <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
-        <h3 className="text-lg font-bold mb-4 text-gray-700 dark:text-gray-200">
-          Sabores Populares
-        </h3>
-
-        <div className="w-full h-[240px] min-h-[240px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart>
-              <Pie
-                data={stats?.populares || []}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label
-              >
-                {(stats?.populares || []).map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={["#ec4899", "#8b5cf6", "#f59e0b", "#10b981"][index % 4]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-            </RechartsPieChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
+      <ChartCard title="Sabores Populares" height="h-[240px]">
+        <RechartsPieChart>
+          <Pie
+            data={stats?.populares || []}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={80}
+            label
+          >
+            {(stats?.populares || []).map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={["#ec4899", "#8b5cf6", "#f59e0b", "#10b981"][index % 4]}
+              />
+            ))}
+          </Pie>
+          <Tooltip />
+        </RechartsPieChart>
+      </ChartCard>
 
       {/* 4. Resumen Rápido (Tabla REAL) */}
       <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
@@ -191,8 +184,8 @@ const DashboardPage = () => {
                     <td className="py-3">{f.fecha_entrega} {f.hora_entrega}</td>
                     <td className="py-3">
                       <span className={`px-2 py-1 rounded text-xs ${f.estatus_folio === 'Cancelado' ? 'bg-red-100 text-red-600' :
-                          f.estatus_produccion === 'Terminado' ? 'bg-green-100 text-green-600' :
-                            'bg-yellow-100 text-yellow-700'
+                        f.estatus_produccion === 'Terminado' ? 'bg-green-100 text-green-600' :
+                          'bg-yellow-100 text-yellow-700'
                         }`}>
                         {f.estatus_folio === 'Cancelado' ? 'Cancelado' : f.estatus_produccion}
                       </span>

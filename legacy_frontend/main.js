@@ -240,14 +240,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- FUNCIÓN PARA CARGAR USUARIOS ---
     async function loadUsers() {
         const userListBody = document.getElementById('userListBody');
-        const authToken = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
 
         userListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">Cargando usuarios...</td></tr>`;
 
         try {
             const response = await fetch('/api/users', {
                 method: 'GET',
-                headers: { 'Authorization': `Bearer ${authToken}` }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (!response.ok) {
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('userListBody').addEventListener('click', async (e) => {
         const target = e.target;
-        const authToken = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         const userId = target.dataset.userId;
         const row = target.closest('tr'); // --- NUEVO: Obtener la fila
 
@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 try {
                     const response = await fetch(`/api/users/${userId}`, {
                         method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${authToken}` }
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.message || `Error ${response.status}`); // --- NUEVO: Mejor manejo de error
@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const response = await fetch(`/api/users/${userId}`, {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `Bearer ${authToken}`,
+                            'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({ role: newRole })
@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleLogout() {
-        localStorage.removeItem('authToken');
+        localStorage.removeItem('token');
         appView.classList.add('hidden');
         loginView.classList.remove('hidden');
         alert("Sesión cerrada.");
@@ -483,12 +483,12 @@ document.addEventListener('DOMContentLoaded', function () {
         aiSuggestionsDiv.innerHTML = '';
 
         try {
-            const authToken = localStorage.getItem('authToken');
+            const token = localStorage.getItem('token');
             const response = await fetch('/api/folios/validate-suggest', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(currentFolioData) // Enviar objeto JS
             });
@@ -869,7 +869,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!response.ok) {
                 throw new Error(data.message || 'Error al iniciar sesión');
             }
-            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('token', data.token);
 
             const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
             const userRole = tokenPayload.role;
@@ -982,14 +982,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData();
         formData.append('audio', audioBlob, 'dictated_order.webm');
 
-        const authToken = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         loadingEl.classList.remove('hidden'); // Mostrar indicador global
         dictationError.textContent = '';
 
         try {
             const response = await fetch('/api/dictation/process', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}` },
+                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
 
@@ -1297,8 +1297,8 @@ document.addEventListener('DOMContentLoaded', function () {
         manualEditBtn.disabled = false;
         // --- FIN NUEVO ---
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/ai-sessions/${sessionId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/ai-sessions/${sessionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'No se pudo cargar la sesión de chat.'); }
             const session = await response.json();
             chatTitle.textContent = `Asistente - Sesión #${session.id}`;
@@ -1346,10 +1346,10 @@ document.addEventListener('DOMContentLoaded', function () {
         chatMessagesContainer.appendChild(thinkingEl);
         chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         try {
-            const authToken = localStorage.getItem('authToken');
+            const token = localStorage.getItem('token');
             const response = await fetch(`/api/ai-sessions/${currentSessionId}/chat`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ message: messageText })
             });
             thinkingEl.remove();
@@ -1392,8 +1392,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!currentSessionId || manualEditBtn.disabled) return; // --- MODIFICADO: chequeo
         loadingEl.classList.remove('hidden');
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/ai-sessions/${currentSessionId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/ai-sessions/${currentSessionId}`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) throw new Error('No se pudo cargar la sesión para edición manual.');
             const session = await response.json();
             const extracted = session.extractedData || {}; // --- NUEVO: Usar objeto vacío si no hay datos
@@ -1433,7 +1433,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 discardSessionBtn.disabled = true;
 
                 try {
-                    const authToken = localStorage.getItem('authToken');
+                    const token = localStorage.getItem('token');
 
                     // ===== INICIO DE LA CORRECCIÓN =====
                     // Usamos la URL absoluta para que coincida con tus otras llamadas
@@ -1441,7 +1441,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         // ===== FIN DE LA CORRECCIÓN =====
                         method: 'DELETE',
                         headers: {
-                            'Authorization': `Bearer ${authToken}`
+                            'Authorization': `Bearer ${token}`
                         }
                     });
 
@@ -1480,8 +1480,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function loadFlavorAndFillingStats() {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch('/api/folios/statistics', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/folios/statistics', { headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) throw new Error('No se pudieron cargar las estadísticas de sabores.');
             const stats = await response.json();
             renderStatsList('normalFlavorsList', stats.normal?.flavors); // --- NUEVO: Optional chaining
@@ -1507,8 +1507,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         productivityListBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">Cargando...</td></tr>`;
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/folios/productivity?date=${date}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/folios/productivity?date=${date}`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'No se pudieron cargar los datos de productividad.'); }
             const stats = await response.json();
             productivityListBody.innerHTML = '';
@@ -1562,7 +1562,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function loadIngredients() {
         try {
-            const authToken = localStorage.getItem('authToken');
+            const token = localStorage.getItem('token');
 
             // Cargar Sabores
             const flavorsRes = await fetch('/api/ingredients/flavors');
@@ -1709,10 +1709,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!name) return alert('Ingresa un nombre');
 
             try {
-                const authToken = localStorage.getItem('authToken');
+                const token = localStorage.getItem('token');
                 const res = await fetch('/api/ingredients/flavors', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ name, isNormal, isTier })
                 });
                 if (res.ok) {
@@ -1732,10 +1732,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!name) return alert('Ingresa un nombre');
 
             try {
-                const authToken = localStorage.getItem('authToken');
+                const token = localStorage.getItem('token');
                 const res = await fetch('/api/ingredients/fillings', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ name, isPaid, suboptions: subsVal })
                 });
                 if (res.ok) {
@@ -1749,17 +1749,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Delegate Delete Buttons
     ingredientManagementModal.addEventListener('click', async (e) => {
-        const authToken = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         if (e.target.classList.contains('delete-flavor-btn')) {
             if (!confirm('¿Eliminar sabor?')) return;
             const id = e.target.dataset.id;
-            await fetch(`/api/ingredients/flavors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+            await fetch(`/api/ingredients/flavors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             await loadIngredients();
         }
         if (e.target.classList.contains('delete-filling-btn')) {
             if (!confirm('¿Eliminar relleno?')) return;
             const id = e.target.dataset.id;
-            await fetch(`/api/ingredients/fillings/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+            await fetch(`/api/ingredients/fillings/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             await loadIngredients();
         }
     });
@@ -1776,7 +1776,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const url = isEditingExisting ? `/api/folios/${editingId}` : '/api/folios';
 
         loadingEl.classList.remove('hidden');
-        const authToken = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         const formData = new FormData();
 
         // --- Recolección de Datos del Formulario (igual que antes) ---
@@ -1899,7 +1899,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         try {
-            const response = await fetch(url, { method, headers: { 'Authorization': `Bearer ${authToken}` }, body: formData });
+            const response = await fetch(url, { method, headers: { 'Authorization': `Bearer ${token}` }, body: formData });
 
             const responseBody = await response.text(); // Leer como texto primero
             let responseData;
@@ -1930,7 +1930,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Llamamos a la ruta DELETE para descartar la sesión de la bandeja de entrada
                     const deleteResponse = await fetch(`/api/ai-sessions/${sessionId}`, {
                         method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${authToken}` }
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
 
                     if (!deleteResponse.ok) {
@@ -1968,7 +1968,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (isCreatingFromAI) {
                 const sessionId = editingId.split('-')[1]; // Extraer ID original de 'ai-ID'
                 // Opcional: Llamar a una ruta API para marcar la sesión como 'completed'
-                // fetch(`/api/ai-sessions/${sessionId}/complete`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${authToken}` } });
+                // fetch(`/api/ai-sessions/${sessionId}/complete`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } });
                 console.log(`Folio creado desde la sesión de IA ${sessionId}. Considerar marcarla como completada.`);
             }
 
@@ -2845,10 +2845,10 @@ document.addEventListener('DOMContentLoaded', function () {
             analyzeImageBtn.disabled = true; // Deshabilitar mientras analiza
 
             try {
-                const authToken = localStorage.getItem('authToken');
+                const token = localStorage.getItem('token');
                 const response = await fetch('/api/folios/analyze-image', { // Usa la ruta correcta
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${authToken}` }, // No 'Content-Type' con FormData
+                    headers: { 'Authorization': `Bearer ${token}` }, // No 'Content-Type' con FormData
                     body: formData
                 });
 
@@ -2881,7 +2881,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // === FIN NUEVO ===
 
     // --- INICIALIZACIÓN ---
-    const storedToken = localStorage.getItem('authToken');
+    const storedToken = localStorage.getItem('token');
     if (storedToken) {
         try {
             const tokenPayload = JSON.parse(atob(storedToken.split('.')[1]));
@@ -2894,7 +2894,7 @@ document.addEventListener('DOMContentLoaded', function () {
             showAppView(storedToken, userRole);
         } catch (error) {
             console.error("Error con token almacenado:", error.message);
-            localStorage.removeItem('authToken'); // Limpiar token inválido/expirado
+            localStorage.removeItem('token'); // Limpiar token inválido/expirado
             showView('login'); // Asegurar que muestre login si hay error
         }
     } else {
@@ -2929,8 +2929,8 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const authToken = localStorage.getItem('authToken');
-        const pdfUrl = `/api/folios/${folio.id}/pdf?token=${authToken}`;
+        const token = localStorage.getItem('token');
+        const pdfUrl = `/api/folios/${folio.id}/pdf?token=${token}`;
 
         pdfViewerTitle.textContent = `Viendo Folio: ${folio.folioNumber || 'N/A'} (${currentFolioIndex + 1}/${currentFolioList.length})`;
         pdfFrame.src = pdfUrl;
@@ -3027,9 +3027,9 @@ document.addEventListener('DOMContentLoaded', function () {
             yesterday.setDate(today.getDate() - 1);
             const reportDate = yesterday.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-            const authToken = localStorage.getItem('authToken');
+            const token = localStorage.getItem('token');
             // Asegurarse de que el token se pasa correctamente como query param
-            const url = `/api/folios/commission-report?date=${reportDate}&token=${authToken}`;
+            const url = `/api/folios/commission-report?date=${reportDate}&token=${token}`;
 
             console.log("Abriendo URL de reporte:", url); // Log para depuración
             window.open(url, '_blank'); // Abrir en nueva pestaña
@@ -3109,8 +3109,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     // --- MODIFICAR la función `loadActiveSessions` original ---
     async function loadActiveSessions() {
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) {
+        const token = localStorage.getItem('token');
+        if (!token) {
             console.warn("No auth token found for loading sessions.");
             return;
         }
@@ -3124,7 +3124,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         try {
             const response = await fetch('/api/ai-sessions?status=active', {
-                headers: { 'Authorization': `Bearer ${authToken}` }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (!response.ok) {

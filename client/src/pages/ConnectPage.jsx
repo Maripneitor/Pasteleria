@@ -1,33 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { QRCodeSVG } from 'qrcode.react'; // 📦 Necesitas instalar esto: npm install qrcode.react
-import client from '../config/axios';
-import { Smartphone, RefreshCw, CheckCircle } from 'lucide-react';
+import React from 'react';
+import usePollingQR from '../hooks/usePollingQR';
+import { Smartphone, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
 
 const ConnectPage = () => {
-    const [qrData, setQrData] = useState(null);
-    const [status, setStatus] = useState('loading');
-
-    const fetchQR = async () => {
-        try {
-            const res = await client.get('/webhooks/qr'); // Note: I'm keeping the path that works currently
-            setStatus(res.data.status);
-            setQrData(res.data.qr);
-        } catch (error) {
-            console.error("Error buscando QR", error);
-        }
-    };
-
-    // Polling: Actualizar cada 3 segs
-    useEffect(() => {
-        fetchQR();
-        const interval = setInterval(fetchQR, 3000);
-        return () => clearInterval(interval);
-    }, []);
+    const { qr, status } = usePollingQR();
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-pink-100">
-                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600">
+                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 
+                    ${status === 'ready' ? 'bg-green-100 text-green-600' : 'bg-pink-100 text-pink-600'}`}>
                     <Smartphone size={32} />
                 </div>
 
@@ -40,9 +22,14 @@ const ConnectPage = () => {
                             <CheckCircle size={64} />
                             <span className="font-bold mt-4 text-lg">¡Conectado!</span>
                         </div>
-                    ) : qrData ? (
+                    ) : status === 'error' ? (
+                        <div className="text-red-400 flex flex-col items-center gap-2">
+                            <AlertTriangle size={48} />
+                            <span>Error de conexión backend</span>
+                        </div>
+                    ) : qr ? (
                         <div className="bg-white p-2 rounded-xl shadow-sm">
-                            <QRCodeSVG value={qrData} size={240} />
+                            <img src={qr} alt="Código QR WhatsApp" className="w-[240px] h-[240px]" />
                         </div>
                     ) : (
                         <div className="text-gray-400 flex flex-col items-center gap-3">
@@ -52,7 +39,12 @@ const ConnectPage = () => {
                     )}
                 </div>
 
-                <p className="text-xs text-gray-400 font-mono">Estado: {status?.toUpperCase()}</p>
+                <div className="flex justify-center gap-2 text-xs font-mono uppercase">
+                    <span className="text-gray-400">Estado:</span>
+                    <span className={`font-bold ${status === 'ready' ? 'text-green-600' : 'text-orange-500'}`}>
+                        {status || 'Iniciando...'}
+                    </span>
+                </div>
             </div>
         </div>
     );
