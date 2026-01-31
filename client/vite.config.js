@@ -12,8 +12,17 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      host: true, // Necesario para Docker
+      host: true, // Permite conexiones externas al contenedor
       port: 5173,
+      strictPort: true,
+      allowedHosts: [
+        'soren-nonpresentational-incongrously.ngrok-free.dev',
+        '.ngrok-free.app',
+        '.ngrok-free.dev'
+      ],
+      hmr: {
+        clientPort: 443, // Forzamos a HMR a usar el puerto de ngrok (HTTPS)
+      },
       proxy: {
         '/api': {
           target, // 'server' es el nombre del servicio en docker-compose, o localhost si es local
