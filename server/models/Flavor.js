@@ -23,6 +23,7 @@ const Flavor = sequelize.define('Flavor', {
         comment: 'Disponible para pisos de pasteles especiales'
     }
 }, {
+    tableName: 'flavors',
     timestamps: false
 });
 

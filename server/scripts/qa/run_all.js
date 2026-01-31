@@ -8,6 +8,7 @@ const { spawn } = require('child_process');
 const { chalk } = require('./_report');
 
 const scripts = [
+    { name: 'DB Sync (QA)', script: 'sync_db.js' },
     { name: 'Contract Verification', script: 'verify_contract.js' },
 ];
 

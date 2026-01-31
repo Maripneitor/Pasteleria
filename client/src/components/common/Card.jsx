@@ -1,10 +1,4 @@
-import { cn } from '../../utils/cn'; // Assuming utils/cn exists or I'll create it. Or just use clsx directly if no util.
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs) {
-    return twMerge(clsx(inputs));
-}
+import { cn } from '../../utils/cn';
 
 export default function Card({ children, className, title, action }) {
     return (

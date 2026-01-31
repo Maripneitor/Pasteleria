@@ -9,6 +9,9 @@ const Flavor = require('./Flavor');
 const Filling = require('./Filling');
 
 
+const Ingredient = require('./Ingredient');
+const CakeFlavor = require('./CakeFlavor');
+
 const AuditLog = require('./AuditLog');
 const { CashCut, CashMovement } = require('./CashModels');
 
@@ -56,6 +59,8 @@ module.exports = {
   AISession,
   Flavor,
   Filling,
+  Ingredient,
+  CakeFlavor,
   AuditLog,
   CashCut,
   CashMovement
