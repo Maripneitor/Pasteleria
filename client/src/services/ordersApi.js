@@ -1,4 +1,5 @@
 import client from '../config/axios';
+import { getToken } from '../utils/auth';
 
 export const ordersApi = {
     // Listar todos (con soporte de búsqueda ?q=...)
@@ -87,7 +88,33 @@ export const ordersApi = {
     // PDF URL helper (no es llamada axios directa, regresa string)
     getPdfUrl: (id) => {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        return `${apiUrl}/folios/${id}/pdf`;
+        const token = getToken();
+        return `${apiUrl}/folios/${id}/pdf?token=${encodeURIComponent(token || '')}`;
+    },
+
+    getLabelPdfUrl: (id) => {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        const token = getToken();
+        return `${apiUrl}/folios/${id}/label-pdf?token=${encodeURIComponent(token || '')}`;
+    },
+
+    getDaySummaryPdfUrl: (date) => {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        const token = getToken();
+        return `${apiUrl}/folios/day-summary-pdf?date=${date}&token=${encodeURIComponent(token || '')}`;
+    },
+
+    // Métodos para descargar PDF via Blob (Headers Auth)
+    downloadPdf: async (id) => {
+        return await client.get(`/folios/${id}/pdf`, { responseType: 'blob' });
+    },
+
+    downloadLabel: async (id) => {
+        return await client.get(`/folios/${id}/label-pdf`, { responseType: 'blob' });
+    },
+
+    downloadDaySummary: async (date) => {
+        return await client.get(`/folios/day-summary-pdf?date=${date}`, { responseType: 'blob' });
     }
 };
 

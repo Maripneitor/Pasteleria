@@ -12,7 +12,8 @@ import UsersPage from './pages/admin/UsersPage';
 import ConnectPage from './pages/ConnectPage';
 
 // 🆕 Páginas Nuevas (Routing Repair)
-import OrdersPage from './pages/OrdersPage'; // Asegúrate de crear/renombrar este archivo
+import OrdersPage from './pages/OrdersPage';
+import EditOrderPage from './pages/EditOrderPage';
 import CashRegister from './pages/CashRegister';
 import ProductionPage from './pages/ProductionPage'; // Nuevo Kanban
 import AuditLog from './pages/AuditLog';
@@ -20,8 +21,13 @@ import NotFound from './pages/NotFound';
 
 // 🆕 Módulos Operativos (UI Forms)
 import LocalSettings from './pages/LocalSettings';
-import CashCountForm from './pages/ops/CashCountForm'; // Sugerencia de carpeta: pages/ops
+import CashCountForm from './pages/ops/CashCountForm';
 import ExpenseForm from './pages/ops/ExpenseForm';
+
+// Admin Pages (Placeholders)
+import AdminStatsPage from './pages/admin/AdminStatsPage';
+import AdminSaboresPage from './pages/admin/AdminSaboresPage';
+import AdminComisionesPage from './pages/admin/AdminComisionesPage';
 
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -46,10 +52,18 @@ function App() {
             <Route path="pedidos/nuevo" element={<NewOrderPage />} />
 
             {/* 🔗 Rutas Reparadas (Spanish URLs) */}
+            {/* 🔗 Rutas Reparadas (Spanish URLs) */}
             <Route path="pedidos" element={<OrdersPage />} />
+            <Route path="pedidos/:id/editar" element={<EditOrderPage />} />
             <Route path="caja" element={<CashRegister />} />
             <Route path="produccion" element={<ProductionPage />} />
-            <Route path="usuarios" element={<UsersPage />} /> {/* Antes /admin/usuarios */}
+            <Route path="usuarios" element={<UsersPage />} />
+
+            {/* 🛡️ Rutas Admin (Placeholders fix 404) */}
+            <Route path="admin/stats" element={<AdminStatsPage />} />
+            <Route path="admin/sabores" element={<AdminSaboresPage />} />
+            <Route path="admin/comisiones" element={<AdminComisionesPage />} />
+
             <Route path="auditoria" element={<AuditLog />} />
             <Route path="calendario" element={<CalendarPage />} />
             <Route path="calendar" element={<Navigate to="/calendario" replace />} />

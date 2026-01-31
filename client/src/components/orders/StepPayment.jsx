@@ -63,6 +63,10 @@ const StepPayment = () => {
             };
 
             await createOrder(payload);
+
+            // 🔥 Avisar a toda la app que cambió la data
+            window.dispatchEvent(new Event('folios:changed'));
+
             toast.success('¡Pedido Creado Exitosamente!');
             navigate('/pedidos');
         } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart } from 'lucide-react';
 import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiAssistantTray from './AiAssistantTray';
@@ -10,13 +10,21 @@ const MainLayout = () => {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isAiOpen, setIsAiOpen] = useState(false); // 🤖 Control de IA
 
+    // Allow opening from anywhere
+    React.useEffect(() => {
+        const handler = () => setIsAiOpen(true);
+        window.addEventListener('open-ai-tray', handler);
+        return () => window.removeEventListener('open-ai-tray', handler);
+    }, []);
+
     // 🔐 Lógica de Logout Robusta
     const handleLogout = () => {
         if (window.confirm("¿Estás seguro que deseas cerrar sesión?")) {
-            localStorage.clear(); // Limpieza total
-            toast.success('Sesión cerrada correctamente');
+            const { clearToken } = require('../utils/auth'); // Lazy import explicitly
+            clearToken();
+            // localStorage.clear(); // Redundant if clearToken does it
+            toast.success('Sesión cerrada. ¡Buen trabajo hoy!');
             navigate('/login');
-            // window.location.href = '/login'; // Force reload if needed, but navigate is smoother usually
         }
     };
 
@@ -72,6 +80,10 @@ const MainLayout = () => {
 
                     <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Sistema</div>
                     <NavItem path="/usuarios" icon={Users} label="Usuarios" />
+                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
+                    <NavItem path="/admin/stats" icon={BarChart} label="Reportes" />
+                    <NavItem path="/admin/sabores" icon={Tags} label="Sabores y Catálogo" />
+                    <NavItem path="/admin/comisiones" icon={PieChart} label="Comisiones" />
                     <NavItem path="/configuracion" icon={Settings} label="Configuración" />
                 </nav>
 

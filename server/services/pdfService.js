@@ -81,14 +81,41 @@ exports.renderLabelPdf = async ({ folio }) => {
     }
 };
 
-exports.renderOrdersPdf = async ({ folios, date }) => {
+exports.renderOrdersPdf = async ({ folios, date, branches }) => {
     try {
         const tpl = path.join(__dirname, '..', 'templates', 'ordersTemplate.ejs');
 
+        // Map snake_case model data to CamelCase template expectations
+        const mappedFolios = folios.map(f => {
+            const additional = Array.isArray(f.complementos) ? f.complementos : [];
+
+            const total = parseFloat(f.total || 0);
+            const anticipo = parseFloat(f.anticipo || 0);
+            const balance = total - anticipo;
+
+            return {
+                folioNumber: f.folio_numero,
+                deliveryDate: f.fecha_entrega,
+                deliveryTime: f.hora_entrega,
+                client: {
+                    name: f.cliente_nombre,
+                    phone: f.cliente_telefono,
+                    phone2: f.cliente_telefono_extra
+                },
+                deliveryLocation: f.ubicacion_entrega || 'En Sucursal',
+                total: f.total || 0,
+                deliveryCost: f.costo_envio || 0,
+                advancePayment: f.anticipo || 0,
+                balance: balance,
+                additional: additional
+            };
+        });
+
         const html = await ejs.renderFile(tpl, {
-            orders: folios,
+            folios: mappedFolios, // Pass as 'folios' to match template variable
             date,
-            reportType: 'Resumen del Día'
+            reportType: 'Resumen del Día',
+            branches: branches || []
         });
 
         const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });

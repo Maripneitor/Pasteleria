@@ -9,25 +9,40 @@ const client = axios.create({
     }
 });
 
+import toast from 'react-hot-toast';
+import { friendlyError } from '../utils/uiMessages';
+
 // 🛡️ INTERCEPTOR (El Portero de Salida)
-// Antes de que salga CUALQUIER petición, le pegamos el token en la frente.
 client.interceptors.request.use((config) => {
     const token = getToken(); // Uses migration logic automatically
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-}, (error) => {
-    return Promise.reject(error);
-});
+}, (error) => Promise.reject(error));
 
-// Interceptor: Si el server dice "401 No Autorizado", nos saca
+// Interceptor: Manejo de Errores Global y UI Friendly
 client.interceptors.response.use(
     (response) => response,
     (error) => {
+        // 1. Mostrar mensaje amigable (toast) en vez de error técnico
+        // Salvo que la petición cancele explícitamente el toast (config.skipToast) - future proofing
+        if (!error.config?.skipToast) {
+            const msg = friendlyError(error);
+            // Evitar duplicados si hay muchos errores seguidos? (Toast libraries usually handle this)
+            toast.error(msg);
+        }
+
+        // 2. Manejo de Auth (401)
         if (error.response?.status === 401) {
-            clearToken(); // Cleans up everything
+            clearToken();
+            // Optional delay to let user read toast before redirect? No, immediate is safer.
             window.location.href = '/login';
+        }
+
+        // Log técnico en desarrollo
+        if (import.meta.env.DEV) {
+            console.error("❌ API Error:", error.response?.data || error.message);
         }
 
         return Promise.reject(error);

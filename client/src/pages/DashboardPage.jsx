@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import client from '../config/axios';
+import ordersApi from '../services/ordersApi';
+import { clearToken } from '../utils/auth';
+import toast from 'react-hot-toast';
 import {
   PlusCircle, Mic, Users, PieChart, DollarSign,
   Calendar, LogOut, Cake, ChefHat, Search, Printer,
-  ArrowRight, Activity
+  ArrowRight, Activity, Mail
 } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip } from 'recharts';
 
@@ -23,6 +26,8 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [sendingCut, setSendingCut] = useState(false);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -31,32 +36,68 @@ const DashboardPage = () => {
         setStats(res.data);
       } catch (e) {
         console.error("Error loading stats", e);
+        toast.error("No pudimos conectar con el servidor. Intenta de nuevo.");
       } finally {
         setLoading(false);
       }
     };
+
     loadStats();
+
+    // 🔥 cuando cambien folios, refrescar dashboard
+    const onChanged = () => loadStats();
+    window.addEventListener('folios:changed', onChanged);
+
+    return () => window.removeEventListener('folios:changed', onChanged);
   }, []);
 
   const handleDownloadPDF = async (id) => {
     try {
-      const response = await client.get(`/folios/${id}/pdf`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `folio-${id}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      alert('Error al descargar el PDF');
+      const res = await ordersApi.downloadPdf(id);
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch (e) {
+      console.error(e);
+      toast.error('Error descargando PDF');
+    }
+  };
+
+  const handleBuscar = () => {
+    const q = prompt("¿Qué deseas buscar? (nombre, teléfono o folio)");
+    if (q) {
+      navigate(`/pedidos?q=${encodeURIComponent(q)}`);
+    }
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("¿Cerrar sesión?")) {
+      clearToken();
+      toast.success("Sesión cerrada. ¡Buen trabajo hoy!");
+      navigate('/login');
+    }
+  };
+
+  const handleEnviarCorte = async () => {
+    if (!window.confirm("¿Enviar corte del día por correo a la administración?")) return;
+
+    setSendingCut(true);
+    try {
+      const date = new Date().toISOString().split('T')[0];
+      await client.post('/reports/daily-cut', { date, includeLabels: true });
+      toast.success("Corte enviado correctamente. 📧");
+    } catch (e) {
+      console.error(e);
+      toast.error("Error al enviar el corte.");
+    } finally {
+      setSendingCut(false);
     }
   };
 
   const actions = [
-    { title: 'Nuevo Folio', icon: PlusCircle, bg: 'bg-pink-600', path: '/pedidos/nuevo' },
-    { title: 'Dictar Pedido', icon: Mic, bg: 'bg-violet-600', path: '/pedidos/dictar' },
-    { title: 'Ver Calendario', icon: Calendar, bg: 'bg-blue-500', path: '/calendario' },
+    { title: 'Nuevo Folio', icon: PlusCircle, bg: 'bg-pink-600', onClick: () => navigate('/pedidos/nuevo') },
+    { title: 'Dictar Pedido', icon: Mic, bg: 'bg-violet-600', onClick: () => window.dispatchEvent(new Event('open-ai-tray')) },
+    { title: 'Ver Calendario', icon: Calendar, bg: 'bg-blue-500', onClick: () => navigate('/calendario') },
+    { title: 'Enviar Corte', icon: Mail, bg: 'bg-emerald-600', onClick: handleEnviarCorte, label: sendingCut ? 'Enviando...' : 'Enviar Corte' },
   ];
 
   const adminModules = [
@@ -75,8 +116,8 @@ const DashboardPage = () => {
         subtitle="Panel de Control General"
         actions={
           <div className="flex gap-2">
-            <Button variant="secondary" icon={Search} onClick={() => { }} className="hidden md:flex">Buscar</Button>
-            <Button variant="danger" icon={LogOut} onClick={() => { }}>Salir</Button>
+            <Button variant="secondary" icon={Search} onClick={handleBuscar} className="hidden md:flex">Buscar</Button>
+            <Button variant="danger" icon={LogOut} onClick={handleLogout}>Salir</Button>
           </div>
         }
       />
@@ -106,15 +147,15 @@ const DashboardPage = () => {
         <div className="lg:col-span-2 space-y-8">
 
           {/* Quick Actions */}
-          <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             {actions.map((action, idx) => (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={idx}>
                 <div
-                  onClick={() => navigate(action.path)}
+                  onClick={action.onClick}
                   className={`${action.bg} text-white p-6 rounded-2xl shadow-lg cursor-pointer flex flex-col items-center justify-center gap-3 h-32 hover:opacity-90 transition`}
                 >
                   <action.icon size={32} />
-                  <span className="font-bold text-lg">{action.title}</span>
+                  <span className="font-bold text-sm text-center">{action.label || action.title}</span>
                 </div>
               </motion.div>
             ))}
@@ -150,7 +191,7 @@ const DashboardPage = () => {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDownloadPDF(f.id); }}
                           className="p-1 hover:bg-gray-100 rounded text-gray-500"
-                          title="PDF"
+                          title="Descargar PDF"
                         >
                           <Printer size={16} />
                         </button>

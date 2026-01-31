@@ -1,40 +1,28 @@
 const nodemailer = require('nodemailer');
 
-// Configura el "transportador" de correo.
-// Reemplaza con tus credenciales o usa variables de entorno para mayor seguridad.
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false, // true for 465, false for other ports
     auth: {
-        user: 'hernandezmolinaisaac05@gmail.com', // Tu correo de Gmail
-        pass: 'pqneenvboggwgjss' // ¡Usa una contraseña de aplicación de Google!
-    }
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
 });
 
-/**
- * Envía un correo electrónico con un archivo adjunto.
- * @param {string} to - El destinatario del correo.
- * @param {string} subject - El asunto del correo.
- * @param {string} text - El cuerpo del correo en texto plano.
- * @param {Buffer} attachment - El buffer del archivo PDF a adjuntar.
- * @param {string} filename - El nombre del archivo adjunto.
- */
-const sendEmailWithAttachment = async (to, subject, text, attachment, filename) => {
+exports.sendEmail = async ({ to, subject, html, attachments = [] }) => {
     try {
-        await transporter.sendMail({
-            from: '"Reportes Pastelería La Fiesta" <hernandezmolinaisaac05@gmail.com>',
+        const info = await transporter.sendMail({
+            from: process.env.SMTP_FROM || '"Pastelería La Fiesta" <no-reply@pasteleria.com>',
             to,
             subject,
-            text,
-            attachments: [{
-                filename,
-                content: attachment,
-                contentType: 'application/pdf'
-            }]
+            html,
+            attachments,
         });
-        console.log(`✅ Correo enviado exitosamente a ${to}`);
+        console.log('📧 Email sent: %s', info.messageId);
+        return info;
     } catch (error) {
-        console.error(`❌ Error al enviar el correo:`, error);
+        console.error('❌ Error sending email:', error);
+        throw error;
     }
 };
-
-module.exports = { sendEmailWithAttachment };

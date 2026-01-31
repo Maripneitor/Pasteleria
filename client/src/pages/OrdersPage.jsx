@@ -22,7 +22,13 @@ export default function OrdersPage() {
         }
     };
 
-    useEffect(() => { fetchOrders(); }, []);
+    useEffect(() => {
+        fetchOrders(); // Initial fetch
+
+        const onChanged = () => fetchOrders();
+        window.addEventListener('folios:changed', onChanged);
+        return () => window.removeEventListener('folios:changed', onChanged);
+    }, []);
 
     if (loading) return (
         <div className="flex justify-center items-center h-[50vh] text-pink-500">
@@ -47,7 +53,7 @@ export default function OrdersPage() {
             {!orders.length ? (
                 <div className="p-12 flex flex-col items-center text-center text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
                     <PackageOpen className="w-16 h-16 mb-4 text-gray-200" />
-                    <p className="text-lg font-medium">No hay pedidos todavÃ­a.</p>
+                    <p className="text-lg font-medium">No hay pedidos todavía.</p>
                 </div>
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

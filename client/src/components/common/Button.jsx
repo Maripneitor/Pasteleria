@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from './Card';
+import { cn } from '../../utils/cn';
 import { Loader2 } from 'lucide-react';
 
 const VARIANTS = {

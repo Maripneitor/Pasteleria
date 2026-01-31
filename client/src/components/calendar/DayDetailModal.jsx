@@ -9,9 +9,15 @@ const DayDetailModal = ({ date, events, onClose, onRefresh }) => {
     const formattedDate = new Date(date).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const dateStr = date.toISOString().split('T')[0];
 
-    const handlePrintDaySummary = () => {
-        const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/folios/day-summary-pdf?date=${dateStr}`;
-        window.open(url, '_blank');
+    const handlePrintDaySummary = async () => {
+        try {
+            const res = await ordersApi.downloadDaySummary(dateStr);
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            window.open(url, '_blank');
+        } catch (e) {
+            console.error(e);
+            toast.error("Error descargando resumen");
+        }
     };
 
     return (
@@ -61,7 +67,15 @@ const DayDetailModal = ({ date, events, onClose, onRefresh }) => {
                                         </button>
                                         <button
                                             title="PDF Pedido"
-                                            onClick={() => window.open(ordersApi.getPdfUrl(data.id), '_blank')}
+                                            onClick={async () => {
+                                                try {
+                                                    const res = await ordersApi.downloadPdf(data.id);
+                                                    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+                                                    window.open(url, '_blank');
+                                                } catch (e) {
+                                                    toast.error("Error al abrir PDF");
+                                                }
+                                            }}
                                             className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
                                         >
                                             <FileText size={16} />

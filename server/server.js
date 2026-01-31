@@ -55,6 +55,7 @@ app.post('/api/ai/session/message',
   require('./controllers/aiSessionController').handleLegacyMessage
 );
 app.use('/api/dictation', dictationRoutes);
+app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/catalog', require('./routes/catalogRoutes'));
 app.use('/api/ingredients', require('./routes/ingredientRoutes'));
 app.use('/api/commissions', require('./routes/commissionRoutes'));

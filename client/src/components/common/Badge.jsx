@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from './Card';
+import { cn } from '../../utils/cn';
 
 const VARIANTS = {
     default: "bg-gray-100 text-gray-700",

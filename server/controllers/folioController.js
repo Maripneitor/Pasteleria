@@ -56,6 +56,7 @@ exports.getFolioById = async (req, res) => {
 
 // ✅ CREATE (recibe tu wizard gigante y guarda claves en columnas)
 // ✅ CREATE (recibe tu wizard gigante y guarda claves en columnas)
+// ✅ CREATE (recibe tu wizard gigante y guarda claves en columnas)
 exports.createFolio = async (req, res) => {
     try {
         const { normalizeBody } = require('../utils/parseMaybeJson');
@@ -74,60 +75,64 @@ exports.createFolio = async (req, res) => {
             if (!folioData[k]) return res.status(400).json({ message: `Falta campo requerido: ${k}` });
         }
 
+        // Safe numeric parsing helper
+        const safeNum = (v) => {
+            const n = parseFloat(String(v || 0).replace(/[^0-9.-]/g, ''));
+            return isNaN(n) ? 0 : n;
+        };
+
         // folio_numero si no viene
         const folioNumero = folioData.folio_numero || await nextFolioNumero();
 
         // Económicos
-        const costo_base = Number(folioData.costo_base || 0);
-        const costo_envio = Number(folioData.costo_envio || 0);
-        const anticipo = Number(folioData.anticipo || 0);
+        const costo_base = safeNum(folioData.costo_base);
+        const costo_envio = safeNum(folioData.costo_envio);
+        const anticipo = safeNum(folioData.anticipo);
 
-        const total = Number(folioData.total ?? (costo_base + costo_envio)) || 0;
+        // Total calculation should prefer provided total, or sum components
+        const total = folioData.total ? safeNum(folioData.total) : (costo_base + costo_envio);
 
         const estatus_pago =
             (folioData.estatus_pago) ||
-            (total - anticipo <= 0 ? 'Pagado' : 'Pendiente');
+            (total - anticipo <= 0.01 ? 'Pagado' : 'Pendiente'); // Tolerance for float diffs
 
-        // Procesar imágenes (ejemplo básico, ajustar según almacenamiento real)
+        // Procesar imágenes
         const referenceImages = files.map(f => ({
             originalName: f.originalname,
             mimeType: f.mimetype,
-            size: f.size,
-            // TODO: Usar servicio de upload real (S3/Local) y guardar URL
-            // Por ahora, solo guardamos metadata
+            size: f.size
         }));
-
-        // Si tienes campo para URLs de imágenes, asignarlo aquí.
-        // Ej: body.imagen_referencia_url = stored_url
 
         const row = await Folio.create({
             // Spread keys that match model directly
             ...folioData,
 
             folio_numero: folioNumero,
-            clientId, // Optional / Fallback
+            clientId: clientId || null,
             responsibleUserId: req.user?.id || null,
 
-            // Explicit overrides / sanitization if needed
-            cliente_nombre: folioData.cliente_nombre,
-            cliente_telefono: folioData.cliente_telefono,
-            cliente_telefono_extra: folioData.cliente_telefono_extra || null,
+            // Explicit overrides / sanitization
+            cliente_nombre: String(folioData.cliente_nombre || '').trim(),
+            cliente_telefono: String(folioData.cliente_telefono || '').trim(),
+            cliente_telefono_extra: folioData.cliente_telefono_extra ? String(folioData.cliente_telefono_extra).trim() : null,
 
-            fecha_entrega: folioData.fecha_entrega,
+            fecha_entrega: folioData.fecha_entrega, // Validar DATE YYYY-MM-DD en cliente o catch error
             hora_entrega: folioData.hora_entrega,
             ubicacion_entrega: folioData.ubicacion_entrega || 'En Sucursal',
 
             tipo_folio: folioData.tipo_folio || 'Normal',
 
             forma: folioData.forma || null,
-            numero_personas: folioData.numero_personas || null,
-            sabores_pan: folioData.sabores_pan || [],
-            rellenos: folioData.rellenos || [],
-            complementos: folioData.complementos || [],
+            numero_personas: folioData.numero_personas ? safeNum(folioData.numero_personas) : null,
+
+            // Arrays: ensure they are arrays if not handled by normalizeBody properly
+            sabores_pan: Array.isArray(folioData.sabores_pan) ? folioData.sabores_pan : [],
+            rellenos: Array.isArray(folioData.rellenos) ? folioData.rellenos : [],
+            complementos: Array.isArray(folioData.complementos) ? folioData.complementos : [],
 
             descripcion_diseno: folioData.descripcion_diseno || null,
             imagen_referencia_url: folioData.imagen_referencia_url || null,
-            diseno_metadata: folioData.diseno_metadata || {},
+            diseno_metadata: typeof folioData.diseno_metadata === 'object' ? folioData.diseno_metadata : {},
 
             costo_base,
             costo_envio,
@@ -143,8 +148,24 @@ exports.createFolio = async (req, res) => {
 
         res.status(201).json(row);
     } catch (e) {
-        console.error('createFolio:', e);
-        res.status(500).json({ message: 'Error creando folio', error: e.message });
+        console.error('createFolio CRITICAL ERROR:', e);
+
+        // Log deep details for debugging
+        if (e.errors) {
+            console.error('Validation Errors:', e.errors.map(err => err.message));
+        }
+
+        // Handle Sequelize Validation Errors specifically
+        if (e.name === 'SequelizeValidationError' || e.name === 'SequelizeUniqueConstraintError') {
+            const errors = e.errors ? e.errors.map(err => `${err.path}: ${err.message}`).join(', ') : e.message;
+            return res.status(400).json({ message: 'Error de validación', details: errors });
+        }
+
+        res.status(500).json({
+            message: 'Error interno creando folio',
+            error: e.message,
+            stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
+        });
     }
 };
 
@@ -362,17 +383,14 @@ exports.generarEtiqueta = async (req, res) => {
 // ✅ RESUMEN DIA
 exports.generarResumenDia = async (req, res) => {
     try {
-        const { date, type } = req.query; // date=YYYY-MM-DD
+        const { date } = req.query;
         if (!date) return res.status(400).json({ message: 'Fecha requerida' });
 
-        // Buscar folios del día (entrega)
         const folios = await Folio.findAll({
             where: { fecha_entrega: date },
             order: [['hora_entrega', 'ASC']]
         });
 
-        // Si type == 'labels', generar todas las etiquetas
-        // Por ahora, asumimos reporte lista
         const buffer = await pdfService.renderOrdersPdf({
             folios: folios.map(f => f.toJSON()),
             date
@@ -380,9 +398,13 @@ exports.generarResumenDia = async (req, res) => {
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename="resumen-${date}.pdf"`);
-        res.send(buffer);
+        return res.send(buffer);
+
     } catch (e) {
         console.error('generarResumenDia:', e);
-        res.status(500).json({ message: 'Error Reporte' });
+        return res.status(500).json({
+            message: 'Error Reporte',
+            error: e.message
+        });
     }
 };

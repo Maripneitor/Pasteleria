@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileText, Edit, Trash2, XCircle, DollarSign, Package } from 'lucide-react';
 import client from '../config/axios';
+import { ordersApi } from '../services/ordersApi';
 import toast from 'react-hot-toast';
 
 const OrderCard = ({ order, onUpdate }) => {
@@ -13,14 +14,32 @@ const OrderCard = ({ order, onUpdate }) => {
         ? `${baseUrl}${order.imagen_referencia_url.startsWith('/') ? '' : '/'}${order.imagen_referencia_url}`
         : null;
 
-    const handlePrintPdf = () => {
-        const pdfUrl = `${apiUrl}/folios/${order.id}/pdf`;
-        window.open(pdfUrl, '_blank');
+    const handlePrintPdf = async () => {
+        try {
+            setLoading(true);
+            const res = await ordersApi.downloadPdf(order.id);
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            window.open(url, '_blank');
+        } catch (e) {
+            console.error(e);
+            toast.error('Error al descargar PDF');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handlePrintLabel = () => {
-        const pdfUrl = `${apiUrl}/folios/${order.id}/label-pdf`;
-        window.open(pdfUrl, '_blank');
+    const handlePrintLabel = async () => {
+        try {
+            setLoading(true);
+            const res = await ordersApi.downloadLabel(order.id);
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            window.open(url, '_blank');
+        } catch (e) {
+            console.error(e);
+            toast.error('Error al descargar Etiqueta');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleStatusUpdate = async (newStatus) => {

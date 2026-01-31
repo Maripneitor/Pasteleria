@@ -1,82 +1,132 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <style>
-        body { font-family: sans-serif; margin: 20px;
-        font-size: 10.5pt; /* --- Aumentado de 9.5pt a 10.5pt --- */ }
-        .grid { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr;
-            gap: 25px; /* --- Aumentado para más espacio --- */
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            font-size: 10.5pt;
+            /* --- Aumentado de 9.5pt a 10.5pt --- */
         }
-        .card { 
-            border: 2px dashed #999; 
-            padding: 15px; /* --- Aumentado para más margen interno --- */
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            /* --- Aumentado para más espacio --- */
+        }
+
+        .card {
+            border: 2px dashed #999;
+            padding: 15px;
+            /* --- Aumentado para más margen interno --- */
             page-break-inside: avoid;
             display: flex;
             flex-direction: column;
         }
+
         .folio-header {
             text-align: center;
             border-bottom: 2px solid #555;
             padding-bottom: 8px;
             margin-bottom: 8px;
         }
+
         .folio-header h2 {
             margin: 0;
-            font-size: 1.9em; /* --- Ligeramente más grande --- */
+            font-size: 1.9em;
+            /* --- Ligeramente más grande --- */
             line-height: 1.1;
         }
+
         .folio-header p {
             margin: 0;
             font-size: 1em;
         }
+
         .card-section {
             margin-bottom: 8px;
         }
+
         .card-section p {
-            margin: 3px 0; /* Espacio vertical mejorado */
+            margin: 3px 0;
+            /* Espacio vertical mejorado */
         }
+
         .account-details {
             border-top: 1px solid #ccc;
             margin-top: auto;
             padding-top: 8px;
         }
+
         .account-details p {
             display: flex;
             justify-content: space-between;
-            margin: 3px 0; /* Espacio vertical mejorado */
+            margin: 3px 0;
+            /* Espacio vertical mejorado */
         }
+
         .account-details p span:last-child {
             font-weight: bold;
         }
     </style>
 </head>
+
 <body>
-    <h1>Comandas del Día: <%= new Date(folios[0].deliveryDate + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }) %></h1>
-    <div class="grid">
-        <% folios.forEach(folio => { %>
-            <div class="card">
-                <div class="folio-header">
-                    <h2><%= folio.folioNumber %></h2>
-                    <p><strong>Entrega:</strong> <%= new Date('1970-01-01T' + folio.deliveryTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true }) %></p>
-                </div>
+    <h1>Comandas del Día: <%= new Date(date + 'T12:00:00' ).toLocaleDateString('es-MX', { day: '2-digit' , month: 'long'
+            , year: 'numeric' }) %>
+    </h1>
+    <% if (folios.length===0) { %>
+        <div style="text-align: center; padding: 50px;">
+            <h2>No hay pedidos para este día.</h2>
+        </div>
+        <% } else { %>
+            <div class="grid">
+                <% folios.forEach(folio=> { %>
+                    <div class="card">
+                        <div class="folio-header">
+                            <h2>
+                                <%= folio.folioNumber %>
+                            </h2>
+                            <p><strong>Entrega:</strong>
+                                <%= new Date('1970-01-01T' + folio.deliveryTime).toLocaleTimeString('es-MX', {
+                                    hour: '2-digit' , minute: '2-digit' , hour12: true }) %>
+                            </p>
+                        </div>
 
-                <div class="card-section">
-                    <p><strong>Cliente:</strong> <%= folio.client.name %></p>
-                    <p><strong>Tel:</strong> <%= folio.client.phone %><% if (folio.client.phone2) { %> | <strong>Adic:</strong> <%= folio.client.phone2 %><% } %></p>
-                    <p><strong>Dirección:</strong> <%= folio.deliveryLocation %></p>
-                </div>
+                        <div class="card-section">
+                            <p><strong>Cliente:</strong>
+                                <%= folio.client.name %>
+                            </p>
+                            <p><strong>Tel:</strong>
+                                <%= folio.client.phone %>
+                                    <% if (folio.client.phone2) { %> | <strong>Adic:</strong>
+                                        <%= folio.client.phone2 %>
+                                            <% } %>
+                            </p>
+                            <p><strong>Dirección:</strong>
+                                <%= folio.deliveryLocation %>
+                            </p>
+                        </div>
 
-                <div class="account-details">
-                    <p><span>Costo Pastel:</span> <span>$<%= (parseFloat(folio.total) - parseFloat(folio.deliveryCost) - (folio.additional || []).reduce((sum, item) => sum + parseFloat(item.price || 0), 0)).toFixed(2) %></span></p>
-                    <p><span>Costo Envío:</span> <span>$<%= parseFloat(folio.deliveryCost).toFixed(2) %></span></p>
-                    <p><span>Total:</span> <span>$<%= parseFloat(folio.total).toFixed(2) %></span></p>
-                    <p><span>Anticipo:</span> <span>$<%= parseFloat(folio.advancePayment).toFixed(2) %></span></p>
-                    <p style="font-weight: bold; font-size: 1.1em; margin-top: 4px;"><span>RESTA:</span> <span>$<%= parseFloat(folio.balance).toFixed(2) %></span></p>
-                </div>
+                        <div class="account-details">
+                            <p><span>Costo Pastel:</span> <span>$<%= (parseFloat(folio.total) -
+                                        parseFloat(folio.deliveryCost) - (folio.additional || []).reduce((sum, item)=>
+                                        sum + parseFloat(item.price || 0), 0)).toFixed(2) %></span></p>
+                            <p><span>Costo Envío:</span> <span>$<%= parseFloat(folio.deliveryCost).toFixed(2) %></span>
+                            </p>
+                            <p><span>Total:</span> <span>$<%= parseFloat(folio.total).toFixed(2) %></span></p>
+                            <p><span>Anticipo:</span> <span>$<%= parseFloat(folio.advancePayment).toFixed(2) %></span>
+                            </p>
+                            <p style="font-weight: bold; font-size: 1.1em; margin-top: 4px;"><span>RESTA:</span> <span>$
+                                    <%= parseFloat(folio.balance).toFixed(2) %>
+                                </span></p>
+                        </div>
+                    </div>
+                    <% }); %>
             </div>
-        <% }); %>
-    </div>
+            <% } %>
 </body>
+
 </html>

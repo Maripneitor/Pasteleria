@@ -26,7 +26,7 @@ export default function ProductionPage() {
             setOrders(res.data);
         } catch (e) {
             console.error(e);
-            toast.error("Error cargando producción");
+            toast.error("Error descargando producción");
         } finally {
             setLoading(false);
         }
@@ -36,7 +36,15 @@ export default function ProductionPage() {
         fetchProduction();
         // Polling simple cada 30s
         const interval = setInterval(fetchProduction, 30000);
-        return () => clearInterval(interval);
+
+        // Listener de actualización global
+        const onChanged = () => fetchProduction();
+        window.addEventListener('folios:changed', onChanged);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('folios:changed', onChanged);
+        };
     }, [date]);
 
     const handleStatusMove = async (orderId, newStatus) => {
