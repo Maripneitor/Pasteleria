@@ -20,6 +20,8 @@ const clientRoutes = require('./routes/clientRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const aiSessionRoutes = require('./routes/aiSessionRoutes');
 const dictationRoutes = require('./routes/dictationRoutes');
+const aiDraftRoutes = require('./routes/aiDraftRoutes');
+const pdfTemplateRoutes = require('./routes/pdfTemplateRoutes');
 
 // Conectar DB
 const { conectarDB } = require('./config/database');
@@ -55,6 +57,7 @@ app.post('/api/ai/session/message',
   require('./controllers/aiSessionController').handleLegacyMessage
 );
 app.use('/api/dictation', dictationRoutes);
+app.use('/api/ai/draft', aiDraftRoutes);
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/catalog', require('./routes/catalogRoutes'));
 app.use('/api/ingredients', require('./routes/ingredientRoutes'));
@@ -62,6 +65,7 @@ app.use('/api/commissions', require('./routes/commissionRoutes'));
 app.use('/api/production', require('./routes/productionRoutes'));
 app.use('/api/cash', require('./routes/cashRoutes')); // Caja
 app.use('/api/audit', require('./routes/auditRoutes')); // Auditoría
+app.use('/api/pdf-templates', pdfTemplateRoutes);
 
 // Ruta de Salud (Para verificar que el server vive)
 // Ruta de Salud (Health Check Standard)

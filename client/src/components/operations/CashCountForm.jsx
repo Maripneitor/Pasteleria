@@ -3,10 +3,21 @@ import { useForm } from 'react-hook-form';
 import { DollarSign, CreditCard, FileText, Lock, Unlock } from 'lucide-react';
 
 const CashCountForm = () => {
-    const { register, handleSubmit, reset } = useForm();
+    const { register, handleSubmit } = useForm();
 
     const onSubmit = (data, event) => {
-        const actionType = event.nativeEvent.submitter.name; // 'open' or 'close'
+        // Fallback or explicit check if we want to be super safe, but using the click handler approach below is better
+        // However, let's keep it simple and robust:
+        // We will add a hidden input or state, but since we are KISS, let's just inspect the submitter carefully
+        // or rely on the state set by the button click.
+        // Actually, the previous code used event.nativeEvent.submitter.name.
+        // Let's improve robustness by setting a value on click.
+
+        // BETTER APPROACH: Use a ref or state to track which button was clicked, or just simpler:
+        // The event.nativeEvent.submitter is usually fine in modern browsers but can be null in some test envs.
+        // Let's trust the button `name` attribute for now, but ensure we handle `?` case.
+        const actionType = event.nativeEvent.submitter?.name || 'unknown';
+
         const payload = {
             ...data,
             timestamp: new Date().toISOString(),

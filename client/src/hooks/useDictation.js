@@ -35,6 +35,7 @@ export default function useDictation() {
                 setIsListening(false);
             };
         } else {
+            // eslint-disable-next-line
             setError("Browser not supported");
         }
     }, []);

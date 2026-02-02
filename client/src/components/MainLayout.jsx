@@ -2,7 +2,20 @@ import React, { useState } from 'react';
 import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart } from 'lucide-react';
 import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { clearToken } from '../utils/auth';
 import AiAssistantTray from './AiAssistantTray';
+
+// Extracted NavItem to avoid re-creation on every render
+const NavItem = ({ path, icon: Icon, label, isActive, onClick }) => ( // eslint-disable-line
+    <Link
+        to={path}
+        onClick={onClick}
+        className={`flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 mb-1 ${isActive ? "bg-pink-100 text-pink-700 font-bold shadow-sm border-r-4 border-pink-500" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium"}`}
+    >
+        <Icon size={20} className={isActive ? 'text-pink-600' : 'text-gray-400'} />
+        <span>{label}</span>
+    </Link>
+);
 
 const MainLayout = () => {
     const navigate = useNavigate();
@@ -20,7 +33,7 @@ const MainLayout = () => {
     // 🔐 Lógica de Logout Robusta
     const handleLogout = () => {
         if (window.confirm("¿Estás seguro que deseas cerrar sesión?")) {
-            const { clearToken } = require('../utils/auth'); // Lazy import explicitly
+            // clearToken(); imported at top
             clearToken();
             // localStorage.clear(); // Redundant if clearToken does it
             toast.success('Sesión cerrada. ¡Buen trabajo hoy!');
@@ -29,27 +42,13 @@ const MainLayout = () => {
     };
 
     // Helper para estados activos
-    const isActive = (path) => {
-        const activeClass = "bg-pink-100 text-pink-700 font-bold shadow-sm border-r-4 border-pink-500";
-        const inactiveClass = "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium";
-
-        // Match exacto o subrutas para secciones
-        if (path === '/' && location.pathname === '/') return activeClass;
-        if (path !== '/' && location.pathname.startsWith(path)) return activeClass;
-
-        return inactiveClass;
+    const checkActive = (path) => {
+        if (path === '/' && location.pathname === '/') return true;
+        if (path !== '/' && location.pathname.startsWith(path)) return true;
+        return false;
     };
 
-    const NavItem = ({ path, icon: Icon, label }) => (
-        <Link
-            to={path}
-            onClick={() => setIsMobileOpen(false)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 mb-1 ${isActive(path)}`}
-        >
-            <Icon size={20} className={isActive(path).includes('text-pink') ? 'text-pink-600' : 'text-gray-400'} />
-            <span>{label}</span>
-        </Link>
-    );
+    const handleNavClick = () => setIsMobileOpen(false);
 
     return (
         <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
@@ -68,23 +67,23 @@ const MainLayout = () => {
                 {/* Nav Links */}
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
                     <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Principal</div>
-                    <NavItem path="/" icon={LayoutDashboard} label="Dashboard" />
-                    <NavItem path="/pedidos/nuevo" icon={PlusCircle} label="Nuevo Pedido" />
-                    <NavItem path="/pedidos" icon={Package} label="Pedidos" />
-                    <NavItem path="/calendario" icon={Calendar} label="Calendario" />
+                    <NavItem path="/" icon={LayoutDashboard} label="Dashboard" isActive={checkActive('/')} onClick={handleNavClick} />
+                    <NavItem path="/pedidos/nuevo" icon={PlusCircle} label="Nuevo Pedido" isActive={checkActive('/pedidos/nuevo')} onClick={handleNavClick} />
+                    <NavItem path="/pedidos" icon={Package} label="Pedidos" isActive={checkActive('/pedidos')} onClick={handleNavClick} />
+                    <NavItem path="/calendario" icon={Calendar} label="Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
 
                     <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Operaciones</div>
-                    <NavItem path="/caja" icon={DollarSign} label="Caja y Cortes" />
-                    <NavItem path="/produccion" icon={ClipboardList} label="Producción" />
-                    <NavItem path="/auditoria" icon={FileText} label="Auditoría" />
+                    <NavItem path="/caja" icon={DollarSign} label="Caja y Cortes" isActive={checkActive('/caja')} onClick={handleNavClick} />
+                    <NavItem path="/produccion" icon={ClipboardList} label="Producción" isActive={checkActive('/produccion')} onClick={handleNavClick} />
+                    <NavItem path="/auditoria" icon={FileText} label="Auditoría" isActive={checkActive('/auditoria')} onClick={handleNavClick} />
 
                     <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Sistema</div>
-                    <NavItem path="/usuarios" icon={Users} label="Usuarios" />
+                    <NavItem path="/usuarios" icon={Users} label="Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
                     <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
-                    <NavItem path="/admin/stats" icon={BarChart} label="Reportes" />
-                    <NavItem path="/admin/sabores" icon={Tags} label="Sabores y Catálogo" />
-                    <NavItem path="/admin/comisiones" icon={PieChart} label="Comisiones" />
-                    <NavItem path="/configuracion" icon={Settings} label="Configuración" />
+                    <NavItem path="/admin/stats" icon={BarChart} label="Reportes" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
+                    <NavItem path="/admin/sabores" icon={Tags} label="Sabores y Catálogo" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
+                    <NavItem path="/admin/comisiones" icon={PieChart} label="Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
+                    <NavItem path="/configuracion" icon={Settings} label="Configuración" isActive={checkActive('/configuracion')} onClick={handleNavClick} />
                 </nav>
 
                 {/* Footer / Danger Zone */}

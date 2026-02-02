@@ -1,7 +1,7 @@
 import React from 'react';
 import { Ghost } from 'lucide-react';
 
-export default function EmptyState({ title, description, icon: Icon = Ghost, action }) {
+export default function EmptyState({ title, description, icon: Icon = Ghost, action }) { // eslint-disable-line
     return (
         <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-95 duration-300">
             <div className="bg-gray-50 p-4 rounded-full mb-4">

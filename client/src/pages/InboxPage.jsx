@@ -12,18 +12,19 @@ export default function InboxPage() {
         try {
             const { data } = await client.get('/ai-sessions/inbox/list');
             setSessions(data);
-        } catch (e) {
-            console.error("Inbox load error", e);
+        } catch {
+            console.error("Inbox load error");
         }
     };
 
+    // eslint-disable-next-line
     useEffect(() => { load(); }, []);
 
     const handlePriority = async (id, priority) => {
         try {
             await client.patch(`/ai-sessions/${id}/priority`, { priority });
             load();
-        } catch (e) { toast.error("Error updating priority"); }
+        } catch { toast.error("Error updating priority"); }
     };
 
     const handleTakeCase = async (id) => {
@@ -33,7 +34,7 @@ export default function InboxPage() {
             await client.patch(`/ai-sessions/${id}/needs-human`, { needsHuman: false });
             toast.success("Caso tomado / Alerta resuelta");
             load();
-        } catch (e) { toast.error("Error"); }
+        } catch { toast.error("Error"); }
     };
 
     const priorityColor = (p) => {

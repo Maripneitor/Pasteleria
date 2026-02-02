@@ -9,7 +9,8 @@ exports.renderFolioPdf = async ({ folio, watermark }) => {
 
         // Generar QR (lo movemos aquí para mantener el controller limpio o lo pasamos desde allá)
         // En la propuesta del usuario, el controller parece pasar datos ya listos, pero el template original usaba qrCode
-        const qrUrl = await QRCode.toDataURL(`http://localhost:5173/folios/${folio.id}`);
+        const baseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
+        const qrUrl = await QRCode.toDataURL(`${baseUrl}/folios/${folio.id}`);
 
         const html = await ejs.renderFile(tpl, {
             folio,
@@ -42,7 +43,8 @@ exports.renderLabelPdf = async ({ folio }) => {
         const tpl = path.join(__dirname, '..', 'templates', 'labelsTemplate.ejs');
 
         // Generar QR para el label también
-        const qrUrl = await QRCode.toDataURL(`http://localhost:5173/folios/${folio.id}`);
+        const baseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
+        const qrUrl = await QRCode.toDataURL(`${baseUrl}/folios/${folio.id}`);
 
         const mappedFolio = {
             id: folio.id,

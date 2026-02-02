@@ -8,7 +8,7 @@ import Badge from '../components/common/Badge';
 import EmptyState from '../components/common/EmptyState';
 import { ShieldAlert, RefreshCw } from 'lucide-react';
 
-export default function AuditLog() {
+export default function AuditPage() {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
 

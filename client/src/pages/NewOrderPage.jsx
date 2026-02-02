@@ -5,17 +5,21 @@ import StepClient from '../components/orders/StepClient';
 import StepProduct from '../components/orders/StepProduct';
 import StepDetails from '../components/orders/StepDetails';
 import StepPayment from '../components/orders/StepPayment';
+import AIDraftPanel from '../components/orders/AIDraftPanel';
 
 const WizardContent = () => {
     const { step } = useOrder();
 
     return (
-        <OrderWizardLayout title="Nuevo Pedido">
-            {step === 1 && <StepClient />}
-            {step === 2 && <StepProduct />}
-            {step === 3 && <StepDetails />}
-            {step === 4 && <StepPayment />}
-        </OrderWizardLayout>
+        <>
+            <AIDraftPanel />
+            <OrderWizardLayout title="Nuevo Pedido">
+                {step === 1 && <StepClient />}
+                {step === 2 && <StepProduct />}
+                {step === 3 && <StepDetails />}
+                {step === 4 && <StepPayment />}
+            </OrderWizardLayout>
+        </>
     );
 };
 

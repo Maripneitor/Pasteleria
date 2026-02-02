@@ -1,9 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import usePollingQR from '../hooks/usePollingQR';
-import { Smartphone, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Smartphone, RefreshCw, CheckCircle, AlertTriangle, Power } from 'lucide-react';
+import client from '../config/axios';
+import toast from 'react-hot-toast';
 
-const ConnectPage = () => {
+const WhatsAppPage = () => {
     const { qr, status } = usePollingQR();
+    const [restarting, setRestarting] = useState(false);
+
+    const handleRestart = async () => {
+        if (!confirm("¿Reiniciar la sesión de WhatsApp? Esto desconectará al bot momentáneamente.")) return;
+        setRestarting(true);
+        try {
+            await client.post('/webhooks/refresh');
+            toast.success("Reiniciando servicio... Espera un momento.");
+            setTimeout(() => window.location.reload(), 3000); // Reload to force polling reset
+        } catch (error) {
+            console.error(error);
+            toast.error("Error al reiniciar sesión");
+            setRestarting(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -26,6 +43,7 @@ const ConnectPage = () => {
                         <div className="text-red-400 flex flex-col items-center gap-2">
                             <AlertTriangle size={48} />
                             <span>Error de conexión backend</span>
+                            <button onClick={() => window.location.reload()} className="text-blue-500 underline text-sm">Reintentar</button>
                         </div>
                     ) : qr ? (
                         <div className="bg-white p-2 rounded-xl shadow-sm">
@@ -39,15 +57,24 @@ const ConnectPage = () => {
                     )}
                 </div>
 
-                <div className="flex justify-center gap-2 text-xs font-mono uppercase">
+                <div className="flex justify-between items-center text-xs font-mono uppercase mb-4 px-4">
                     <span className="text-gray-400">Estado:</span>
                     <span className={`font-bold ${status === 'ready' ? 'text-green-600' : 'text-orange-500'}`}>
                         {status || 'Iniciando...'}
                     </span>
                 </div>
+
+                <button
+                    onClick={handleRestart}
+                    disabled={restarting}
+                    className="w-full py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-black transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                    <Power size={18} />
+                    {restarting ? 'Reiniciando...' : 'Reiniciar Sesión'}
+                </button>
             </div>
         </div>
     );
 };
 
-export default ConnectPage;
+export default WhatsAppPage;

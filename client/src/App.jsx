@@ -8,15 +8,15 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import NewOrderPage from './pages/NewOrderPage';
 import CalendarPage from './pages/CalendarPage';
-import UsersPage from './pages/admin/UsersPage';
-import ConnectPage from './pages/ConnectPage';
+import TeamPage from './pages/TeamPage';
+import WhatsAppPage from './pages/WhatsAppPage';
 
 // 🆕 Páginas Nuevas (Routing Repair)
 import OrdersPage from './pages/OrdersPage';
 import EditOrderPage from './pages/EditOrderPage';
 import CashRegister from './pages/CashRegister';
 import ProductionPage from './pages/ProductionPage'; // Nuevo Kanban
-import AuditLog from './pages/AuditLog';
+import AuditPage from './pages/AuditPage';
 import NotFound from './pages/NotFound';
 
 // 🆕 Módulos Operativos (UI Forms)
@@ -27,7 +27,7 @@ import ExpenseForm from './pages/ops/ExpenseForm';
 // Admin Pages (Placeholders)
 import AdminStatsPage from './pages/admin/AdminStatsPage';
 import AdminSaboresPage from './pages/admin/AdminSaboresPage';
-import AdminComisionesPage from './pages/admin/AdminComisionesPage';
+import CommissionsPage from './pages/CommissionsPage';
 
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -41,7 +41,7 @@ function App() {
         {/* Rutas Públicas */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<RegisterPage />} />
-        <Route path="/conectar" element={<ConnectPage />} />
+        <Route path="/admin/whatsapp" element={<WhatsAppPage />} />
 
         {/* 🔒 Rutas Protegidas */}
         <Route element={<ProtectedRoute />}>
@@ -57,14 +57,14 @@ function App() {
             <Route path="pedidos/:id/editar" element={<EditOrderPage />} />
             <Route path="caja" element={<CashRegister />} />
             <Route path="produccion" element={<ProductionPage />} />
-            <Route path="usuarios" element={<UsersPage />} />
+            <Route path="usuarios" element={<TeamPage />} />
 
             {/* 🛡️ Rutas Admin (Placeholders fix 404) */}
             <Route path="admin/stats" element={<AdminStatsPage />} />
             <Route path="admin/sabores" element={<AdminSaboresPage />} />
-            <Route path="admin/comisiones" element={<AdminComisionesPage />} />
+            <Route path="comisiones" element={<CommissionsPage />} />
 
-            <Route path="auditoria" element={<AuditLog />} />
+            <Route path="auditoria" element={<AuditPage />} />
             <Route path="calendario" element={<CalendarPage />} />
             <Route path="calendar" element={<Navigate to="/calendario" replace />} />
 

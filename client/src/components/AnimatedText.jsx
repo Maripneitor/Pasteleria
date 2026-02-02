@@ -1,4 +1,5 @@
 import React from 'react';
+// eslint-disable-next-line
 import { motion } from 'framer-motion';
 
 const AnimatedText = ({ text, className }) => {

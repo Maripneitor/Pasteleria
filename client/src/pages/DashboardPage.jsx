@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
+// eslint-disable-next-line
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import ExpenseForm from './ops/ExpenseForm';
 import client from '../config/axios';
 import ordersApi from '../services/ordersApi';
+import reportsApi from '../services/reportsApi'; // Import new API
 import { clearToken } from '../utils/auth';
+import { handlePdfResponse } from '../utils/pdfHelper';
 import toast from 'react-hot-toast';
-import {
-  PlusCircle, Mic, Users, PieChart, DollarSign,
-  Calendar, LogOut, Cake, ChefHat, Search, Printer,
-  ArrowRight, Activity, Mail
-} from 'lucide-react';
+import { Search, PlusCircle, Mic, Calendar, User as UserIcon, LogOut, Mail, Users, ChefHat, PieChart, DollarSign, FileText, Printer } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip } from 'recharts';
 
 import PageHeader from '../components/common/PageHeader';
@@ -25,8 +25,6 @@ const formatMoney = (amount) => `$${Number(amount || 0).toLocaleString()}`;
 const DashboardPage = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
   const [sendingCut, setSendingCut] = useState(false);
 
   useEffect(() => {
@@ -38,7 +36,7 @@ const DashboardPage = () => {
         console.error("Error loading stats", e);
         toast.error("No pudimos conectar con el servidor. Intenta de nuevo.");
       } finally {
-        setLoading(false);
+        // setLoading(false);
       }
     };
 
@@ -51,15 +49,8 @@ const DashboardPage = () => {
     return () => window.removeEventListener('folios:changed', onChanged);
   }, []);
 
-  const handleDownloadPDF = async (id) => {
-    try {
-      const res = await ordersApi.downloadPdf(id);
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      window.open(url, '_blank');
-    } catch (e) {
-      console.error(e);
-      toast.error('Error descargando PDF');
-    }
+  const handleDownloadPDF = (id) => {
+    handlePdfResponse(() => ordersApi.downloadPdf(id));
   };
 
   const handleBuscar = () => {
@@ -83,20 +74,27 @@ const DashboardPage = () => {
     setSendingCut(true);
     try {
       const date = new Date().toISOString().split('T')[0];
-      await client.post('/reports/daily-cut', { date, includeLabels: true });
+      await reportsApi.sendDailyCut(date);
       toast.success("Corte enviado correctamente. 📧");
     } catch (e) {
       console.error(e);
-      toast.error("Error al enviar el corte.");
+      const msg = e.response?.data?.details || e.response?.data?.message || "Error al enviar el corte.";
+      toast.error(msg);
     } finally {
       setSendingCut(false);
     }
+  };
+
+  const handleVerCorte = () => {
+    const date = new Date().toISOString().split('T')[0];
+    handlePdfResponse(() => reportsApi.getDailyCutPdf(date));
   };
 
   const actions = [
     { title: 'Nuevo Folio', icon: PlusCircle, bg: 'bg-pink-600', onClick: () => navigate('/pedidos/nuevo') },
     { title: 'Dictar Pedido', icon: Mic, bg: 'bg-violet-600', onClick: () => window.dispatchEvent(new Event('open-ai-tray')) },
     { title: 'Ver Calendario', icon: Calendar, bg: 'bg-blue-500', onClick: () => navigate('/calendario') },
+    { title: 'Ver Corte (PDF)', icon: FileText, bg: 'bg-indigo-600', onClick: handleVerCorte },
     { title: 'Enviar Corte', icon: Mail, bg: 'bg-emerald-600', onClick: handleEnviarCorte, label: sendingCut ? 'Enviando...' : 'Enviar Corte' },
   ];
 

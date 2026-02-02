@@ -8,22 +8,21 @@ import toast from 'react-hot-toast';
 export default function CashRegister() {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [data, setData] = useState({ cut: null, movements: [] });
-    const [loading, setLoading] = useState(false);
 
     const fetchData = async () => {
-        setLoading(true);
         try {
             const res = await client.get(`/cash/summary?date=${date}`);
             setData(res.data);
-        } catch (e) {
-            console.error(e);
+        } catch {
+            // ignore error
         } finally {
-            setLoading(false);
+            // setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchData();
+        // eslint-disable-next-line
     }, [date]);
 
     const handleClose = async () => {
@@ -33,7 +32,8 @@ export default function CashRegister() {
             toast.success("Caja cerrada");
             fetchData();
         } catch (e) {
-            toast.error("Error al cerrar");
+            const msg = e.response?.data?.message || "Error al cerrar";
+            toast.error(msg);
         }
     };
 

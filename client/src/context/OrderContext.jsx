@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState } from 'react';
 
 const OrderContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useOrder = () => useContext(OrderContext);
 
 export const OrderProvider = ({ children }) => {
@@ -14,7 +15,8 @@ export const OrderProvider = ({ children }) => {
         deliveryTime: '',
         isDelivery: false,
         total: 0,
-        advance: 0
+        advance: 0,
+        applyCommission: false
     });
 
     const updateOrder = (data) => {

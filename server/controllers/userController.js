@@ -1,4 +1,5 @@
 const User = require('../models/user');
+const auditService = require('../services/auditService');
 
 exports.getAllUsers = async (req, res) => {
   try {
@@ -13,16 +14,20 @@ exports.getAllUsers = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const { username, email, password, globalRole } = req.body;
+    const { username, email, password, role, isActive } = req.body;
+    const globalRole = role || 'USER'; // Map role to globalRole
 
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) return res.status(400).json({ message: 'El correo ya está registrado' });
 
     // Asumimos que el modelo User tiene un hook beforeCreate para hashear el password
-    const newUser = await User.create({ username, email, password, globalRole });
+    const newUser = await User.create({ username, email, password, globalRole, isActive: isActive !== undefined ? isActive : true });
 
     const userResp = newUser.toJSON();
     delete userResp.password;
+
+    // AUDIT
+    auditService.log('CREATE', 'USER', newUser.id, { username: newUser.username }, req.user?.id);
 
     res.status(201).json(userResp);
   } catch (error) {
@@ -38,12 +43,17 @@ exports.updateUser = async (req, res) => {
     const user = await User.findByPk(id);
     if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
 
-    if (name) user.name = name;
-    if (role) user.role = role;
-    if (phone) user.phone = phone;
-    if (password) user.password = password; // El hook del modelo debería hashear esto
+    if (name) user.username = name; // Map name to username
+    if (role) user.globalRole = role;
+    if (phone) user.phone = phone; // Note: phone not in model yet, but leaving for now if added later
+    if (password) user.password = password;
+    if (req.body.isActive !== undefined) user.isActive = req.body.isActive;
 
     await user.save();
+
+    // AUDIT
+    auditService.log('UPDATE', 'USER', user.id, { changes: req.body }, req.user?.id);
+
     res.json({ message: 'Usuario actualizado correctamente' });
   } catch (error) {
     res.status(500).json({ message: 'Error actualizando usuario' });
@@ -52,7 +62,12 @@ exports.updateUser = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
   try {
-    await User.destroy({ where: { id: req.params.id } });
+    const userId = req.params.id;
+    await User.destroy({ where: { id: userId } });
+
+    // AUDIT
+    auditService.log('DELETE', 'USER', userId, {}, req.user?.id);
+
     res.json({ message: 'Usuario eliminado' });
   } catch (error) {
     res.status(500).json({ message: 'Error eliminando usuario' });

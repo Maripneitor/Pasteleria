@@ -1,6 +1,8 @@
 const { Op } = require('sequelize');
 const Folio = require('../models/Folio');
 const pdfService = require('../services/pdfService');
+const commissionService = require('../services/commissionService');
+const auditService = require('../services/auditService');
 
 // Genera folio_numero secuencial simple
 async function nextFolioNumero() {
@@ -146,6 +148,25 @@ exports.createFolio = async (req, res) => {
             tenantId: req.user?.tenantId || 1
         });
 
+        // 🟢 COMMISSION REGISTRATION (Enforced)
+        try {
+            // flag 'aplicar_comision_cliente' can come as 'true' string in multipart
+            const applyComm = folioData.aplicar_comision_cliente === true || folioData.aplicar_comision_cliente === 'true';
+
+            await commissionService.createCommission({
+                folioNumber: row.folio_numero,
+                total: row.total,
+                appliedToCustomer: applyComm,
+                userId: req.user?.id
+            });
+        } catch (commError) {
+            // No bloquear la respuesta del folio, pero loggear error crítico
+            console.error(`[Commission] FAILED to record for ${row.folio_numero}:`, commError);
+        }
+
+        // AUDIT
+        auditService.log('CREATE', 'FOLIO', row.id, { folio: row.folio_numero }, req.user?.id);
+
         res.status(201).json(row);
     } catch (e) {
         console.error('createFolio CRITICAL ERROR:', e);
@@ -226,6 +247,9 @@ exports.cancelFolio = async (req, res) => {
             motivo_cancelacion: req.body?.motivo || null,
         });
 
+        // AUDIT
+        auditService.log('CANCEL', 'FOLIO', row.id, { motivo: req.body?.motivo }, req.user?.id);
+
         res.json({ message: 'Folio cancelado', folio: row });
     } catch (e) {
         console.error('cancelFolio:', e);
@@ -256,6 +280,9 @@ exports.deleteFolio = async (req, res) => {
         if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
 
         await row.destroy();
+        // AUDIT
+        auditService.log('DELETE', 'FOLIO', req.params.id, {}, req.user?.id);
+
         res.json({ message: 'Eliminado' });
     } catch (e) {
         console.error('deleteFolio:', e);
@@ -283,8 +310,9 @@ exports.getCalendarEvents = async (req, res) => {
             id: String(f.id),
             title: `${f.folio_numero} • ${f.cliente_nombre}`,
             start: `${f.fecha_entrega}T${f.hora_entrega}`,
-            extendedProps: f.toJSON(),
-            // Add color logic if desired
+            // Lite payload
+            statusPago: f.estatus_pago,
+            statusFolio: f.estatus_folio,
             color: f.estatus_folio === 'Cancelado' ? '#ef4444' : f.estatus_pago === 'Pagado' ? '#10b981' : '#f59e0b'
         }));
 

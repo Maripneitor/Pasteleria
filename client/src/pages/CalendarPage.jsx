@@ -1,25 +1,26 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
-import client from '../config/axios';
+import { ordersApi } from '../services/ordersApi'; // Updated import
 import PageShell from '../components/ui/PageShell';
 import Card from '../components/ui/Card';
 import DayDetailModal from '../components/calendar/DayDetailModal';
-import { useNavigate } from 'react-router-dom';
+import EventDetailModal from '../components/calendar/EventDetailModal'; // New Import
 
 export default function CalendarPage() {
-    const [selectedDay, setSelectedDay] = useState(null); // { date: Date, events: [] }
+    const [selectedDay, setSelectedDay] = useState(null); // For day click
+    const [selectedEventId, setSelectedEventId] = useState(null); // For event click
     const calendarRef = useRef(null);
-    const navigate = useNavigate();
 
     // Función de carga dinámica para FullCalendar
     const fetchEvents = async (fetchInfo, successCallback, failureCallback) => {
         try {
             const { startStr, endStr } = fetchInfo;
-            const res = await client.get(`/folios/calendar?start=${startStr}&end=${endStr}`);
+            // Use Lite endpoint
+            const res = await ordersApi.getCalendarEventsLite(startStr, endStr);
             successCallback(res.data);
         } catch (e) {
             console.error("Calendar fetch error", e);
@@ -28,16 +29,14 @@ export default function CalendarPage() {
     };
 
     const handleDateClick = (arg) => {
-        // Al hacer click en un día, buscamos los eventos de ese día visualmente o via API
-        // Usamos la API del calendario para obtener los eventos cacheados
+        // Al hacer click en un día (celda vacía o día), mostramos resumen del día
+        // Reutilizamos la lógica existente de DayDetailModal
         const calendarApi = calendarRef.current.getApi();
         const events = calendarApi.getEvents();
 
-        // Filtrar eventos del día seleccionado
         const dayEvents = events.filter(evt => {
-            const d = evt.start; // Date object
-            // Comparar strings YYYY-MM-DD
-            return d.toISOString().split('T')[0] === arg.dateStr;
+            const d = evt.start;
+            return d && d.toISOString().split('T')[0] === arg.dateStr;
         });
 
         setSelectedDay({
@@ -52,9 +51,11 @@ export default function CalendarPage() {
     };
 
     const handleEventClick = (info) => {
-        // Navegar directo a editar o abrir modal de día?
-        // El requisito dice "Click en evento: abre detalle/edición"
-        navigate(`/pedidos/${info.event.id}/editar`);
+        // Prevenir que el click se propague al día (opcional, pero útil)
+        info.jsEvent.stopPropagation();
+
+        // Abrir Modal de Detalle
+        setSelectedEventId(info.event.id);
     };
 
     return (
@@ -76,16 +77,30 @@ export default function CalendarPage() {
                         }}
                         height="100%"
                         dayMaxEvents={true}
+                        eventTimeFormat={{
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            meridiem: 'short'
+                        }}
                     />
                 </div>
             </Card>
 
+            {/* Modal de Día (Resumen) */}
             {selectedDay && (
                 <DayDetailModal
                     date={selectedDay.date}
                     events={selectedDay.events}
                     onClose={() => setSelectedDay(null)}
                     onRefresh={() => calendarRef.current?.getApi().refetchEvents()}
+                />
+            )}
+
+            {/* Modal de Evento Individual (Detalle Lite -> Full) */}
+            {selectedEventId && (
+                <EventDetailModal
+                    eventId={selectedEventId}
+                    onClose={() => setSelectedEventId(null)}
                 />
             )}
         </PageShell>

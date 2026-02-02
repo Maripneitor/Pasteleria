@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Bot, X, Send, Sparkles, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
+// eslint-disable-next-line
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import aiService from '../services/aiService';
@@ -20,7 +21,7 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
     // Sync dictation to input
     useEffect(() => {
         if (transcript) {
-            setInput(prev => {
+            setInput(() => {
                 // Si el transcript es nuevo, lo agregamos. 
                 // Pero como transcript se acumula, mejor reemplazamos o concatenamos inteligentemente.
                 // ResetTranscript se maneja manualmente tras envío.

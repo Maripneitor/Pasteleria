@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+// eslint-disable-next-line
 import { motion } from 'framer-motion';
 
-const InputGroup = ({ icon: Icon, type, placeholder, register, name, error }) => {
+const InputGroup = ({ icon: Icon, type, placeholder, register, name, error }) => { // eslint-disable-line
     const [isFocused, setIsFocused] = useState(false);
 
     return (

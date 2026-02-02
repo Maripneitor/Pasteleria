@@ -1,19 +1,56 @@
 const { AISession } = require('../models');
 
+const openaiClient = require('../services/openaiResponsesClient');
+
 // Helper: Core Chat Logic (Service Layer)
 // En un refactor mayor, esto iría a /services/aiService.js
+// Helper: Core Chat Logic (Smart Mock)
 async function processChatMessage(session, userMessage) {
     const conversation = JSON.parse(session.whatsappConversation || '[]');
     conversation.push({ role: 'user', content: userMessage, timestamp: new Date() });
 
-    // TODO: Aquí iría la llamada real a OpenAI
-    const mockResponse = "Respuesta simulada para sesión " + session.id;
-    conversation.push({ role: 'assistant', content: mockResponse, timestamp: new Date() });
+    // --- SMART MOCK LOGIC (No OpenAI Key) ---
+    // 1. Detección simple de intenciones
+    const lower = userMessage.toLowerCase();
+
+    let responseText = "Entendido.";
+    let draftData = null;
+
+    if (lower.includes('hola') || lower.includes('buenos')) {
+        responseText = "¡Hola! Soy tu asistente de pastelería virtual. ¿En qué puedo ayudarte hoy? ¿Quieres levantar un pedido?";
+    } else if (lower.includes('precio') || lower.includes('cuesta')) {
+        responseText = "Los precios dependen del tamaño y diseño. Un pastel básico empieza en $250. ¿Para cuántas personas lo buscas?";
+    } else if (lower.includes('personas') || lower.includes('grande')) {
+        responseText = "Perfecto. ¿De qué sabor te gustaría? Tenemos Chocolate, Vainilla y Fresa.";
+    } else if (lower.includes('chocolate') || lower.includes('vainilla') || lower.includes('fresa')) {
+        responseText = "¡Delicioso! ¿Para cuándo lo necesitas? (Fecha y Hora)";
+    } else if (lower.includes('mañana') || lower.includes('hoy') || /\d/.test(lower)) {
+        responseText = "Anotado. ¿Cuál es el nombre del cliente y algún teléfono de contacto?";
+    } else if (lower.includes('nombre') || lower.includes('soy')) {
+        responseText = "¡Gracias! He generado un borrador de tu pedido. Puedes revisarlo en la sección de 'Nuevo Pedido'.";
+
+        // Generar Draft Mock
+        draftData = {
+            cliente_nombre: "Cliente Mock",
+            sabor: "Chocolate",
+            personas: 20
+        };
+    } else {
+        responseText = "Entiendo. ¿Me podrías dar más detalles sobre el pedido?";
+    }
+
+    // Update Session with extracted data if found
+    if (draftData) {
+        session.extractedData = draftData;
+    }
+
+    // Save Assistant Response
+    conversation.push({ role: 'assistant', content: responseText, timestamp: new Date() });
 
     session.whatsappConversation = JSON.stringify(conversation);
     await session.save();
 
-    return { responseText: mockResponse, conversation };
+    return { responseText, conversation, draft: draftData };
 }
 
 // Handler Functions
@@ -143,7 +180,8 @@ const postChatMessage = async (req, res) => {
 
         res.json({
             text: result.responseText,
-            conversation: result.conversation
+            conversation: result.conversation,
+            draft: result.draft
         });
     } catch (error) {
         console.error("Chat Error:", error);

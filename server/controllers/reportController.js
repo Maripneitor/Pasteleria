@@ -1,95 +1,76 @@
-const { CashCut, Folio } = require('../models');
-const { Op } = require('sequelize');
-const nodemailer = require('nodemailer');
-const pdfService = require('../services/pdfService');
-
-function ymd(d) {
-    return new Date(d).toISOString().split('T')[0];
-}
+const { processDailyCutEmail } = require('../services/dailyCutEmailService');
+const auditService = require('../services/auditService');
 
 exports.sendDailyCut = async (req, res) => {
     try {
-        const date = req.body?.date ? ymd(req.body.date) : ymd(new Date());
+        const date = req.body?.date;
         const branches = Array.isArray(req.body?.branches) ? req.body.branches : [];
+        const email = req.body?.email; // explicit override or undefined
 
-        // 1) SIEMPRE guardamos el corte primero (si tienes el modelo CashCut)
-        let cut;
-        try {
-            cut = await CashCut.create({
-                date,
-                branches: branches.length ? JSON.stringify(branches) : null,
-                createdByUserId: req.user?.id || null,
-                status: 'CREATED',
-            });
-        } catch (dbError) {
-            console.warn("Could not create CashCut record (table might be missing), proceeding with email...", dbError.message);
-        }
-
-        // 2) Traer folios del día
-        const folios = await Folio.findAll({
-            where: { fecha_entrega: date, estatus_folio: { [Op.ne]: 'Cancelado' } },
-            order: [['hora_entrega', 'ASC']],
-        });
-
-        // 3) Generar PDF (aunque esté vacío)
-        const pdfBuffer = await pdfService.renderOrdersPdf({
-            folios: folios.map(f => f.toJSON()),
+        const result = await processDailyCutEmail({
             date,
             branches,
+            email,
+            userId: req.user?.id
         });
 
-        // 4) Intentar correo (si falla, NO rompe el corte)
-        const to = req.body?.email || 'Mariomoguel05@gmail.com';
-
-        let emailStatus = 'SENT';
-        let emailError = null;
-
-        try {
-            const transporter = nodemailer.createTransport({
-                host: process.env.SMTP_HOST,
-                port: Number(process.env.SMTP_PORT || 587),
-                secure: false,
-                auth: {
-                    user: process.env.SMTP_USER,
-                    pass: process.env.SMTP_PASS
-                },
-            });
-
-            await transporter.sendMail({
-                from: process.env.SMTP_FROM || process.env.SMTP_USER,
-                to,
-                subject: `Corte del día - ${date}`,
-                text:
-                    `Corte del día ${date}\n` +
-                    `Sucursales: ${branches.length ? branches.join(', ') : '(no especificadas)'}\n` +
-                    `Total pedidos: ${folios.length}\n`,
-                attachments: [{ filename: `corte-${date}.pdf`, content: pdfBuffer }],
-            });
-        } catch (err) {
-            emailStatus = 'FAILED';
-            emailError = err?.message || 'Error enviando correo';
-            console.error("Email failed:", emailError);
+        if (result.skipped) {
+            return res.json({ ok: true, message: result.message, skipped: true });
         }
 
-        // 5) Actualiza el corte con resultado del correo
-        if (cut) {
-            await CashCut.update(
-                { status: emailStatus, emailTo: to, emailError },
-                { where: { id: cut.id } }
-            );
+        if (!result.ok) {
+            // Return 500 with details for frontend toast
+            return res.status(500).json({
+                ok: false,
+                message: result.message,
+                details: result.error
+            });
         }
 
-        return res.json({
-            ok: true,
-            message:
-                emailStatus === 'SENT'
-                    ? 'Corte guardado y enviado.'
-                    : 'Corte guardado. Falló el correo (reintentar).',
-            cutId: cut?.id,
-            emailStatus,
-        });
+        // AUDIT (Async) via processDailyCutEmail logic? 
+        // Actually processDailyCutEmail handles the "business logic". 
+        // We can log the "trigger" here.
+        auditService.log('SEND_REPORT', 'DAILY_CUT', 0, { date, email }, req.user?.id);
+
+        return res.json({ ok: true, message: 'Corte guardado y enviado.' });
+
     } catch (e) {
         console.error('dailyCut:', e);
         return res.status(500).json({ message: 'Error generando corte', error: e.message });
+    }
+};
+
+exports.previewDailyCut = async (req, res) => {
+    try {
+        const { date, branches } = req.query;
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        const branchList = branches ? branches.split(',') : [];
+
+        // Reusing logic from dailyCutEmailService (but lighter)
+        const { Folio } = require('../models');
+        const { Op } = require('sequelize');
+        const pdfService = require('../services/pdfService');
+
+        const folios = await Folio.findAll({
+            where: { fecha_entrega: targetDate, estatus_folio: { [Op.ne]: 'Cancelado' } },
+            order: [['hora_entrega', 'ASC']],
+        });
+
+        const pdfBuffer = await pdfService.renderOrdersPdf({
+            folios: folios.map(f => f.toJSON()),
+            date: targetDate,
+            branches: branchList,
+        });
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `inline; filename="corte-${targetDate}.pdf"`,
+            'Content-Length': pdfBuffer.length
+        });
+        res.send(pdfBuffer);
+
+    } catch (e) {
+        console.error('previewDailyCut:', e);
+        res.status(500).json({ message: 'Error generando vista previa', error: e.message });
     }
 };

@@ -24,8 +24,8 @@ export default function ProductionPage() {
         try {
             const res = await client.get(`/production?date=${date}`);
             setOrders(res.data);
-        } catch (e) {
-            console.error(e);
+        } catch {
+            console.error("Error descargando producción");
             toast.error("Error descargando producción");
         } finally {
             setLoading(false);
@@ -45,6 +45,7 @@ export default function ProductionPage() {
             clearInterval(interval);
             window.removeEventListener('folios:changed', onChanged);
         };
+        // eslint-disable-next-line
     }, [date]);
 
     const handleStatusMove = async (orderId, newStatus) => {
@@ -55,7 +56,7 @@ export default function ProductionPage() {
         try {
             await client.patch(`/production/${orderId}/status`, { status: newStatus });
             toast.success("Estado actualizado");
-        } catch (e) {
+        } catch {
             toast.error("Error moviendo tarjeta");
             setOrders(prevOrders); // Revert
         }

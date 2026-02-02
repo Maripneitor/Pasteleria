@@ -8,6 +8,7 @@ router.post('/whatsapp', whatsappController.handleWebhook);
 
 // Nueva ruta GET para obtener el código QR
 router.get('/qr', whatsappController.getQR);
+router.post('/refresh', whatsappController.refreshSession);
 
 // Whaticket también puede requerir una validación inicial con una petición GET.
 // Esta ruta es un placeholder por si es necesaria.

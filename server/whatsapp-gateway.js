@@ -150,7 +150,19 @@ const initializeWhatsApp = () => {
 module.exports = {
     initializeWhatsApp,
     getClient: () => client,
-    getStatus: () => ({ status, qr: qrCodeData })
+    getStatus: () => ({ status, qr: qrCodeData }),
+    restart: async () => {
+        console.log('🔄 Restarting WhatsApp Client via API...');
+        if (client) {
+            try {
+                await client.destroy();
+            } catch (e) { console.error('Error destroying client:', e.message); }
+        }
+        status = 'disconnected';
+        qrCodeData = null;
+        initializeWhatsApp();
+        return { success: true };
+    }
 };
 
 // 🟢 AUTO-ARRANQUE SI SE EJECUTA DESDE DOCKER/COMANDE (node whatsapp-gateway.js)

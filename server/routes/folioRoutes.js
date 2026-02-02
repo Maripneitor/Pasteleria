@@ -11,6 +11,9 @@ router.use(authMiddleware);
 router.get('/stats/dashboard', folioController.getDashboardStats);
 router.get('/calendar', folioController.getCalendarEvents);
 
+// Detail specific route (reusing getFolioById logic)
+router.get('/:id/calendar-detail', folioController.getFolioById);
+
 // ✅ CRUD
 router.get('/', folioController.listFolios);
 router.get('/day-summary-pdf', folioController.generarResumenDia); // Nueva ruta (antes de /:id)

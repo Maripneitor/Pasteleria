@@ -29,6 +29,7 @@ export default function InsumosPage() {
         }
     };
 
+    // eslint-disable-next-line
     useEffect(() => { load(); }, []);
 
     const handleEdit = (ing) => {
@@ -58,7 +59,7 @@ export default function InsumosPage() {
             }
             handleCancel();
             load();
-        } catch (e) {
+        } catch {
             toast.error("Error al guardar");
         }
     };
@@ -69,7 +70,7 @@ export default function InsumosPage() {
             await client.delete(`/ingredients/${id}`);
             toast.success("Eliminado");
             load();
-        } catch (e) {
+        } catch {
             toast.error("Error al eliminar");
         }
     };

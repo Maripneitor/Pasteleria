@@ -3,13 +3,18 @@ const { sequelize } = require('../config/database');
 
 const CashCut = sequelize.define('CashCut', {
     date: { type: DataTypes.DATEONLY, allowNull: false, unique: true },
+    createdByUserId: { type: DataTypes.BIGINT, allowNull: true },
     totalIncome: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
     totalExpense: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
     finalBalance: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
     closedAt: { type: DataTypes.DATE, allowNull: true },
     closedByUserId: { type: DataTypes.BIGINT, allowNull: true },
     status: { type: DataTypes.ENUM('Open', 'Closed'), defaultValue: 'Open' },
-    notes: { type: DataTypes.TEXT, allowNull: true }
+    notes: { type: DataTypes.TEXT, allowNull: true },
+    // Email Tracking
+    emailStatus: { type: DataTypes.ENUM('PENDING', 'SENT', 'FAILED'), defaultValue: 'PENDING' },
+    emailTo: { type: DataTypes.STRING, allowNull: true },
+    emailError: { type: DataTypes.TEXT, allowNull: true }
 }, { tableName: 'cash_cuts' });
 
 const CashMovement = sequelize.define('CashMovement', {

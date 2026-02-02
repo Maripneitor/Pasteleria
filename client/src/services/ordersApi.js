@@ -13,6 +13,16 @@ export const ordersApi = {
         return await client.get(`/folios/${id}`);
     },
 
+    // Calendar Lite (start/end)
+    getCalendarEventsLite: async (start, end) => {
+        return await client.get(`/folios/calendar?start=${start}&end=${end}`);
+    },
+
+    // Calendar Detail (Full info)
+    getCalendarDetail: async (id) => {
+        return await client.get(`/folios/${id}`);
+    },
+
     // Crear nuevo
     create: async (data) => {
         const form = new FormData();

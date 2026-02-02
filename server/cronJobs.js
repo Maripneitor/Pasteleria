@@ -37,10 +37,30 @@ cron.schedule('0 21 * * *', async () => {
         const text = `Adjunto encontrarás el reporte de comisiones para el día de trabajo que finalizó a las 8:30 PM.`;
         const filename = `ReporteComisiones_${reportDate}.pdf`;
 
-        await sendEmailWithAttachment('hernandezmolinaisaac05@gmail.com', subject, text, pdfBuffer, filename);
+        const recipient = process.env.COMMISSIONS_REPORT_EMAIL_TO || 'mariomoguel05@gmail.com';
+        await sendEmailWithAttachment(recipient, subject, text, pdfBuffer, filename);
 
     } catch (error) {
         console.error('❌ Error en la tarea programada de comisiones:', error);
+    }
+}, {
+    scheduled: true,
+    timezone: "America/Mexico_City"
+});
+
+// Tarea: Enviar Corte Diario a las 9:05 PM (Redundancia)
+// Se enviará a mariomoguel05@gmail.com (o ENV) si no se ha enviado por cierre de caja.
+const { processDailyCutEmail } = require('./services/dailyCutEmailService');
+
+cron.schedule('5 21 * * *', async () => {
+    console.log('🕒 Ejecutando tarea programada: Corte de caja diario...');
+    try {
+        await processDailyCutEmail({
+            // Fecha actual
+            // Nota: processDailyCutEmail ya hace new Date() si no se pasa date.
+        });
+    } catch (e) {
+        console.error('❌ Error tarea cron corte caja:', e);
     }
 }, {
     scheduled: true,

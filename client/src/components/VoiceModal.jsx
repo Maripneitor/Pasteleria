@@ -1,5 +1,6 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+// eslint-disable-next-line
+import { motion, AnimatePresence } from 'framer-motion';
 
 const VoiceModal = ({ isOpen, onClose, isListening }) => {
     if (!isOpen) return null;

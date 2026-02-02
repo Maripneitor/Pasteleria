@@ -6,5 +6,6 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.use(authMiddleware);
 
 router.post('/daily-cut', reportController.sendDailyCut);
+router.get('/daily-cut/preview', reportController.previewDailyCut);
 
 module.exports = router;

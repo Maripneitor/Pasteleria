@@ -80,6 +80,22 @@ exports.closeDay = async (req, res) => {
         cut.notes = notes;
         await cut.save();
 
+        // 🚀 Disparo de correo (Redundancia evento)
+        // No esperamos (fire & forget) o esperamos pero no fallamos request?
+        // El prompt dice "NO romper cierre".
+        // Lo haremos sin 'await' bloqueante si es posible, o await en try/catch.
+        // Node es single thread, 'await' bloqueará, pero es rápido. Mejor 'await' para logging correcto.
+        try {
+            const { processDailyCutEmail } = require('../services/dailyCutEmailService');
+            // Nota: processDailyCutEmail busca por fecha. 'cut.date' es string YYYY-MM-DD.
+            await processDailyCutEmail({
+                date: cut.date,
+                userId: req.user.id
+            });
+        } catch (mailError) {
+            console.error("⚠️ Error enviando correo automático al cierre:", mailError);
+        }
+
         res.json(cut);
     } catch (e) {
         res.status(500).json({ message: 'Error closing day' });

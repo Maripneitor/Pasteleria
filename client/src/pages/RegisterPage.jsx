@@ -1,5 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';

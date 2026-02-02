@@ -2,44 +2,18 @@ import { useState } from 'react';
 import { FileText, Edit, Trash2, XCircle, DollarSign, Package } from 'lucide-react';
 import client from '../config/axios';
 import { ordersApi } from '../services/ordersApi';
+import { handlePdfResponse } from '../utils/pdfHelper'; // Import helper
 import toast from 'react-hot-toast';
 
 const OrderCard = ({ order, onUpdate }) => {
-    const [imageLoaded, setImageLoaded] = useState(false);
     const [loading, setLoading] = useState(false);
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
 
-    const imageUrl = order.imagen_referencia_url
-        ? `${baseUrl}${order.imagen_referencia_url.startsWith('/') ? '' : '/'}${order.imagen_referencia_url}`
-        : null;
-
-    const handlePrintPdf = async () => {
-        try {
-            setLoading(true);
-            const res = await ordersApi.downloadPdf(order.id);
-            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-            window.open(url, '_blank');
-        } catch (e) {
-            console.error(e);
-            toast.error('Error al descargar PDF');
-        } finally {
-            setLoading(false);
-        }
+    const handlePrintPdf = () => {
+        handlePdfResponse(() => ordersApi.downloadPdf(order.id));
     };
 
-    const handlePrintLabel = async () => {
-        try {
-            setLoading(true);
-            const res = await ordersApi.downloadLabel(order.id);
-            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-            window.open(url, '_blank');
-        } catch (e) {
-            console.error(e);
-            toast.error('Error al descargar Etiqueta');
-        } finally {
-            setLoading(false);
-        }
+    const handlePrintLabel = () => {
+        handlePdfResponse(() => ordersApi.downloadLabel(order.id));
     };
 
     const handleStatusUpdate = async (newStatus) => {
@@ -84,7 +58,7 @@ const OrderCard = ({ order, onUpdate }) => {
             await client.patch(`/folios/${order.id}/cancel`, { motivo: 'Cancelado por usuario' });
             toast.success('Pedido cancelado');
             if (onUpdate) onUpdate();
-        } catch (error) {
+        } catch {
             toast.error('Error al cancelar');
         } finally {
             setLoading(false);

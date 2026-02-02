@@ -44,22 +44,52 @@ const StepProduct = () => {
     const product = orderData.products?.[0] || {};
     const isValid = product.type && product.flavorId && product.fillingId;
 
+    // Toggle handler for Base Cake
+    const isBaseCake = orderData.tipo_folio === 'Base';
+
+    const handleBaseToggle = (isBase) => {
+        updateOrder({
+            tipo_folio: isBase ? 'Base' : 'Normal',
+            isBaseCake: isBase
+        });
+    };
+
     if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-pink-500" /></div>;
 
     return (
-        <div className="space-y-6 fade-in">
-            <h2 className="text-2xl font-bold text-gray-800">Detalles del Pastel</h2>
+        <div className="space-y-8 fade-in">
+            {/* Header & Toggle */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h2 className="text-2xl font-bold text-gray-800">Detalles del Pastel</h2>
+
+                <div className="bg-gray-100 p-1 rounded-xl flex items-center">
+                    <button
+                        onClick={() => handleBaseToggle(false)}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${!isBaseCake ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Pastel Normal
+                    </button>
+                    <button
+                        onClick={() => handleBaseToggle(true)}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${isBaseCake ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        Pastel Base (Insumo)
+                    </button>
+                </div>
+            </div>
 
             <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">Tipo de Pastel</label>
+                <label className="block text-sm font-medium text-gray-700">Tipo de Altura / Pisos</label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {types.map(type => (
                         <button
                             key={type}
                             onClick={() => handleProductChange('type', type)}
-                            className={`p-3 rounded-xl border transition ${product.type === type
-                                    ? 'bg-pink-50 border-pink-500 text-pink-700 font-bold ring-2 ring-pink-200'
-                                    : 'border-gray-200 hover:border-pink-300'
+                            className={`p-4 rounded-xl border transition-all duration-200 ${product.type === type
+                                ? 'bg-pink-50 border-pink-500 text-pink-700 font-bold ring-2 ring-pink-200 shadow-sm'
+                                : 'border-gray-200 hover:border-pink-300 hover:shadow-sm bg-white'
                                 }`}
                         >
                             {type}
@@ -71,34 +101,58 @@ const StepProduct = () => {
             <div className="grid md:grid-cols-2 gap-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Sabor de Pan</label>
-                    <select
-                        value={product.flavorId || ''}
-                        onChange={(e) => handleProductChange('flavorId', e.target.value)}
-                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
-                        size={5} // Listbox style
-                    >
-                        {flavors.map(f => (
-                            <option key={f.id} value={f.id} className="p-2 hover:bg-pink-50 cursor-pointer rounded">
-                                {f.name}
-                            </option>
-                        ))}
-                    </select>
+                    {flavors.length === 0 ? (
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center">
+                            <Cake className="mx-auto text-gray-400 mb-2" size={24} />
+                            <p className="text-sm text-gray-500">No hay sabores activos.</p>
+                        </div>
+                    ) : (
+                        <select
+                            value={product.flavorId || ''}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const name = flavors.find(f => f.id === id)?.name || '';
+                                handleProductChange('flavorId', id);
+                                handleProductChange('flavorName', name);
+                            }}
+                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                            size={5} // Listbox style
+                        >
+                            {flavors.map(f => (
+                                <option key={f.id} value={f.id} className="p-2 hover:bg-pink-50 cursor-pointer rounded">
+                                    {f.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Relleno</label>
-                    <select
-                        value={product.fillingId || ''}
-                        onChange={(e) => handleProductChange('fillingId', e.target.value)}
-                        className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
-                        size={5}
-                    >
-                        {fillings.map(f => (
-                            <option key={f.id} value={f.id} className="p-2 hover:bg-pink-50 cursor-pointer rounded">
-                                {f.name}
-                            </option>
-                        ))}
-                    </select>
+                    {fillings.length === 0 ? (
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center">
+                            <Loader2 className="mx-auto text-gray-400 mb-2" size={24} />
+                            <p className="text-sm text-gray-500">No hay rellenos activos.</p>
+                        </div>
+                    ) : (
+                        <select
+                            value={product.fillingId || ''}
+                            onChange={(e) => {
+                                const id = Number(e.target.value);
+                                const name = fillings.find(f => f.id === id)?.name || '';
+                                handleProductChange('fillingId', id);
+                                handleProductChange('fillingName', name);
+                            }}
+                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                            size={5}
+                        >
+                            {fillings.map(f => (
+                                <option key={f.id} value={f.id} className="p-2 hover:bg-pink-50 cursor-pointer rounded">
+                                    {f.name}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                 </div>
             </div>
 

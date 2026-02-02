@@ -1,23 +1,16 @@
 import React from 'react';
 import { FileText, X, Package, Edit, DollarSign } from 'lucide-react';
 import { ordersApi } from '../../services/ordersApi';
-import toast from 'react-hot-toast';
+import { handlePdfResponse } from '../../utils/pdfHelper'; // Updated
 import { useNavigate } from 'react-router-dom';
 
-const DayDetailModal = ({ date, events, onClose, onRefresh }) => {
+const DayDetailModal = ({ date, events, onClose }) => {
     const navigate = useNavigate();
     const formattedDate = new Date(date).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const dateStr = date.toISOString().split('T')[0];
 
-    const handlePrintDaySummary = async () => {
-        try {
-            const res = await ordersApi.downloadDaySummary(dateStr);
-            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-            window.open(url, '_blank');
-        } catch (e) {
-            console.error(e);
-            toast.error("Error descargando resumen");
-        }
+    const handlePrintDaySummary = () => {
+        handlePdfResponse(() => ordersApi.downloadDaySummary(dateStr));
     };
 
     return (
@@ -67,15 +60,7 @@ const DayDetailModal = ({ date, events, onClose, onRefresh }) => {
                                         </button>
                                         <button
                                             title="PDF Pedido"
-                                            onClick={async () => {
-                                                try {
-                                                    const res = await ordersApi.downloadPdf(data.id);
-                                                    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-                                                    window.open(url, '_blank');
-                                                } catch (e) {
-                                                    toast.error("Error al abrir PDF");
-                                                }
-                                            }}
+                                            onClick={() => handlePdfResponse(() => ordersApi.downloadPdf(data.id))}
                                             className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
                                         >
                                             <FileText size={16} />

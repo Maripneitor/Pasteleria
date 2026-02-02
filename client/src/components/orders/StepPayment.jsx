@@ -10,9 +10,7 @@ const StepPayment = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleChange = (e) => {
-        updateOrder({ [e.target.name]: parseFloat(e.target.value) || 0 });
-    };
+    // handleChange removed (unused)
 
     const handleSubmit = async () => {
         setLoading(true);
@@ -57,6 +55,9 @@ const StepPayment = () => {
 
                 estatus_pago: (orderData.total - orderData.advance) <= 0 ? 'Pagado' : 'Pendiente',
                 estatus_produccion: 'Pendiente',
+
+                // Commission Flag
+                aplicar_comision_cliente: orderData.applyCommission || false,
 
                 // Prefijo para generador
                 folio_numero: null // Dejar que backend genere
@@ -112,6 +113,39 @@ const StepPayment = () => {
                         />
                     </div>
                 </div>
+            </div>
+
+            {/* Commission Toggle Section */}
+            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <div className="flex items-center gap-3">
+                    <input
+                        type="checkbox"
+                        id="applyCommission"
+                        checked={orderData.applyCommission || false}
+                        onChange={(e) => updateOrder({ applyCommission: e.target.checked })}
+                        className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                    />
+                    <label htmlFor="applyCommission" className="font-medium text-gray-700 cursor-pointer select-none">
+                        Agregar comisión (5%) al cliente
+                    </label>
+                </div>
+
+                {orderData.applyCommission && (
+                    <div className="mt-3 pl-8 text-sm text-gray-600 space-y-1">
+                        <div className="flex justify-between max-w-xs">
+                            <span>Subtotal:</span>
+                            <span>${(orderData.total || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between max-w-xs font-medium text-blue-700">
+                            <span>+ Comisión (5%):</span>
+                            <span>${((orderData.total || 0) * 0.05).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between max-w-xs font-bold border-t border-blue-200 pt-1 mt-1">
+                            <span>Total a Cobrar:</span>
+                            <span>${((orderData.total || 0) * 1.05).toFixed(2)}</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl border border-gray-200">

@@ -143,3 +143,12 @@ exports.getQR = async (req, res) => {
     });
   }
 };
+
+exports.refreshSession = async (req, res) => {
+  try {
+    await gateway.restart();
+    res.json({ message: 'Reiniciando sesión de WhatsApp...' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error reiniciando sesión' });
+  }
+};
