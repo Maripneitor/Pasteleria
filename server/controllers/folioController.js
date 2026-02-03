@@ -80,14 +80,28 @@ exports.createFolio = async (req, res) => {
 
         const { clientId = null, ...folioData } = body;
 
+        const requestId = req.requestId; // Grab from middleware
+
         // Validations
         if (!folioData.cliente_nombre || !folioData.cliente_telefono) {
-            return res.status(400).json({ message: 'Falta: cliente_nombre y/o cliente_telefono' });
+            return res.status(400).json({
+                ok: false,
+                code: 'VALIDATION_ERROR',
+                message: 'Datos incompletos',
+                details: ['Falta: cliente_nombre y/o cliente_telefono'],
+                requestId
+            });
         }
 
         const required = ['fecha_entrega', 'hora_entrega'];
         for (const k of required) {
-            if (!folioData[k]) return res.status(400).json({ message: `Falta campo requerido: ${k}` });
+            if (!folioData[k]) return res.status(400).json({
+                ok: false,
+                code: 'VALIDATION_ERROR',
+                message: 'Datos incompletos',
+                details: [`Falta campo requerido: ${k}`],
+                requestId
+            });
         }
 
         const safeNum = (v) => {
@@ -106,6 +120,39 @@ exports.createFolio = async (req, res) => {
 
         // Tenant Assignment
         const tenantId = req.user?.tenantId || 1;
+
+        // Resolving IDs to Names (Source of Truth: IDs)
+        let resolvedSabores = Array.isArray(folioData.sabores_pan) ? folioData.sabores_pan : [];
+        let resolvedRellenos = Array.isArray(folioData.rellenos) ? folioData.rellenos : [];
+        const flavorIds = Array.isArray(folioData.flavorIds) ? folioData.flavorIds : [];
+        const fillingIds = Array.isArray(folioData.fillingIds) ? folioData.fillingIds : [];
+
+        if (flavorIds.length > 0) {
+            const CakeFlavor = require('../models/CakeFlavor');
+            const flavors = await CakeFlavor.findAll({
+                where: {
+                    id: flavorIds,
+                    tenantId: tenantId
+                }
+            });
+            resolvedSabores = flavors.map(f => f.name);
+        }
+
+        if (fillingIds.length > 0) {
+            const Filling = require('../models/Filling');
+            const fillings = await Filling.findAll({
+                where: {
+                    id: fillingIds,
+                    tenantId: tenantId
+                }
+            });
+            resolvedRellenos = fillings.map(f => f.name);
+        }
+
+        // Update Metadata with IDs and Resolves Names
+        if (typeof folioData.diseno_metadata !== 'object') folioData.diseno_metadata = {};
+        folioData.diseno_metadata.flavorIds = flavorIds;
+        folioData.diseno_metadata.fillingIds = fillingIds;
 
         const row = await Folio.create({
             ...folioData,
@@ -126,13 +173,13 @@ exports.createFolio = async (req, res) => {
             forma: folioData.forma || null,
             numero_personas: folioData.numero_personas ? safeNum(folioData.numero_personas) : null,
 
-            sabores_pan: Array.isArray(folioData.sabores_pan) ? folioData.sabores_pan : [],
-            rellenos: Array.isArray(folioData.rellenos) ? folioData.rellenos : [],
+            sabores_pan: resolvedSabores,
+            rellenos: resolvedRellenos,
             complementos: Array.isArray(folioData.complementos) ? folioData.complementos : [],
 
             descripcion_diseno: folioData.descripcion_diseno || null,
             imagen_referencia_url: folioData.imagen_referencia_url || null,
-            diseno_metadata: typeof folioData.diseno_metadata === 'object' ? folioData.diseno_metadata : {},
+            diseno_metadata: folioData.diseno_metadata, // updated above
 
             costo_base, costo_envio, anticipo, total, estatus_pago,
             estatus_produccion: folioData.estatus_produccion || 'Pendiente',
@@ -155,11 +202,27 @@ exports.createFolio = async (req, res) => {
         auditService.log('CREATE', 'FOLIO', row.id, { folio: row.folio_numero }, req.user?.id);
         res.status(201).json(row);
     } catch (e) {
-        console.error('createFolio CRITICAL ERROR:', e);
+        console.error(`[CreateFolio] CRITICAL ERROR (Req: ${req.requestId}):`, e);
+
+        const requestId = req.requestId;
+
         if (e.name === 'SequelizeValidationError') {
-            return res.status(400).json({ message: 'Error de validación', details: e.message });
+            const errors = e.errors.map(er => `${er.path}: ${er.message}`);
+            return res.status(400).json({
+                ok: false,
+                code: 'VALIDATION_ERROR',
+                message: 'Error de validación',
+                details: errors,
+                requestId
+            });
         }
-        res.status(500).json({ message: 'Error interno creando folio', error: e.message });
+        res.status(500).json({
+            ok: false,
+            code: 'INTERNAL_ERROR',
+            message: 'Error interno creando folio',
+            error: e.message,
+            requestId
+        });
     }
 };
 
@@ -314,9 +377,22 @@ exports.generarPDF = async (req, res) => {
         if (!folio) return res.status(404).json({ message: 'Folio no encontrado' });
 
         const watermark = computeWatermark(folio);
+
+        // --- Branding Injection ---
+        // Determine Owner from user context OR if it's not clear (public access?), from Folio's creator?
+        // Ideally we use req.user context if logged in.
+        let templateConfig = {};
+        if (req.user) {
+            const ownerId = req.user.ownerId || req.user.id;
+            const PdfTemplate = require('../models/PdfTemplate');
+            const template = await PdfTemplate.findOne({ where: { ownerId } });
+            if (template) templateConfig = template.configJson;
+        }
+
         const buffer = await pdfService.renderFolioPdf({
             folio: folio.toJSON(),
             watermark,
+            templateConfig
         });
 
         if (!buffer || buffer.length === 0) throw new Error("PDF Buffer is empty");

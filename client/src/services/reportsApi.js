@@ -6,8 +6,8 @@ const reportsApi = {
      * @param {string} date - YYYY-MM-DD
      * @returns {Promise<Object>}
      */
-    sendDailyCut: async (date) => {
-        const response = await api.post('/reports/daily-cut', { date });
+    sendDailyCut: async (date, force = false) => {
+        const response = await api.post('/reports/daily-cut', { date, force });
         return response.data;
     },
 

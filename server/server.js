@@ -12,10 +12,15 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const requestLogger = require('./middleware/requestLogger');
+app.use(requestLogger);
+
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
-
-// ...
+const authRoutes = require('./routes/authRoutes');
+const folioRoutes = require('./routes/folioRoutes');
+const userRoutes = require('./routes/userRoutes');
+const clientRoutes = require('./routes/clientRoutes');
 
 app.use('/api/folios', folioRoutes);
 app.use('/api/users', userRoutes);
@@ -76,6 +81,20 @@ app.use('/api/audit', require('./routes/auditRoutes')); // Auditoría
 app.use('/api/upload', require('./routes/uploadRoutes')); // Imágenes de Referencia
 app.use('/api/pdf-templates', pdfTemplateRoutes);
 
+// Base API route (for testing/info)
+app.get('/api/', (req, res) => {
+  res.json({
+    status: 'online',
+    message: 'API Pastelería v2.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth/*',
+      folios: '/api/folios/*',
+      // ... other endpoints
+    }
+  });
+});
+
 // Ruta de Salud (Para verificar que el server vive)
 // Ruta de Salud (Health Check Standard)
 app.get('/api/health', async (req, res) => {
@@ -99,13 +118,42 @@ app.get('/api/health', async (req, res) => {
 // 🚀 FALLBACK SPA (Para React Router)
 // Si no es /api ni archivo estático, devuelve index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  const distPath = path.join(__dirname, '../client/dist/index.html');
+  const fs = require('fs');
+
+  // Guard: if dist doesn't exist (dev mode), return helpful message
+  if (!fs.existsSync(distPath)) {
+    return res.status(200).json({
+      ok: true,
+      mode: 'dev',
+      message: 'API running. Frontend is served by Vite dev server at :5173',
+      api: '/api/*',
+      health: '/api/health'
+    });
+  }
+
+  res.sendFile(distPath);
 });
 
 // 👇 MANEJADOR DE ERRORES GLOBAL (Evita que el server muera en silencio)
 app.use((err, req, res, next) => {
-  console.error("❌ Error del Servidor:", err.stack);
-  res.status(500).json({ message: "Algo salió mal en el servidor", error: err.message });
+  const requestId = req.requestId || 'unknown';
+
+  // Log completo en servidor (con stack trace)
+  console.error(`❌ [Global Error Handler] RequestID: ${requestId}`);
+  console.error('Error:', err.message);
+  console.error('Stack:', err.stack);
+
+  // Determinar código de error apropiado
+  const statusCode = err.statusCode || err.status || 500;
+
+  // Respuesta estandarizada al cliente (sin stack trace)
+  res.status(statusCode).json({
+    ok: false,
+    code: err.code || 'INTERNAL_ERROR',
+    message: err.message || 'Algo salió mal en el servidor',
+    requestId
+  });
 });
 
 const PORT = process.env.PORT || 3000;
@@ -128,6 +176,16 @@ async function startServer() {
     }
 
     console.log('✅ DB Conectada.');
+
+    // Startup Info for Debugging
+    const fs = require('fs');
+    const distExists = fs.existsSync(path.join(__dirname, '../client/dist/index.html'));
+    console.log('🔧 Server Config:');
+    console.log(`   - PORT: ${PORT}`);
+    console.log(`   - NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`   - client/dist exists: ${distExists}`);
+    console.log(`   - DB_SYNC_MODE: ${syncMode}`);
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
     });

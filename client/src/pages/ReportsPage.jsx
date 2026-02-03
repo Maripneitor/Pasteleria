@@ -63,13 +63,25 @@ const DailyCutTab = () => {
         }
     };
 
-    const handleSendEmail = async () => {
-        if (!window.confirm(`¿Enviar corte del día ${date} por correo?`)) return;
+    const handleSendEmail = async (force = false) => {
+        if (!force && !window.confirm(`¿Enviar corte del día ${date} por correo?`)) return;
 
         setSendingEmail(true);
         try {
-            await reportsApi.sendDailyCut(date);
-            toast.success("Corte enviado correctamente");
+            const res = await reportsApi.sendDailyCut(date, force);
+
+            if (res.skipped) {
+                // Already sent case
+                if (window.confirm(`${res.message}\n¿Deseas FORZAR el reenvío a los admin?`)) {
+                    // Recursive call with force=true
+                    setSendingEmail(false); // Reset state to avoid lock
+                    handleSendEmail(true);
+                    return;
+                }
+            } else {
+                toast.success(res.message || "Corte enviado correctamente");
+            }
+
         } catch (e) {
             const msg = e.response?.data?.details || e.response?.data?.message || "Error al enviar corte";
             toast.error(msg);

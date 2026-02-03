@@ -7,8 +7,21 @@ import aiService from '../services/aiService';
 import toast from 'react-hot-toast';
 import useDictation from '../hooks/useDictation';
 
+import { useOrder } from '../context/OrderContext';
+
 const AiAssistantTray = ({ isOpen, onClose }) => {
     const location = useLocation();
+
+    // Conditional hook usage - only use if context is available
+    let updateOrder = null;
+    try {
+        const orderContext = useOrder();
+        updateOrder = orderContext?.updateOrder;
+    } catch (e) {
+        // Context not available (component used outside OrderProvider)
+        // This is fine - persistence will be skipped
+    }
+
     const [messages, setMessages] = useState([
         { role: 'ai', text: '¡Hola! Soy tu asistente de pastelería. ¿En qué te ayudo hoy?' }
     ]);
@@ -16,17 +29,21 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
     const [isThinking, setIsThinking] = useState(false);
     const [error, setError] = useState(null);
 
-    const { isListening, transcript, startListening, stopListening, resetTranscript, supported } = useDictation();
+    const { isListening, transcript, startListening, stopListening, resetTranscript, supported, elapsedMs, error: dictationError } = useDictation();
+
+    // Sync dictation error
+    useEffect(() => {
+        if (dictationError) {
+            setError(dictationError);
+            // Clear error after 5s
+            setTimeout(() => setError(null), 5000);
+        }
+    }, [dictationError]);
 
     // Sync dictation to input
     useEffect(() => {
         if (transcript) {
-            setInput(() => {
-                // Si el transcript es nuevo, lo agregamos. 
-                // Pero como transcript se acumula, mejor reemplazamos o concatenamos inteligentemente.
-                // ResetTranscript se maneja manualmente tras envío.
-                return transcript; // Simple replace for now, or ensure user edits.
-            });
+            setInput(transcript);
         }
     }, [transcript]);
 
@@ -35,6 +52,14 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
         if (!input.trim() || isThinking) return;
 
         const userMessage = input;
+
+        // PERSISTENCE: Save conversation/dictation to Order Context (if available)
+        if (updateOrder) {
+            updateOrder(prev => ({
+                draftTranscriptRaw: (prev.draftTranscriptRaw || '') + '\n- ' + userMessage
+            }));
+        }
+
         setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
         setInput('');
         resetTranscript(); // Clear dictation buffer
@@ -130,21 +155,35 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
 
                         {/* Input Area */}
                         <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-100">
+                            {/* Dictation Feedback Overlay */}
+                            {isListening && (
+                                <div className="absolute bottom-20 left-4 right-4 bg-red-50 border border-red-100 p-3 rounded-xl flex items-center justify-between animate-in slide-in-from-bottom-2 shadow-lg">
+                                    <div className="flex items-center gap-2 text-red-600 font-bold">
+                                        <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                                        <span>Grabando...</span>
+                                    </div>
+                                    <span className="font-mono text-red-800 font-medium">
+                                        {Math.floor(elapsedMs / 60000).toString().padStart(2, '0')}:
+                                        {Math.floor((elapsedMs % 60000) / 1000).toString().padStart(2, '0')}
+                                    </span>
+                                </div>
+                            )}
+
                             <div className="relative flex items-center gap-2">
                                 <input
-                                    type="text"
+                                    type="text" // Changed to input
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder={isListening ? "Escuchando..." : "Pregúntame algo..."}
-                                    className={`w-full pl-4 pr-12 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 transition text-sm ${isListening ? 'ring-2 ring-red-400 bg-red-50' : ''}`}
+                                    className={`w-full pl-4 pr-12 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 transition text-sm ${isListening ? 'ring-2 ring-red-400 bg-red-50 placeholder-red-400' : ''}`}
                                 />
 
                                 {supported && (
                                     <button
                                         type="button"
                                         onClick={toggleDictation}
-                                        className={`absolute right-14 p-2 rounded-full transition ${isListening ? 'text-red-500 hover:bg-red-100' : 'text-gray-400 hover:bg-gray-200'}`}
-                                        title="Dictar"
+                                        className={`absolute right-14 p-2 rounded-full transition ${isListening ? 'bg-red-500 text-white shadow-md' : 'text-gray-400 hover:bg-gray-200'}`}
+                                        title={isListening ? "Detener grabación" : "Iniciar dictado"}
                                     >
                                         {isListening ? <MicOff size={18} /> : <Mic size={18} />}
                                     </button>

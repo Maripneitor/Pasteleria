@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import commissionsApi from '../services/commissionsApi';
 import { toast } from 'react-hot-toast';
-import { Download, RefreshCw, DollarSign, CheckCircle, Clock } from 'lucide-react';
+import { Mail } from 'lucide-react';
+
+
 
 const CommissionsPage = () => {
     // State
@@ -12,6 +14,24 @@ const CommissionsPage = () => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+
+    const [sendingEmail, setSendingEmail] = useState(false);
+
+    const handleSendEmail = async () => {
+        if (!window.confirm("¿Enviar reporte por correo a los administradores?")) return;
+
+        setSendingEmail(true);
+        try {
+            await commissionsApi.sendReportEmail(filters.from, filters.to);
+            toast.success("Correo enviado exitosamente");
+        } catch (e) {
+            console.error(e);
+            toast.error("Error enviando correo");
+        } finally {
+            setSendingEmail(false);
+        }
+    };
 
     const [filters, setFilters] = useState({
         from: firstDay,
@@ -88,6 +108,14 @@ const CommissionsPage = () => {
                         title="Recargar"
                     >
                         <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+                    </button>
+                    <button
+                        onClick={handleSendEmail}
+                        disabled={sendingEmail}
+                        className="bg-white text-gray-700 border px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors shadow-sm font-medium disabled:opacity-50"
+                    >
+                        <Mail size={18} />
+                        <span>{sendingEmail ? 'Enviando...' : 'Enviar por Correo'}</span>
                     </button>
                     <button className="bg-pink-600 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-pink-700 transition-colors shadow-sm font-medium">
                         <Download size={18} />

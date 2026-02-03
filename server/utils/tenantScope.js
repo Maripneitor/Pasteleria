@@ -35,7 +35,8 @@ function buildTenantWhere(req, { tenantField = 'tenantId', allowQueryTenant = tr
 
     // ADMIN / USER: siempre cerco lógico
     // Nota: req.user.tenantId viene del token/authMiddleware
-    return { [tenantField]: user.tenantId };
+    const tenantId = user.tenantId || 1;
+    return { [tenantField]: tenantId };
 }
 
 module.exports = { buildTenantWhere };

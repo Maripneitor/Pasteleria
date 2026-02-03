@@ -32,13 +32,17 @@ import AdminSaboresPage from './pages/admin/AdminSaboresPage';
 import PendingUsersPage from './pages/PendingUsersPage';
 import CommissionsPage from './pages/CommissionsPage';
 import ReportsPage from './pages/ReportsPage';
+import BrandingPage from './pages/admin/BrandingPage';
 
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
+import DebugPanel from './components/DebugPanel';
+
 function App() {
   return (
     <>
+      <DebugPanel />
       <Toaster position="top-right" toastOptions={{ className: '', style: { border: '1px solid #fbcfe8', padding: '16px', color: '#831843' } }} />
 
       <Routes>
@@ -67,19 +71,26 @@ function App() {
         </Route>
 
         {/* 🛡️ Rutas Admin / Owner */}
-        <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'OWNER']} />}>
           <Route element={<MainLayout />}>
             <Route path="usuarios" element={<TeamPage />} />
             <Route path="admin/reports" element={<ReportsPage />} />
             <Route path="admin/stats" element={<Navigate to="/admin/reports" replace />} />
             <Route path="admin/sabores" element={<AdminSaboresPage />} />
-            <Route path="comisiones" element={<CommissionsPage />} />
+            <Route path="admin/comisiones" element={<CommissionsPage />} />
             <Route path="auditoria" element={<AuditPage />} />
             <Route path="auditoria" element={<AuditPage />} />
             <Route path="configuracion" element={<LocalSettings />} />
             <Route path="usuarios/pendientes" element={<PendingUsersPage />} />
+            <Route path="admin/branding" element={<BrandingPage />} />
           </Route>
         </Route>
+
+        {/* Owner Specific (if separated) or merged above if allowedRoles includes OWNER */}
+        {/* We need to ensure the route guard above accepts OWNER. 
+            Currently: allowedRoles={['SUPER_ADMIN', 'ADMIN']}
+            I will update it to include OWNER.
+        */}
 
         {/* 404 - Catch All */}
         <Route path="*" element={<NotFound />} />

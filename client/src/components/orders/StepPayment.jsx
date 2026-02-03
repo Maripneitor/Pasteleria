@@ -30,9 +30,13 @@ const StepPayment = () => {
 
                 tipo_folio: product.type || 'Normal',
 
-                // Arrays
-                sabores_pan: product.flavorId ? [product.flavorName] : [],
-                rellenos: product.fillingId ? [product.fillingName] : [],
+                // Arrays (Send IDs for backend resolution)
+                flavorIds: product.flavorId ? [product.flavorId] : [],
+                fillingIds: product.fillingId ? [product.fillingId] : [],
+
+                // Legacy fields (Backend will populate these based on IDs)
+                sabores_pan: [],
+                rellenos: [],
 
                 numero_personas: product.persons || 10,
                 forma: product.shape || 'Redondo',
@@ -46,7 +50,8 @@ const StepPayment = () => {
                     entrega: {
                         isDelivery: orderData.isDelivery,
                         location: orderData.deliveryLocation || 'En Sucursal'
-                    }
+                    },
+                    // Store technical IDs here if returned? No, we send them up.
                 },
                 ubicacion_entrega: orderData.deliveryLocation || 'En Sucursal',
 

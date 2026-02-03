@@ -36,6 +36,16 @@ const commissionsApi = {
         // Optional endpoint if implemented
         const response = await api.post(`/commissions/trigger-report`);
         return response.data;
+    },
+
+    /**
+     * Send report via email to admins
+     * @param {string} from - YYYY-MM-DD
+     * @param {string} to - YYYY-MM-DD
+     */
+    sendReportEmail: async (from, to) => {
+        const response = await api.post(`/commissions/report/email`, { from, to });
+        return response.data;
     }
 };
 

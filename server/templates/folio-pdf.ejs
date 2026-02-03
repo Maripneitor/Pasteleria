@@ -115,8 +115,19 @@
     <div class="page">
         <div class="header">
             <div class="logo">
-                <h1>La Fiesta 🎂</h1>
-                <p>Pastelería Artesanal</p>
+                <% if (config && config.logoUrl) { %>
+                    <img src="<%= config.logoUrl %>" style="max-height: 80px; max-width: 250px;" alt="Logo" />
+                    <% if (config.businessName) { %>
+                        <h2 style="font-size: 16px; margin: 5px 0 0 0; color: #ec4899;">
+                            <%= config.businessName %>
+                        </h2>
+                        <% } %>
+                            <% } else { %>
+                                <h1>
+                                    <%= (config && config.businessName) || 'La Fiesta 🎂' %>
+                                </h1>
+                                <p>Pastelería Artesanal</p>
+                                <% } %>
             </div>
             <div class="info">
                 <p><strong>Folio:</strong> #<%= folio.folio_numero || folio.id %>

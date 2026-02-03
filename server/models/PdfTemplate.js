@@ -16,6 +16,11 @@ const PdfTemplate = sequelize.define('PdfTemplate', {
         defaultValue: 1,
         allowNull: false
     },
+    ownerId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        comment: 'Dueño de la configuración de branding'
+    },
     isDefault: {
         type: DataTypes.BOOLEAN,
         defaultValue: false

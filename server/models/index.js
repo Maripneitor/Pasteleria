@@ -18,6 +18,7 @@ const { CashCut, CashMovement } = require('./CashModels');
 // --- Sprint 4: Control & Limits ---
 const ActivationCode = require('./ActivationCode');
 const UserSession = require('./UserSession');
+const PdfTemplate = require('./PdfTemplate');
 
 // --- Relaciones Principales ---
 User.hasMany(Folio, { foreignKey: 'responsibleUserId' });
@@ -78,5 +79,6 @@ module.exports = {
   CashCut,
   CashMovement,
   ActivationCode,
-  UserSession
+  UserSession,
+  PdfTemplate
 };

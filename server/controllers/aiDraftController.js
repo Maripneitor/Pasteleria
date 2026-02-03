@@ -1,9 +1,4 @@
-const { OpenAI } = require('openai');
-
-// Configuración opcional de OpenAI
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-}) : null;
+const aiDraftService = require('../services/aiDraftService');
 
 /**
  * Genera un borrador de pedido basado en texto libre.
@@ -18,55 +13,9 @@ const generateDraft = async (req, res) => {
             return res.status(400).json({ message: "Se requiere un prompt" });
         }
 
-        // 1. CHECK API KEY
-        if (!openai) {
-            console.log("⚠️ OpenAI no configurado.");
-            return res.status(503).json({ message: "La IA no está configurada (Falta OPENAI_API_KEY)" });
-        }
-
-        // 2. LLAMADA REAL A OPENAI
-        try {
-            const completion = await openai.chat.completions.create({
-                model: "gpt-3.5-turbo",
-                messages: [
-                    {
-                        role: "system",
-                        content: `Eres un asistente de pastelería inteligente.
-                        Tu trabajo es extraer detalles de pedidos del texto del usuario y devolver ONLY JSON válido.
-                        No incluyas markdown.
-                        
-                        Schema esperado:
-                        {
-                            "draft": {
-                                "clientName": string | "",
-                                "clientPhone": string | "",
-                                "deliveryDate": "YYYY-MM-DD" | "",
-                                "deliveryTime": "HH:mm" | "",
-                                "products": [
-                                    { "flavor": string, "filling": string, "design": string, "notes": string }
-                                ]
-                            },
-                            "missing": string[], // Lista de datos cruciales que faltan (Fecha, sabor, etc)
-                            "nextQuestion": string // Pregunta para obtener los datos faltantes
-                        }`
-                    },
-                    { role: "user", content: prompt }
-                ],
-                temperature: 0.2, // Lograr consistencia
-            });
-
-            const content = completion.choices[0].message.content;
-
-            // Limpiar posibles bloques de código Markdown
-            const cleanJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
-            const parsedData = JSON.parse(cleanJson);
-
-            return res.json(parsedData);
-
-        } catch (aiError) {
-            console.error("OpenAI Error:", aiError);
-            res.status(500).json({ message: "Error procesando la solicitud de IA" });
-        }
+        // Delegate to Service (OpenAI or Fallback)
+        const result = await aiDraftService.processDraft(prompt);
+        res.json(result);
 
     } catch (error) {
         console.error("Critical Draft Error:", error);

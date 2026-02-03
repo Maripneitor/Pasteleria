@@ -7,6 +7,7 @@ exports.sendDailyCut = async (req, res) => {
         const date = req.body?.date;
         const branches = Array.isArray(req.body?.branches) ? req.body.branches : [];
         const email = req.body?.email; // explicit override or undefined
+        const force = req.body?.force === true;
 
         // FIX: Use centralized tenant scope
         const tenantWhere = buildTenantWhere(req, { allowQueryTenant: false }); // For email actions, maybe restrict? 
@@ -19,7 +20,8 @@ exports.sendDailyCut = async (req, res) => {
             branches,
             email,
             userId: req.user?.id,
-            tenantFilter: tenantWhere // Pass valid where clause
+            tenantFilter: tenantWhere, // Pass valid where clause
+            force
         });
 
         if (result.skipped) {

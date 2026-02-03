@@ -39,11 +39,19 @@ exports.register = async (req, res) => {
 
 // Función para INICIAR SESIÓN
 exports.login = async (req, res) => {
+  const requestId = req.requestId || 'unknown';
+
   try {
     const { email, username, password } = req.body;
 
+    // Validación de entrada
     if (!password || (!email && !username)) {
-      return res.status(400).json({ message: 'Credenciales incompletas.' });
+      return res.status(400).json({
+        ok: false,
+        code: 'INVALID_INPUT',
+        message: 'Credenciales incompletas.',
+        requestId
+      });
     }
 
     // 1. Buscar al usuario por email O username
@@ -55,27 +63,56 @@ exports.login = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: 'Credenciales inválidas.' });
+      return res.status(401).json({
+        ok: false,
+        code: 'INVALID_CREDENTIALS',
+        message: 'Correo o contraseña incorrectos.',
+        requestId
+      });
     }
 
     // 2. Comparar la contraseña
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Credenciales inválidas.' });
+      return res.status(401).json({
+        ok: false,
+        code: 'INVALID_CREDENTIALS',
+        message: 'Correo o contraseña incorrectos.',
+        requestId
+      });
     }
 
     // --- Status Check ---
     if (user.status !== 'ACTIVE') {
-      if (user.status === 'BLOCKED') return res.status(403).json({ message: 'Cuenta bloqueada.' });
+      if (user.status === 'BLOCKED') {
+        return res.status(403).json({
+          ok: false,
+          code: 'ACCOUNT_BLOCKED',
+          message: 'Cuenta bloqueada.',
+          requestId
+        });
+      }
 
       // Pending activation logic
+      if (!process.env.JWT_SECRET) {
+        console.error(`[Login] JWT_SECRET missing. RequestID: ${requestId}`);
+        return res.status(503).json({
+          ok: false,
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Servicio temporalmente no disponible.',
+          requestId
+        });
+      }
+
       const tempPayload = { id: user.id, role: 'guest', status: 'PENDING' };
       const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
       return res.status(403).json({
-        message: 'Cuenta pendiente de activación.',
+        ok: false,
         code: 'ACCOUNT_PENDING',
-        tempToken: tempToken
+        message: 'Cuenta pendiente de activación.',
+        tempToken,
+        requestId
       });
     }
 
@@ -93,7 +130,11 @@ exports.login = async (req, res) => {
       }
     });
 
-    if (activeSession) {
+    // REGLA: Bloqueo de sesión duplicada controlado por feature flag.
+    // Default: false (permitir múltiples sesiones).
+    const isDuplicateSessionBlockEnabled = process.env.DUPLICATE_SESSION_BLOCK_ENABLED === 'true';
+
+    if (isDuplicateSessionBlockEnabled && activeSession) {
       // Bloqueo estricto multi-sesión
       return res.status(409).json({
         message: 'Ya tienes una sesión activa en otro dispositivo.',
@@ -106,7 +147,8 @@ exports.login = async (req, res) => {
       id: user.id,
       username: user.username,
       globalRole: user.globalRole,
-      tenantId: user.tenantId
+      tenantId: user.tenantId,
+      ownerId: user.ownerId // Include ownerId for Role resolution middleware
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
@@ -132,13 +174,16 @@ exports.login = async (req, res) => {
       expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000) // 8 horas hard limit
     });
 
+    // Calculate effective role for Client
+    const effectiveRole = getEffectiveRole(user);
+
     res.status(200).json({
       message: "Inicio de sesión exitoso",
       token: token,
       user: {
         id: user.id,
         username: user.username,
-        role: user.globalRole,
+        role: effectiveRole, // Computed
         tenantId: user.tenantId,
         ownerId: user.ownerId,
         status: user.status
@@ -146,8 +191,25 @@ exports.login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({ message: 'Error en el servidor', error: error.message });
+    console.error(`❌ [Login Error] RequestID: ${requestId}`, error);
+
+    // Clasificar errores de DB vs otros
+    if (error.name === 'SequelizeDatabaseError' || error.name === 'SequelizeConnectionError') {
+      return res.status(503).json({
+        ok: false,
+        code: 'DATABASE_ERROR',
+        message: 'Servicio temporalmente no disponible.',
+        requestId
+      });
+    }
+
+    // Error genérico (no esperado)
+    res.status(500).json({
+      ok: false,
+      code: 'INTERNAL_ERROR',
+      message: 'Error interno del servidor.',
+      requestId
+    });
   }
 };
 
@@ -199,10 +261,27 @@ async function deactivateExpiredSessions(userId) {
   }
 }
 
+// Helper: Determine Effective Role
+function getEffectiveRole(user) {
+  const globalRole = (user.globalRole || '').toUpperCase();
+
+  if (globalRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+  if (globalRole === 'ADMIN') return 'ADMIN';
+
+  // Logic for USER base role
+  if (globalRole === 'USER') {
+    // If they have an ownerId, they belong to someone -> EMPLOYEE
+    if (user.ownerId) return 'EMPLOYEE';
+    // If they don't have an ownerId (and are not pending activation without logic), they are the OWNER
+    return 'OWNER';
+  }
+
+  return 'USER'; // Fallback
+}
+
 exports.getMe = async (req, res) => {
   try {
-    const { User } = require('../models'); // Ensure User model is available
-    // req.user is set by authMiddleware
+    const { User } = require('../models');
     const user = await User.findByPk(req.user.id, {
       attributes: ['id', 'username', 'email', 'globalRole', 'tenantId', 'ownerId', 'status']
     });
@@ -211,13 +290,16 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
 
+    const effectiveRole = getEffectiveRole(user);
+
     res.json({
       id: user.id,
       name: user.username,
       email: user.email,
-      role: user.globalRole,
+      role: effectiveRole, // Computed Role
       tenantId: user.tenantId,
-      ownerId: user.ownerId
+      ownerId: user.ownerId,
+      status: user.status
     });
   } catch (error) {
     console.error(error);

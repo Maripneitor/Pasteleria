@@ -3,7 +3,7 @@ const path = require('path');
 const QRCode = require('qrcode');
 const { renderHtmlToPdfBuffer } = require('./pdfRenderer');
 
-exports.renderFolioPdf = async ({ folio, watermark }) => {
+exports.renderFolioPdf = async ({ folio, watermark, templateConfig }) => {
     try {
         const tpl = path.join(__dirname, '..', 'templates', 'folio-pdf.ejs');
 
@@ -13,7 +13,8 @@ exports.renderFolioPdf = async ({ folio, watermark }) => {
         const html = await ejs.renderFile(tpl, {
             folio,
             watermark,
-            qrCode: qrUrl
+            qrCode: qrUrl,
+            config: templateConfig || {} // Default empty
         });
 
         return renderHtmlToPdfBuffer(html, {

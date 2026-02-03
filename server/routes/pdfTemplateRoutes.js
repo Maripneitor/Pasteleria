@@ -5,6 +5,9 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
 
+router.get('/my-branding', controller.getMyBranding);
+router.post('/my-branding', controller.saveMyBranding);
+
 router.get('/', controller.listTemplates);
 router.post('/', controller.createTemplate);
 router.put('/:id', controller.updateTemplate);

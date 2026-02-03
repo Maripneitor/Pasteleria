@@ -19,26 +19,27 @@ const AIDraftPanel = () => {
         try {
             // Llama al endpoint de IA (simulado o real)
             const res = await client.post('/ai/draft', { prompt });
-            const { draft, missing, nextQuestion } = res.data;
+            const { draft, missing, nextQuestion, mode, warning } = res.data;
 
             if (draft) {
                 updateOrder(draft);
-                toast.success("Borrador aplicado al formulario");
+                if (mode === 'fallback') {
+                    toast('Modo Offline: Verifique los datos extraídos', { icon: '⚠️' });
+                } else {
+                    toast.success("Borrador aplicado al formulario");
+                }
             }
 
-            if (missing && missing.length > 0) {
+            if (warning) {
+                setSuggestion(warning);
+            } else if (missing && missing.length > 0) {
                 setSuggestion(nextQuestion || `Falta información: ${missing.join(', ')}`);
             } else {
                 setSuggestion(null);
             }
         } catch (error) {
             console.error("AI Draft Error:", error);
-            if (error.response?.status === 503) {
-                toast.error("⚠️ IA no configurada (Falta API Key)");
-                setSuggestion("Configura OPENAI_API_KEY en el servidor para usar esta función.");
-            } else {
-                toast.error("Error al procesar con IA");
-            }
+            toast.error("Error al procesar con IA");
         } finally {
             setLoading(false);
         }

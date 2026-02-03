@@ -52,36 +52,98 @@ exports.deleteTemplate = async (req, res) => {
 };
 
 // PREVIEW
+// MOCK PREVIEW REMOVED OR KEPT AS LEGACY? 
+// Replaced with specific Branding Logic
+
+// GET Branding (For Admin/Owner to view)
+exports.getMyBranding = async (req, res) => {
+    try {
+        const ownerId = req.user.ownerId || req.user.id; // If I am owner, my Id. If employee, my boss.
+
+        // Find template for this owner
+        let template = await PdfTemplate.findOne({ where: { ownerId } });
+
+        // Default structure if none
+        if (!template) {
+            return res.json({
+                businessName: '',
+                footerText: '',
+                logoUrl: '',
+                primaryColor: '#000000'
+            });
+        }
+
+        res.json(template.configJson || {});
+    } catch (e) {
+        console.error('getBranding:', e);
+        res.status(500).json({ message: 'Error retrieving branding' });
+    }
+};
+
+// SAVE Branding (Owner Only)
+exports.saveMyBranding = async (req, res) => {
+    try {
+        // Strict Check: Only OWNER (or Super Admin masquerading) can write
+        // "ADMIN" role is usually an Employee with powers, but USER REQUEST says:
+        // "Admin puede ver... pero NO modificarlo (a menos que se autorice explícitamente)"
+        // Since we don't have explicit auth toggle, strict to OWNER role or ownerId=null (which implies Owner)
+
+        // However, effective role logic:
+        // If req.user.role === 'OWNER' -> OK.
+        // If req.user.role === 'ADMIN' -> REJECT? Request says "Solo OWNER... puede modificar".
+
+        if (req.user.role !== 'OWNER' && req.user.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ message: 'Solo el dueño puede modificar el branding.' });
+        }
+
+        const ownerId = req.user.id; // I am the owner
+        const config = req.body; // { logoUrl, businessName, etc }
+
+        let template = await PdfTemplate.findOne({ where: { ownerId } });
+
+        if (template) {
+            await template.update({ configJson: config });
+        } else {
+            await PdfTemplate.create({
+                name: 'Branding ' + ownerId,
+                ownerId,
+                tenantId: req.user.tenantId || 1,
+                configJson: config,
+                isDefault: true
+            });
+        }
+
+        res.json({ message: 'Branding actualizado correctmente', config });
+
+    } catch (e) {
+        console.error('saveBranding:', e);
+        res.status(500).json({ message: 'Error saving branding' });
+    }
+};
+
+// PREVIEW (Updated to use branding)
 exports.previewTemplate = async (req, res) => {
     try {
-        const templateId = req.params.id;
-        const folioId = req.query.folioId;
+        // Use current user's branding context
+        const ownerId = req.user.ownerId || req.user.id;
+        const template = await PdfTemplate.findOne({ where: { ownerId } });
+        const config = template ? template.configJson : {};
 
-        const template = await PdfTemplate.findByPk(templateId);
-        if (!template) return res.status(404).json({ message: 'Template not found' });
-
-        // Mock folio or fetch real one
-        let folioData = {
+        // Mock folio
+        const folioData = {
             folio_numero: 'PREVIEW-001',
             cliente_nombre: 'Cliente Vista Previa',
             total: 1500,
-            fecha_entrega: '2023-12-31',
-            // ... more mock data
+            fecha_entrega: new Date().toISOString().split('T')[0],
+            sabores_pan: ['Chocolate', 'Vainilla'],
+            rellenos: ['Fresa'],
+            id: 999999
         };
 
-        if (folioId) {
-            const Folio = require('../models/Folio');
-            const realFolio = await Folio.findByPk(folioId);
-            if (realFolio) folioData = realFolio.toJSON();
-        }
-
-        // Pass template config as options to renderFolioPdf
-        // Note: We assume renderFolioPdf can handle a second options arg or we patch it later.
-        // For now, we pass it to see if it breaks.
         const buffer = await pdfService.renderFolioPdf({
             folio: folioData,
             watermark: 'VISTA PREVIA',
-            templateConfig: template.configJson // Injecting config
+            templateConfig: config
         });
 
         res.setHeader('Content-Type', 'application/pdf');

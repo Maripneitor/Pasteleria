@@ -17,11 +17,32 @@ function ymd(d) {
  * @param {number} [params.userId] - ID of user triggering the action (if any)
  * @param {Object} [params.tenantFilter] - Sequelize filter for tenant scoping
  */
-async function processDailyCutEmail({ date, branches = [], email, userId, tenantFilter = {} }) {
+async function processDailyCutEmail({ date, branches = [], email, userId, tenantFilter = {}, force = false }) {
     const targetDate = date ? ymd(date) : ymd(new Date());
-    const recipient = email || process.env.DAILY_CASH_CUT_EMAIL_TO || 'mariomoguel05@gmail.com';
 
-    console.log(`[DailyCut] Processing email for ${targetDate} to ${recipient}...`);
+    // Recipients Logic
+    // 1. Explicit override (email arg)
+    // 2. ENV List (ADMIN_REPORT_RECIPIENTS)
+    // 3. Fallback (DAILY_CASH_CUT_EMAIL_TO)
+    // 4. Fallback hardcoded
+    let recipientsList = [];
+    if (email) {
+        recipientsList = [email];
+    } else if (process.env.ADMIN_REPORT_RECIPIENTS) {
+        recipientsList = process.env.ADMIN_REPORT_RECIPIENTS.split(',').map(e => e.trim()).filter(Boolean);
+    } else {
+        recipientsList = [(process.env.DAILY_CASH_CUT_EMAIL_TO || 'mariomoguel05@gmail.com')];
+    }
+
+    // Dedupe empty
+    recipientsList = [...new Set(recipientsList)];
+    const recipientsStr = recipientsList.join(',');
+
+    if (recipientsList.length === 0) {
+        return { ok: false, message: 'No hay destinatarios configurados.' };
+    }
+
+    console.log(`[DailyCut] Processing email for ${targetDate}. Recipients: ${recipientsStr}. Force: ${force}`);
 
     let cut;
     try {
@@ -39,9 +60,9 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
         });
 
         // 2. Deduplication Check
-        if (cut.emailStatus === 'SENT') {
+        if (!force && cut.emailStatus === 'SENT') {
             console.log(`[DailyCut] Skipping email for ${targetDate}: Already SENT.`);
-            return { ok: true, message: 'Correo ya enviado previamente.', skipped: true };
+            return { ok: true, message: `El reporte del ${targetDate} ya fue enviado previamente.`, skipped: true };
         }
 
     } catch (dbError) {
@@ -78,24 +99,16 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
         });
 
         // 5.1 Verify Connection
-        try {
-            await transporter.verify();
-            console.log('[DailyCut] SMTP Connection Verified');
-        } catch (smtpError) {
-            console.error('[DailyCut] SMTP Verify Error:', smtpError);
-            const msg = smtpError.code === 'EAUTH'
-                ? 'Error de autenticación SMTP. Revise usuario/contraseña.'
-                : `Error de conexión SMTP: ${smtpError.message}`;
-            throw new Error(msg);
-        }
+        // Optimization: Verify only once or proceed with send logic to catch error there
+        // await transporter.verify(); 
 
         await transporter.sendMail({
             from: process.env.SMTP_FROM || process.env.SMTP_USER,
-            to: recipient,
-            subject: `Corte del día - ${targetDate}`,
+            to: recipientsStr, // Nodemailer accepts "a@a.com, b@b.com"
+            subject: `Corte del día - ${targetDate} ${force ? '(Reenvío)' : ''}`,
             text:
                 `Corte del día ${targetDate}\n` +
-                `Sucursales: ${branches.length ? branches.join(', ') : '(no especificadas)'}\n` +
+                `Generado por: ${userId ? 'Usuario ' + userId : 'Sistema'}\n` +
                 `Total pedidos: ${folios.length}\n`,
             attachments: [{ filename: `corte-${targetDate}.pdf`, content: pdfBuffer }],
         });
@@ -104,13 +117,13 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
         if (cut) {
             await cut.update({
                 emailStatus: 'SENT',
-                emailTo: recipient,
+                emailTo: recipientsStr,
                 emailError: null
             });
         }
 
-        console.log(`[DailyCut] Email successfully sent to ${recipient}`);
-        return { ok: true, message: `Enviado a ${recipient}` };
+        console.log(`[DailyCut] Email successfully sent to ${recipientsStr}`);
+        return { ok: true, message: `Enviado a ${recipientsList.length} destinatarios.` };
 
     } catch (error) {
         console.error(`[DailyCut] Failed to send email:`, error);
@@ -119,7 +132,7 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
         if (cut) {
             await cut.update({
                 emailStatus: 'FAILED',
-                emailTo: recipient,
+                emailTo: recipientsStr,
                 emailError: error.message
             });
         }
@@ -128,6 +141,49 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
     }
 }
 
+/**
+ * Generic function to send a report email with attachment.
+ */
+async function sendReportEmail({ subject, text, filename, content, recipients }) {
+    // Recipients Logic
+    let recipientsList = [];
+    if (recipients) {
+        recipientsList = Array.isArray(recipients) ? recipients : recipients.split(',').map(e => e.trim());
+    } else if (process.env.ADMIN_REPORT_RECIPIENTS) {
+        recipientsList = process.env.ADMIN_REPORT_RECIPIENTS.split(',').map(e => e.trim()).filter(Boolean);
+    } else {
+        recipientsList = [(process.env.DAILY_CASH_CUT_EMAIL_TO || 'mariomoguel05@gmail.com')];
+    }
+
+    // Dedupe
+    const recipientsStr = [...new Set(recipientsList)].join(',');
+
+    if (!recipientsStr) {
+        throw new Error('No recipients configured');
+    }
+
+    const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: false,
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        },
+    });
+
+    await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: recipientsStr,
+        subject: subject,
+        text: text,
+        attachments: [{ filename, content }],
+    });
+
+    return { ok: true, recipients: recipientsStr };
+}
+
 module.exports = {
-    processDailyCutEmail
+    processDailyCutEmail,
+    sendReportEmail
 };

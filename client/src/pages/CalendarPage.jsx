@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -14,6 +14,17 @@ export default function CalendarPage() {
     const [selectedDay, setSelectedDay] = useState(null); // For day click
     const [selectedEventId, setSelectedEventId] = useState(null); // For event click
     const calendarRef = useRef(null);
+
+    // Listen to global event for order changes
+    useEffect(() => {
+        const handleFoliosChanged = () => {
+            // Refetch calendar events
+            calendarRef.current?.getApi().refetchEvents();
+        };
+
+        window.addEventListener('folios:changed', handleFoliosChanged);
+        return () => window.removeEventListener('folios:changed', handleFoliosChanged);
+    }, []);
 
     // Función de carga dinámica para FullCalendar
     const fetchEvents = async (fetchInfo, successCallback, failureCallback) => {

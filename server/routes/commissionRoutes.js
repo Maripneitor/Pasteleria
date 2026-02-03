@@ -93,4 +93,44 @@ router.post('/trigger-report', async (req, res) => {
     }
 });
 
+// POST /api/commissions/report/email
+router.post('/report/email', async (req, res) => {
+    try {
+        const { from, to } = req.body;
+        if (!from || !to) {
+            return res.status(400).json({ error: 'Parameters "from" and "to" are required.' });
+        }
+
+        const { getReport } = require('../services/commissionService');
+        const pdfService = require('../services/pdfService');
+        const { sendReportEmail } = require('../services/dailyCutEmailService');
+
+        // 1. Get Data
+        const report = await getReport({ from, to });
+
+        // 2. Generate PDF
+        const buffer = await pdfService.renderCommissionsPdf({
+            reportData: report.details,
+            from,
+            to
+        });
+
+        // 3. Send Email
+        const dateRange = `${from} al ${to}`;
+        const result = await sendReportEmail({
+            subject: `Reporte de Comisiones (${dateRange})`,
+            text: `Adjunto encontrarás el reporte de comisiones del periodo ${dateRange}.\n\nGenerado por: ${req.user?.name || 'Admin'}`,
+            filename: `Comisiones_${from}_${to}.pdf`,
+            content: buffer,
+            // Recipients will be handled by service default (ADMIN_REPORT_RECIPIENTS)
+        });
+
+        res.json({ message: 'Correo enviado', details: result });
+
+    } catch (error) {
+        console.error("Error sending commission report email:", error);
+        res.status(500).json({ message: 'Error enviando correo', details: error.message });
+    }
+});
+
 module.exports = router;
