@@ -1,29 +1,22 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ allowedRoles = [] }) => {
-    // Verificamos si existe el token
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
+    const { user, loading } = useAuth();
 
-    if (!token) {
+    if (loading) {
+        return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    }
+
+    if (!user) {
         return <Navigate to="/login" replace />;
     }
 
-    // Role Check
-    if (allowedRoles.length > 0 && userStr) {
-        let isAuthorized = false;
-        try {
-            const user = JSON.parse(userStr);
-            if (allowedRoles.includes(user.role)) {
-                isAuthorized = true;
-            }
-        } catch (e) {
-            console.error("Error parsing user for RBAC", e);
-            // Unauthorized by default if error
-        }
-
-        if (!isAuthorized) {
+    // Role Check: user.role comes from backend's globalRole
+    if (allowedRoles.length > 0) {
+        if (!allowedRoles.includes(user.role)) {
+            // Unauthorized - redirect to home
             return <Navigate to="/" replace />;
         }
     }
@@ -32,3 +25,4 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
 };
 
 export default ProtectedRoute;
+

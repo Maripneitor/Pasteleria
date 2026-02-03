@@ -74,28 +74,42 @@ export const usePollingQR = (endpoint = '/webhooks/qr') => {
 export const usePollingQRV2 = () => {
     const [state, setState] = useState({ qr: null, status: 'loading' });
 
+    // Expose a way to force reload
+    const loadQR = async () => {
+        try {
+            const res = await client.get('/webhooks/qr');
+            setState(res.data);
+            return res.data;
+        } catch (e) {
+            console.error("Poll Error", e);
+            setState(s => ({ ...s, status: 'error' }));
+        }
+    };
+
+    const restartSession = async () => {
+        try {
+            await client.post('/webhooks/restart');
+            setState({ qr: null, status: 'loading' });
+            // Poll will pick it up
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     useEffect(() => {
         let timeoutId;
         let pDelay = 1000;
 
         const poll = async () => {
-            try {
-                const res = await client.get('/webhooks/qr');
-                setState(res.data);
+            const data = await loadQR();
 
-                if (res.data.status === 'ready') {
-                    return; // Stop polling
-                }
-
-                // Reset backoff on success (got response)
-                pDelay = res.data.qr ? 3000 : 1500;
-
-            } catch (e) {
-                console.error("Poll Error", e);
-                setState(s => ({ ...s, status: 'error' }));
-                pDelay = Math.min(pDelay * 1.5, 5000); // Backoff
+            if (data?.status === 'ready') {
+                return; // Stop polling
             }
 
+            // Reset backoff on success (got response)
+            // If connected, no need to poll fast.
+            pDelay = data?.qr ? 3000 : 2000;
             timeoutId = setTimeout(poll, pDelay);
         };
 
@@ -103,7 +117,7 @@ export const usePollingQRV2 = () => {
         return () => clearTimeout(timeoutId);
     }, []);
 
-    return state;
+    return { ...state, reload: loadQR, restart: restartSession };
 };
 
 export default usePollingQRV2;

@@ -30,9 +30,9 @@ const User = sequelize.define('User', {
     comment: 'ID de la sucursal/negocio principal'
   },
   globalRole: {
-    type: DataTypes.ENUM('admin', 'owner', 'employee', 'Administrador', 'Usuario'),
+    type: DataTypes.ENUM('SUPER_ADMIN', 'ADMIN', 'USER'),
     allowNull: false,
-    defaultValue: 'employee'
+    defaultValue: 'USER'
   },
   // --- Sprint 4: Control & Limits ---
   status: {

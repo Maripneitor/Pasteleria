@@ -6,7 +6,8 @@ exports.generateCode = async (req, res) => {
         const { tenantId, id: ownerId, role, maxUsers } = req.user;
 
         // 1. Verify Permission (Admin or Owner)
-        if (!['admin', 'owner'].includes(role)) {
+        // Note: After role normalization, check for ADMIN or tenant-level OWNER
+        if (!['ADMIN', 'SUPER_ADMIN'].includes(role) && role !== 'owner') {
             return res.status(403).json({ message: 'No tienes permiso para generar códigos.' });
         }
 
@@ -68,7 +69,7 @@ exports.verifyCode = async (req, res) => {
         // Check limit again (Race condition safety)
         const owner = await User.findByPk(activationEntry.ownerId, { transaction: t });
         // Assume owner exists. If owner enforces limit:
-        if (owner && owner.globalRole === 'owner') {
+        if (owner && ['owner', 'ADMIN', 'SUPER_ADMIN'].includes(owner.globalRole)) {
             const currentCount = await User.count({
                 where: { ownerId: owner.id, status: 'ACTIVE' },
                 transaction: t
@@ -84,7 +85,7 @@ exports.verifyCode = async (req, res) => {
             status: 'ACTIVE',
             tenantId: activationEntry.tenantId,
             ownerId: activationEntry.ownerId, // Link hierarchy
-            globalRole: 'employee' // Default to employee
+            globalRole: 'USER' // Default to USER (tenant role via tenant_users)
         }, { where: { id: userId }, transaction: t });
 
         // Mark Code Used

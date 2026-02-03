@@ -14,7 +14,7 @@ exports.register = async (req, res) => {
       username,
       email,
       password: hashedPassword, // Guardamos la contraseña encriptada
-      globalRole: globalRole || 'employee',
+      globalRole: globalRole || 'USER',
       tenantId: tenantId || null,
       status: 'PENDING'
     });
@@ -123,7 +123,7 @@ exports.login = async (req, res) => {
     const payload = {
       id: user.id,
       username: user.username,
-      role: user.globalRole ? user.globalRole.toLowerCase() : 'user',
+      globalRole: user.globalRole,  // Use globalRole directly, not lowercase
       tenantId: user.tenantId
     };
 

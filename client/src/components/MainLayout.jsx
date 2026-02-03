@@ -85,7 +85,7 @@ const MainLayout = () => {
                     <NavItem path="/produccion" icon={ClipboardList} label="Producción" isActive={checkActive('/produccion')} onClick={handleNavClick} />
 
                     {/* Admin / Owner Only */}
-                    {['admin', 'owner'].includes(user?.role) && (
+                    {['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
                         <>
                             <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Sistema</div>
                             <NavItem path="/auditoria" icon={FileText} label="Auditoría" isActive={checkActive('/auditoria')} onClick={handleNavClick} />
@@ -94,7 +94,7 @@ const MainLayout = () => {
                             <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
                             <NavItem path="/admin/stats" icon={BarChart} label="Reportes" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
                             <NavItem path="/admin/sabores" icon={Tags} label="Sabores y Catálogo" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
-                            {user?.role === 'admin' && ( // Only global admin sees commissions config? or owner too? Let's say owner too for now or stick to admin 
+                            {user?.role === 'SUPER_ADMIN' && ( // Only SUPER_ADMIN sees commissions
                                 <NavItem path="/admin/comisiones" icon={PieChart} label="Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
                             )}
                             <NavItem path="/configuracion" icon={Settings} label="Configuración" isActive={checkActive('/configuracion')} onClick={handleNavClick} />
@@ -164,7 +164,14 @@ const MainLayout = () => {
                                     <div className="space-y-1 mb-4">
                                         <div className="flex justify-between text-xs">
                                             <span className="text-gray-400">Rol Global</span>
-                                            <span className="font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full uppercase text-[10px]">{user?.role || 'user'}</span>
+                                            <span className={`font-bold px-2 py-0.5 rounded-full uppercase text-[10px] ${user?.role === 'SUPER_ADMIN' ? 'text-purple-700 bg-purple-100' :
+                                                    user?.role === 'ADMIN' ? 'text-blue-700 bg-blue-100' :
+                                                        'text-gray-700 bg-gray-100'
+                                                }`}>
+                                                {user?.role === 'SUPER_ADMIN' ? 'Super Admin' :
+                                                    user?.role === 'ADMIN' ? 'Admin' :
+                                                        user?.role || 'User'}
+                                            </span>
                                         </div>
                                         {user?.tenantId && (
                                             <div className="flex justify-between text-xs">

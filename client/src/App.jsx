@@ -67,7 +67,7 @@ function App() {
         </Route>
 
         {/* 🛡️ Rutas Admin / Owner */}
-        <Route element={<ProtectedRoute allowedRoles={['admin', 'owner']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']} />}>
           <Route element={<MainLayout />}>
             <Route path="usuarios" element={<TeamPage />} />
             <Route path="admin/reports" element={<ReportsPage />} />

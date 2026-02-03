@@ -1,30 +1,18 @@
 /**
- * Idempotente:
- * - Si el usuario NO existe: lo crea con password bcrypt
- * - Si existe: le fuerza rol ADMIN/Administrador (según tu columna)
+ * Idempotent Admin Seeder
+ * Creates or updates admin accounts with exact credentials
  */
 require('dotenv').config({ path: '../.env' });
 const bcrypt = require('bcryptjs');
 const { User, sequelize } = require('../models');
 
 const admins = [
-    { email: 'admin@gmail.com', password: 'Admin1234', username: 'Admin' },
-    { email: 'mario@dev.com', password: 'mario123', username: 'Mario' },
+    { email: 'admin@gmail.com', password: 'Admin1234', username: 'Admin', globalRole: 'ADMIN' },
+    { email: 'mario@dev.com', password: 'commario123', username: 'Mario', globalRole: 'SUPER_ADMIN' },
 ];
 
-function setRoleFields(user) {
-    // Soporta ambos estilos (base antigua y base mejorada)
-    // - base vieja: user.role = 'Administrador'
-    // - base tenant/global: user.globalRole = 'Administrador' (adjusted from ADMIN per previous fix)
-
-    // Note: Previous steps confirmed globalRole ENUM uses 'Administrador'
-    if (user.dataValues.hasOwnProperty('globalRole')) user.globalRole = 'Administrador';
-    if (user.dataValues.hasOwnProperty('role')) user.role = 'Administrador';
-    if (user.dataValues.hasOwnProperty('isActive')) user.isActive = 1;
-}
-
 async function run() {
-    console.log('🚀 Running make_admins.js...');
+    console.log('🚀 Running make_admins.js with canonical roles...');
     await sequelize.authenticate();
 
     for (const a of admins) {
@@ -34,21 +22,26 @@ async function run() {
                 username: a.username,
                 email: a.email,
                 password: await bcrypt.hash(a.password, 10),
-                globalRole: 'Administrador' // Direct default
+                globalRole: a.globalRole,
+                status: 'ACTIVE' // Admins are always active
             },
         });
 
-        // si existía, no tocamos password a menos que quieras forzarlo:
+        // If user existed, update password and role
         if (!created) {
-            // Optional: Force password update if needed
             user.password = await bcrypt.hash(a.password, 10);
+            user.globalRole = a.globalRole;
+            user.status = 'ACTIVE';
+            await user.save();
         }
 
-        setRoleFields(user);
-        await user.save();
-
-        console.log(`✅ ${a.email} => ADMIN (${created ? 'created' : 'updated'})`);
+        console.log(`✅ ${a.email} => ${a.globalRole} (${created ? 'created' : 'updated'})`);
     }
+
+    console.log('\n📋 Admin Summary:');
+    console.log('   - admin@gmail.com / Admin1234 => ADMIN');
+    console.log('   - mario@dev.com / commario123 => SUPER_ADMIN');
+
     process.exit(0);
 }
 

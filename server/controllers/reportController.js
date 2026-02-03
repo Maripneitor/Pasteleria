@@ -33,6 +33,9 @@ exports.sendDailyCut = async (req, res) => {
         // We can log the "trigger" here.
         auditService.log('SEND_REPORT', 'DAILY_CUT', 0, { date, email }, req.user?.id);
 
+        // AUDIT
+        auditService.log('SEND_REPORT', 'DAILY_CUT', 0, { date, email }, req.user?.id);
+
         return res.json({ ok: true, message: 'Corte guardado y enviado.' });
 
     } catch (e) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { activationApi } from '../services/activationApi';
 import toast from 'react-hot-toast';
 import { Lock, ShieldCheck, LogOut } from 'lucide-react';
