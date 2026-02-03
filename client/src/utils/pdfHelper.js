@@ -21,9 +21,27 @@ export const handlePdfResponse = async (apiCall) => {
             try {
                 const json = JSON.parse(text);
                 errorMessage = json.message || errorMessage;
+                if (json.details) errorMessage += `: ${json.details}`;
             } catch { /* ignore parse error */ }
 
             throw new Error(errorMessage);
+        }
+
+        // Check for suspiciously small blobs (likely error text sent as application/pdf by mistake or empty)
+        if (res.data.size < 100) {
+            const text = await res.data.text();
+            console.error("PDF Blob too small, potential error:", text);
+            try {
+                // Try to parse if it's JSON
+                const json = JSON.parse(text);
+                if (json.message) throw new Error(json.message);
+            } catch (e) {
+                if (e.message && e.message !== 'Unexpected token') throw e; // rethrow if it was a json parse success that threw error
+            }
+            // If not JSON, maybe just text error
+            if (text.includes('Error') || text.includes('Cannot')) {
+                throw new Error(`Error del servidor: ${text.substring(0, 50)}...`);
+            }
         }
 
         // It is a PDF

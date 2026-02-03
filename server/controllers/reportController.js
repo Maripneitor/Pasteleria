@@ -11,7 +11,8 @@ exports.sendDailyCut = async (req, res) => {
             date,
             branches,
             email,
-            userId: req.user?.id
+            userId: req.user?.id,
+            tenantFilter: req.tenantFilter || {}
         });
 
         if (result.skipped) {
@@ -23,7 +24,7 @@ exports.sendDailyCut = async (req, res) => {
             return res.status(500).json({
                 ok: false,
                 message: result.message,
-                details: result.error
+                details: result.error || 'Error desconocido'
             });
         }
 
@@ -51,8 +52,10 @@ exports.previewDailyCut = async (req, res) => {
         const { Op } = require('sequelize');
         const pdfService = require('../services/pdfService');
 
+        const tenantFilter = req.tenantFilter || {};
+
         const folios = await Folio.findAll({
-            where: { fecha_entrega: targetDate, estatus_folio: { [Op.ne]: 'Cancelado' } },
+            where: { fecha_entrega: targetDate, estatus_folio: { [Op.ne]: 'Cancelado' }, ...tenantFilter },
             order: [['hora_entrega', 'ASC']],
         });
 

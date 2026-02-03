@@ -33,9 +33,11 @@ const AIDraftPanel = () => {
             }
         } catch (error) {
             console.error("AI Draft Error:", error);
-            // El interceptor de axios ya muestra toast, pero podemos ser específicos si queremos
-            if (error.response?.status === 404) {
-                toast.error("Servicio de IA no disponible en este momento.");
+            if (error.response?.status === 503) {
+                toast.error("⚠️ IA no configurada (Falta API Key)");
+                setSuggestion("Configura OPENAI_API_KEY en el servidor para usar esta función.");
+            } else {
+                toast.error("Error al procesar con IA");
             }
         } finally {
             setLoading(false);

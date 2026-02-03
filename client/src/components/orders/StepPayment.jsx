@@ -38,6 +38,7 @@ const StepPayment = () => {
                 forma: product.shape || 'Redondo',
 
                 descripcion_diseno: product.design || '',
+                imagen_referencia_url: product.referenceImageUrl || null,
 
                 // Metadatos y Extras
                 diseno_metadata: {

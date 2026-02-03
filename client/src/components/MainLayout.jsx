@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart } from 'lucide-react';
 import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { clearToken } from '../utils/auth';
 import AiAssistantTray from './AiAssistantTray';
 
 // Extracted NavItem to avoid re-creation on every render
@@ -17,11 +16,19 @@ const NavItem = ({ path, icon: Icon, label, isActive, onClick }) => ( // eslint-
     </Link>
 );
 
+import { useAuth } from '../context/AuthContext';
+
+// ... (NavItem remains same)
+
 const MainLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const [isAiOpen, setIsAiOpen] = useState(false); // 🤖 Control de IA
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+    // Read user from Context (Real RBAC)
+    const { user, logout } = useAuth();
 
     // Allow opening from anywhere
     React.useEffect(() => {
@@ -31,11 +38,10 @@ const MainLayout = () => {
     }, []);
 
     // 🔐 Lógica de Logout Robusta
+    // 🔐 Lógica de Logout Robusta
     const handleLogout = () => {
         if (window.confirm("¿Estás seguro que deseas cerrar sesión?")) {
-            // clearToken(); imported at top
-            clearToken();
-            // localStorage.clear(); // Redundant if clearToken does it
+            logout(); // Use Context Logout
             toast.success('Sesión cerrada. ¡Buen trabajo hoy!');
             navigate('/login');
         }
@@ -66,24 +72,34 @@ const MainLayout = () => {
 
                 {/* Nav Links */}
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+                    {/* Common */}
                     <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Principal</div>
                     <NavItem path="/" icon={LayoutDashboard} label="Dashboard" isActive={checkActive('/')} onClick={handleNavClick} />
                     <NavItem path="/pedidos/nuevo" icon={PlusCircle} label="Nuevo Pedido" isActive={checkActive('/pedidos/nuevo')} onClick={handleNavClick} />
                     <NavItem path="/pedidos" icon={Package} label="Pedidos" isActive={checkActive('/pedidos')} onClick={handleNavClick} />
                     <NavItem path="/calendario" icon={Calendar} label="Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
 
+                    {/* Operational */}
                     <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Operaciones</div>
                     <NavItem path="/caja" icon={DollarSign} label="Caja y Cortes" isActive={checkActive('/caja')} onClick={handleNavClick} />
                     <NavItem path="/produccion" icon={ClipboardList} label="Producción" isActive={checkActive('/produccion')} onClick={handleNavClick} />
-                    <NavItem path="/auditoria" icon={FileText} label="Auditoría" isActive={checkActive('/auditoria')} onClick={handleNavClick} />
 
-                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Sistema</div>
-                    <NavItem path="/usuarios" icon={Users} label="Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
-                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
-                    <NavItem path="/admin/stats" icon={BarChart} label="Reportes" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
-                    <NavItem path="/admin/sabores" icon={Tags} label="Sabores y Catálogo" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
-                    <NavItem path="/admin/comisiones" icon={PieChart} label="Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
-                    <NavItem path="/configuracion" icon={Settings} label="Configuración" isActive={checkActive('/configuracion')} onClick={handleNavClick} />
+                    {/* Admin / Owner Only */}
+                    {['admin', 'owner'].includes(user?.role) && (
+                        <>
+                            <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Sistema</div>
+                            <NavItem path="/auditoria" icon={FileText} label="Auditoría" isActive={checkActive('/auditoria')} onClick={handleNavClick} />
+                            <NavItem path="/usuarios" icon={Users} label="Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
+
+                            <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
+                            <NavItem path="/admin/stats" icon={BarChart} label="Reportes" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
+                            <NavItem path="/admin/sabores" icon={Tags} label="Sabores y Catálogo" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
+                            {user?.role === 'admin' && ( // Only global admin sees commissions config? or owner too? Let's say owner too for now or stick to admin 
+                                <NavItem path="/admin/comisiones" icon={PieChart} label="Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
+                            )}
+                            <NavItem path="/configuracion" icon={Settings} label="Configuración" isActive={checkActive('/configuracion')} onClick={handleNavClick} />
+                        </>
+                    )}
                 </nav>
 
                 {/* Footer / Danger Zone */}
@@ -124,8 +140,53 @@ const MainLayout = () => {
                             <Bot size={18} /> <span className="hidden sm:inline font-bold text-sm">Asistente IA</span>
                         </button>
 
-                        <div className="w-9 h-9 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold text-sm border-2 border-white shadow-md">
-                            A
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                className="w-9 h-9 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold text-sm border-2 border-white shadow-md hover:ring-2 ring-pink-300 transition-all"
+                            >
+                                {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                            </button>
+
+                            {/* Profile Popover */}
+                            {isProfileOpen && (
+                                <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-50">
+                                        <div className="w-10 h-10 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold">
+                                            {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                                        </div>
+                                        <div className="overflow-hidden">
+                                            <p className="font-bold text-gray-800 text-sm truncate">{user?.name || 'Usuario'}</p>
+                                            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1 mb-4">
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-gray-400">Rol Global</span>
+                                            <span className="font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full uppercase text-[10px]">{user?.role || 'user'}</span>
+                                        </div>
+                                        {user?.tenantId && (
+                                            <div className="flex justify-between text-xs">
+                                                <span className="text-gray-400">Sucursal</span>
+                                                <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">#{user.tenantId}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-red-500 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <LogOut size={14} /> Cerrar Sesión
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Backdrop for click away */}
+                            {isProfileOpen && (
+                                <div className="fixed inset-0 z-[-1]" onClick={() => setIsProfileOpen(false)} />
+                            )}
                         </div>
                     </div>
                 </header>

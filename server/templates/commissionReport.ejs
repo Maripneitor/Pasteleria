@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Helvetica', sans-serif;
+            padding: 20px;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ec4899;
+            padding-bottom: 10px;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #ec4899;
+        }
+
+        .header h2 {
+            margin: 5px 0 0;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .meta {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .meta span {
+            display: inline-block;
+            margin-right: 20px;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+
+        th {
+            background-color: #fce7f3;
+            color: #be185d;
+            padding: 10px;
+            text-align: left;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        .total-row {
+            font-weight: bold;
+            background-color: #fdf2f8 !important;
+        }
+
+        .amount {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Reporte de Comisiones</h1>
+        <h2>Pastelería "La Fiesta"</h2>
+    </div>
+
+    <div class="meta">
+        <span>Desde: <%= from %></span>
+        <span>Hasta: <%= to %></span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Folio</th>
+                <th>Fecha</th>
+                <th class="amount">Monto (5%)</th>
+                <th class="amount">Redondeo (Cobrado)</th>
+                <th>Estatus</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% reportData.forEach(function(row) { %>
+                <tr>
+                    <td>
+                        <%= row.folioNumber %>
+                    </td>
+                    <td>
+                        <%= new Date(row.createdAt).toLocaleDateString() %>
+                            <%= new Date(row.createdAt).toLocaleTimeString([], {hour: '2-digit' , minute:'2-digit'}) %>
+                    </td>
+                    <td class="amount">$<%= Number(row.amount).toLocaleString('es-MX', { minimumFractionDigits: 2 }) %>
+                    </td>
+                    <td class="amount">
+                        <% if (row.appliedToCustomer && row.roundedAmount) { %>
+                            $<%= Number(row.roundedAmount).toLocaleString('es-MX', { minimumFractionDigits: 2 }) %>
+                                <% } else { %>
+                                    -
+                                    <% } %>
+                    </td>
+                    <td style="text-align: center; font-size: 10px;">
+                        <% if (row.appliedToCustomer) { %>
+                            <span style="color: #059669; font-weight: bold;">Cobrado a Cliente</span>
+                            <% } else { %>
+                                <span style="color: #d97706;">Absorbido</span>
+                                <% } %>
+                    </td>
+                </tr>
+                <% }); %>
+
+                    <% const sumAmount=reportData.reduce((acc, r)=> acc + Number(r.amount), 0);
+                        const sumRounded = reportData.reduce((acc, r) => acc + (r.appliedToCustomer ?
+                        Number(r.roundedAmount) : 0), 0);
+                        %>
+                        <tr class="total-row">
+                            <td colspan="2">TOTALES</td>
+                            <td class="amount">$<%= sumAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 }) %>
+                            </td>
+                            <td class="amount">$<%= sumRounded.toLocaleString('es-MX', { minimumFractionDigits: 2 }) %>
+                            </td>
+                            <td></td>
+                        </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Generado el <%= new Date().toLocaleString() %>
+    </div>
+</body>
+
+</html>

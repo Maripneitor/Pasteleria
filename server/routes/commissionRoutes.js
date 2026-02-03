@@ -23,6 +23,37 @@ router.get('/report', async (req, res) => {
     }
 });
 
+// GET /api/commissions/report/pdf?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get('/report/pdf', async (req, res) => {
+    try {
+        const { from, to } = req.query;
+        if (!from || !to) {
+            return res.status(400).json({ error: 'Parameters "from" and "to" are required.' });
+        }
+
+        // Get data using existing service logic
+        const { getReport } = require('../services/commissionService');
+        const pdfService = require('../services/pdfService');
+
+        const report = await getReport({ from, to });
+
+        const buffer = await pdfService.renderCommissionsPdf({
+            reportData: report.details, // Pass the array of commissions
+            from,
+            to
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="comisiones_${from}_${to}.pdf"`);
+        res.setHeader('Content-Length', buffer.length);
+        res.send(buffer);
+
+    } catch (error) {
+        console.error("Error generating commission PDF:", error);
+        res.status(500).json({ message: 'Error generando PDF de comisiones', details: error.message });
+    }
+});
+
 // POST /api/commissions/record
 router.post('/record', async (req, res) => {
     try {

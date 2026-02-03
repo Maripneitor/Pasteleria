@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const folioController = require('../controllers/folioController');
 const authMiddleware = require('../middleware/authMiddleware');
+const tenantScope = require('../middleware/tenantScope');
 
 const uploadReference = require('../middleware/uploadReference');
 
 router.use(authMiddleware);
+router.use(tenantScope);
 
 // ✅ Primero rutas estáticas
 router.get('/stats/dashboard', folioController.getDashboardStats);

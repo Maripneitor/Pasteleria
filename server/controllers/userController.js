@@ -12,6 +12,33 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+exports.getPendingUsers = async (req, res) => {
+  try {
+    const { role, tenantId } = req.user;
+    const where = { status: 'PENDING' };
+
+    // If Owner, maybe specific logic?
+    // But for now, if user registered with a tenantId, we filter by it.
+    // If user registered with null tenantId, only Admin sees them?
+    // Or if Owner wants to "adopt" a user, maybe they don't need to see them in a list first?
+    // The code generation is the key customization.
+    // Let's implement strict tenant filtering if tenantId is present on the user.
+
+    if (role === 'owner' || role === 'employee') {
+      // Employees shouldn't see this list usually, but if they did...
+      if (tenantId) where.tenantId = tenantId;
+    }
+
+    const users = await User.findAll({
+      where,
+      attributes: { exclude: ['password'] }
+    });
+    res.json(users);
+  } catch (e) {
+    res.status(500).json({ message: 'Error obteniendo usuarios pendientes' });
+  }
+};
+
 exports.createUser = async (req, res) => {
   try {
     const { username, email, password, role, isActive } = req.body;

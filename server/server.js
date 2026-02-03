@@ -58,6 +58,8 @@ app.post('/api/ai/session/message',
 );
 app.use('/api/dictation', dictationRoutes);
 app.use('/api/ai/draft', aiDraftRoutes);
+app.use('/api/activation', require('./routes/activationRoutes')); // Sprint 4
+app.use('/api/users', require('./routes/userRoutes')); // Sprint 4 - Pending Users
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/catalog', require('./routes/catalogRoutes'));
 app.use('/api/ingredients', require('./routes/ingredientRoutes'));
@@ -65,6 +67,7 @@ app.use('/api/commissions', require('./routes/commissionRoutes'));
 app.use('/api/production', require('./routes/productionRoutes'));
 app.use('/api/cash', require('./routes/cashRoutes')); // Caja
 app.use('/api/audit', require('./routes/auditRoutes')); // Auditoría
+app.use('/api/upload', require('./routes/uploadRoutes')); // Imágenes de Referencia
 app.use('/api/pdf-templates', pdfTemplateRoutes);
 
 // Ruta de Salud (Para verificar que el server vive)

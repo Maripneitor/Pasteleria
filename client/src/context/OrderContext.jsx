@@ -20,7 +20,11 @@ export const OrderProvider = ({ children }) => {
     });
 
     const updateOrder = (data) => {
-        setOrderData((prev) => ({ ...prev, ...data }));
+        setOrderData((prev) => {
+            // Support functional updates: updateOrder(prev => ({...}))
+            const newData = typeof data === 'function' ? data(prev) : data;
+            return { ...prev, ...newData };
+        });
     };
 
     const nextStep = () => setStep((p) => Math.min(p + 1, 4));

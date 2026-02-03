@@ -49,6 +49,9 @@ const LoginPage = () => {
             // 3. Guardamos el token
             if (res.data.token) {
                 localStorage.setItem('token', res.data.token);
+                if (res.data.user) {
+                    localStorage.setItem('user', JSON.stringify(res.data.user));
+                }
 
                 // 4. Feedback al usuario
                 const nombre = res.data.user?.name || res.data.user?.username || "Usuario";
@@ -62,6 +65,17 @@ const LoginPage = () => {
 
         } catch (error) {
             console.error("Error en login:", error);
+
+            // Sprint 4: Manejo de Cuenta Pendiente
+            if (error.response?.status === 403 && error.response?.data?.code === 'ACCOUNT_PENDING') {
+                const tempToken = error.response.data.tempToken;
+                if (tempToken) {
+                    localStorage.setItem('temp_activation_token', tempToken);
+                    toast("Tu cuenta requiere activación", { icon: '🔒' });
+                    navigate('/activacion');
+                    return;
+                }
+            }
 
             // Paso 3: Manejo específico de ERR_EMPTY_RESPONSE o Network Error
             if (error.code === 'ERR_NETWORK' || !error.response) {

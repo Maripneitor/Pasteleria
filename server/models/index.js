@@ -15,6 +15,10 @@ const CakeFlavor = require('./CakeFlavor');
 const AuditLog = require('./AuditLog');
 const { CashCut, CashMovement } = require('./CashModels');
 
+// --- Sprint 4: Control & Limits ---
+const ActivationCode = require('./ActivationCode');
+const UserSession = require('./UserSession');
+
 // --- Relaciones Principales ---
 User.hasMany(Folio, { foreignKey: 'responsibleUserId' });
 Folio.belongsTo(User, { as: 'responsibleUser', foreignKey: 'responsibleUserId', onDelete: 'SET NULL' });
@@ -48,6 +52,15 @@ CashMovement.belongsTo(User, { as: 'performer', foreignKey: 'performedByUserId' 
 User.hasMany(AISession, { foreignKey: 'userId', as: 'aiSessions' });
 AISession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// --- Relaciones Sprint 4 (Control) ---
+// Owner generates codes
+User.hasMany(ActivationCode, { foreignKey: 'ownerId', as: 'generatedCodes' });
+ActivationCode.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
+
+// User has sessions
+User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
+UserSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 // --- Exportación de todos los modelos ---
 module.exports = {
   sequelize,
@@ -63,5 +76,7 @@ module.exports = {
   CakeFlavor,
   AuditLog,
   CashCut,
-  CashMovement
+  CashMovement,
+  ActivationCode,
+  UserSession
 };

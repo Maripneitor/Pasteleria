@@ -5,11 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import ExpenseForm from './ops/ExpenseForm';
 import client from '../config/axios';
 import ordersApi from '../services/ordersApi';
-import reportsApi from '../services/reportsApi'; // Import new API
 import { clearToken } from '../utils/auth';
 import { handlePdfResponse } from '../utils/pdfHelper';
 import toast from 'react-hot-toast';
-import { Search, PlusCircle, Mic, Calendar, User as UserIcon, LogOut, Mail, Users, ChefHat, PieChart, DollarSign, FileText, Printer } from 'lucide-react';
+import { Search, PlusCircle, Mic, Calendar, User as UserIcon, LogOut, Users, ChefHat, PieChart, DollarSign, FileText, Printer } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip } from 'recharts';
 
 import PageHeader from '../components/common/PageHeader';
@@ -25,7 +24,6 @@ const formatMoney = (amount) => `$${Number(amount || 0).toLocaleString()}`;
 const DashboardPage = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [sendingCut, setSendingCut] = useState(false);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -68,34 +66,11 @@ const DashboardPage = () => {
     }
   };
 
-  const handleEnviarCorte = async () => {
-    if (!window.confirm("¿Enviar corte del día por correo a la administración?")) return;
-
-    setSendingCut(true);
-    try {
-      const date = new Date().toISOString().split('T')[0];
-      await reportsApi.sendDailyCut(date);
-      toast.success("Corte enviado correctamente. 📧");
-    } catch (e) {
-      console.error(e);
-      const msg = e.response?.data?.details || e.response?.data?.message || "Error al enviar el corte.";
-      toast.error(msg);
-    } finally {
-      setSendingCut(false);
-    }
-  };
-
-  const handleVerCorte = () => {
-    const date = new Date().toISOString().split('T')[0];
-    handlePdfResponse(() => reportsApi.getDailyCutPdf(date));
-  };
-
   const actions = [
     { title: 'Nuevo Folio', icon: PlusCircle, bg: 'bg-pink-600', onClick: () => navigate('/pedidos/nuevo') },
     { title: 'Dictar Pedido', icon: Mic, bg: 'bg-violet-600', onClick: () => window.dispatchEvent(new Event('open-ai-tray')) },
     { title: 'Ver Calendario', icon: Calendar, bg: 'bg-blue-500', onClick: () => navigate('/calendario') },
-    { title: 'Ver Corte (PDF)', icon: FileText, bg: 'bg-indigo-600', onClick: handleVerCorte },
-    { title: 'Enviar Corte', icon: Mail, bg: 'bg-emerald-600', onClick: handleEnviarCorte, label: sendingCut ? 'Enviando...' : 'Enviar Corte' },
+    { title: 'Reportes y Cortes', icon: FileText, bg: 'bg-emerald-600', onClick: () => navigate('/admin/reports') },
   ];
 
   const adminModules = [

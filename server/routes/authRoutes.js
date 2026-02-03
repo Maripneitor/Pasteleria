@@ -9,4 +9,8 @@ router.post('/register', authController.register);
 // URL Final: /api/auth/login
 router.post('/login', authController.login);
 
+// Ruta para obtener usuario actual
+const authMiddleware = require('../middleware/authMiddleware');
+router.get('/me', authMiddleware, authController.getMe);
+
 module.exports = router;

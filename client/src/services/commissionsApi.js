@@ -15,6 +15,20 @@ const commissionsApi = {
     },
 
     /**
+     * Get commissions report PDF
+     * @param {string} from - YYYY-MM-DD
+     * @param {string} to - YYYY-MM-DD
+     * @returns {Promise<Blob>}
+     */
+    getReportPdf: async (from, to) => {
+        const response = await api.get(`/commissions/report/pdf`, {
+            params: { from, to },
+            responseType: 'blob'
+        });
+        return response; // Return full response for pdfHelper
+    },
+
+    /**
      * Manually trigger a commission calculation/check if needed
      * @returns {Promise<Object>}
      */

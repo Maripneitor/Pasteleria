@@ -1,16 +1,33 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
-const ProtectedRoute = () => {
-    // Verificamos si existe el token en el almacenamiento local
+const ProtectedRoute = ({ allowedRoles = [] }) => {
+    // Verificamos si existe el token
     const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
 
-    // Si no hay token, lo mandamos al Login
     if (!token) {
         return <Navigate to="/login" replace />;
     }
 
-    // Si hay token, dejamos pasar a las rutas hijas (Outlet)
+    // Role Check
+    if (allowedRoles.length > 0 && userStr) {
+        let isAuthorized = false;
+        try {
+            const user = JSON.parse(userStr);
+            if (allowedRoles.includes(user.role)) {
+                isAuthorized = true;
+            }
+        } catch (e) {
+            console.error("Error parsing user for RBAC", e);
+            // Unauthorized by default if error
+        }
+
+        if (!isAuthorized) {
+            return <Navigate to="/" replace />;
+        }
+    }
+
     return <Outlet />;
 };
 

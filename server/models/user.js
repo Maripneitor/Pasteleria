@@ -24,11 +24,30 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  // ==================== INICIO DE LA MODIFICACIÓN ====================
+  tenantId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'ID de la sucursal/negocio principal'
+  },
   globalRole: {
-    type: DataTypes.ENUM('ADMIN', 'USER', 'Administrador', 'Usuario'),
+    type: DataTypes.ENUM('admin', 'owner', 'employee', 'Administrador', 'Usuario'),
     allowNull: false,
-    defaultValue: 'USER'
+    defaultValue: 'employee'
+  },
+  // --- Sprint 4: Control & Limits ---
+  status: {
+    type: DataTypes.ENUM('PENDING', 'ACTIVE', 'BLOCKED'),
+    allowNull: false,
+    defaultValue: 'PENDING'
+  },
+  ownerId: {
+    type: DataTypes.BIGINT, // Referencia al Dueño (si es empleado)
+    allowNull: true
+  },
+  maxUsers: {
+    type: DataTypes.INTEGER, // Si es Dueño, cuántos empleados puede tener
+    allowNull: false,
+    defaultValue: 5
   }
   // ===================== FIN DE LA MODIFICACIÓN ======================
 }, {

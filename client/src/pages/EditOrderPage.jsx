@@ -25,8 +25,12 @@ const EditOrderPage = () => {
             }
         };
 
-        if (id) {
+        if (id && id !== 'undefined' && id !== 'null') {
             fetchOrder();
+        } else {
+            console.warn("Invalid ID in EditOrderPage:", id);
+            setError("ID de pedido no válido.");
+            setLoading(false);
         }
     }, [id]);
 

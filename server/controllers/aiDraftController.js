@@ -18,10 +18,10 @@ const generateDraft = async (req, res) => {
             return res.status(400).json({ message: "Se requiere un prompt" });
         }
 
-        // 1. MOCK / FALLBACK (Si no hay API Key)
+        // 1. CHECK API KEY
         if (!openai) {
-            console.log("⚠️ OpenAI no configurado. Usando Mock.");
-            return res.json(mockResponse(prompt));
+            console.log("⚠️ OpenAI no configurado.");
+            return res.status(503).json({ message: "La IA no está configurada (Falta OPENAI_API_KEY)" });
         }
 
         // 2. LLAMADA REAL A OPENAI
@@ -65,8 +65,7 @@ const generateDraft = async (req, res) => {
 
         } catch (aiError) {
             console.error("OpenAI Error:", aiError);
-            // Fallback al mock si falla la API
-            return res.json(mockResponse(prompt));
+            res.status(500).json({ message: "Error procesando la solicitud de IA" });
         }
 
     } catch (error) {
@@ -74,29 +73,5 @@ const generateDraft = async (req, res) => {
         res.status(500).json({ message: "Error generando borrador" });
     }
 };
-
-// Mock estúpido pero funcional para pruebas
-function mockResponse(prompt) {
-    const isBirthday = prompt.toLowerCase().includes('cumple');
-    const isChocolate = prompt.toLowerCase().includes('chocolate');
-
-    return {
-        draft: {
-            clientName: "Cliente (IA Detectado)",
-            clientPhone: "",
-            deliveryDate: new Date().toISOString().split('T')[0], // Hoy
-            deliveryTime: "12:00",
-            products: [{
-                id: Date.now(),
-                flavor: isChocolate ? "Chocolate" : "Vainilla",
-                filling: isBirthday ? "Fresa" : "Durazno",
-                design: "Decoración estándar por IA",
-                notes: "Generado automáticamente"
-            }]
-        },
-        missing: isBirthday ? [] : ["Temática del evento"],
-        nextQuestion: isBirthday ? "" : "¿Para qué ocasión es el pastel?"
-    };
-}
 
 module.exports = { generateDraft };

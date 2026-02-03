@@ -138,3 +138,31 @@ exports.renderOrdersPdf = async ({ folios, date, branches }) => {
         throw e;
     }
 };
+
+exports.renderCommissionsPdf = async ({ reportData, from, to }) => {
+    try {
+        const tpl = path.join(__dirname, '..', 'templates', 'commissionReport.ejs');
+
+        const html = await ejs.renderFile(tpl, {
+            reportData,
+            from,
+            to
+        });
+
+        const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        const buffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '2cm', right: '2cm', bottom: '2cm', left: '2cm' }
+        });
+
+        await browser.close();
+        return buffer;
+    } catch (e) {
+        console.error("Error renderCommissionsPdf:", e);
+        throw e;
+    }
+};

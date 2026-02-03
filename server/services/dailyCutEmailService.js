@@ -15,8 +15,9 @@ function ymd(d) {
  * @param {Array<string>} [params.branches] - List of branch names
  * @param {string} [params.email] - Recipient email override
  * @param {number} [params.userId] - ID of user triggering the action (if any)
+ * @param {Object} [params.tenantFilter] - Sequelize filter for tenant scoping
  */
-async function processDailyCutEmail({ date, branches = [], email, userId }) {
+async function processDailyCutEmail({ date, branches = [], email, userId, tenantFilter = {} }) {
     const targetDate = date ? ymd(date) : ymd(new Date());
     const recipient = email || process.env.DAILY_CASH_CUT_EMAIL_TO || 'mariomoguel05@gmail.com';
 
@@ -50,7 +51,11 @@ async function processDailyCutEmail({ date, branches = [], email, userId }) {
     // 3. Gather Data
     try {
         const folios = await Folio.findAll({
-            where: { fecha_entrega: targetDate, estatus_folio: { [Op.ne]: 'Cancelado' } },
+            where: {
+                fecha_entrega: targetDate,
+                estatus_folio: { [Op.ne]: 'Cancelado' },
+                ...tenantFilter
+            },
             order: [['hora_entrega', 'ASC']],
         });
 
@@ -78,7 +83,10 @@ async function processDailyCutEmail({ date, branches = [], email, userId }) {
             console.log('[DailyCut] SMTP Connection Verified');
         } catch (smtpError) {
             console.error('[DailyCut] SMTP Verify Error:', smtpError);
-            throw new Error(`Error de conexión SMTP: ${smtpError.message}`);
+            const msg = smtpError.code === 'EAUTH'
+                ? 'Error de autenticación SMTP. Revise usuario/contraseña.'
+                : `Error de conexión SMTP: ${smtpError.message}`;
+            throw new Error(msg);
         }
 
         await transporter.sendMail({
