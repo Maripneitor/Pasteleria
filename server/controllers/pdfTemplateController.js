@@ -1,11 +1,12 @@
 const PdfTemplate = require('../models/PdfTemplate');
 const pdfService = require('../services/pdfService');
+const { buildTenantWhere } = require('../utils/tenantScope');
 
 // CRUD
 exports.listTemplates = async (req, res) => {
     try {
-        const tenantId = req.user?.tenantId || 1;
-        const list = await PdfTemplate.findAll({ where: { tenantId } });
+        const where = buildTenantWhere(req);
+        const list = await PdfTemplate.findAll({ where });
         res.json(list);
     } catch (e) {
         console.error('ListTemplates:', e);

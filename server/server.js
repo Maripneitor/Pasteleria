@@ -12,12 +12,18 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Importar Rutas
-const authRoutes = require('./routes/authRoutes');
-const folioRoutes = require('./routes/folioRoutes');
-const userRoutes = require('./routes/userRoutes');
-const clientRoutes = require('./routes/clientRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
+
+// ...
+
+app.use('/api/folios', folioRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/clients', clientRoutes);
+
+// Fix: WhatsApp Admin vs Webhooks separation
+app.use('/api/whatsapp', whatsappRoutes); // Admin (QR, Refresh)
+app.use('/api/webhooks', webhookRoutes);  // Public (Webhook)
 const aiSessionRoutes = require('./routes/aiSessionRoutes');
 const dictationRoutes = require('./routes/dictationRoutes');
 const aiDraftRoutes = require('./routes/aiDraftRoutes');

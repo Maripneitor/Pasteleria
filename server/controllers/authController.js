@@ -1,4 +1,6 @@
 const { User, sequelize } = require('../models');
+const UserSession = require('../models/UserSession');
+const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -53,40 +55,20 @@ exports.login = async (req, res) => {
     });
 
     if (!user) {
-      // Retornar 401 genérico para no filtrar usuarios
       return res.status(401).json({ message: 'Credenciales inválidas.' });
     }
 
-    // 2. Comparar la contraseña enviada con la encriptada en la BD
+    // 2. Comparar la contraseña
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Credenciales inválidas.' });
     }
 
-    // --- Sprint 4: Status Check ---
+    // --- Status Check ---
     if (user.status !== 'ACTIVE') {
       if (user.status === 'BLOCKED') return res.status(403).json({ message: 'Cuenta bloqueada.' });
 
-      // If PENDING, we ALLOW login but return a special flag so frontend can redirect to Lock Page
-      // OR we return 403 with specific code.
-      // User requested: "responder 403 con { code: 'ACCOUNT_PENDING' }"
-
-      // BUT if we return 403, the frontend needs to know WHO it is to verify later?
-      // Actually verify takes a token. So we might need a "Temporary Token" or allow login with restricted scope.
-      // Let's issue a token but with scope='activation_only' or similar?
-      // The implementation plan says: "Login blocks... Code ACCOUNT_PENDING".
-      // Use case: User registers -> Responds 201.
-      // User logs in -> 403 ACCOUNT_PENDING.
-      // Then Verification endpoint `verifyCode` needs `req.user.id`. 
-      // HOW do we id the user if they can't login?
-
-      // Solucion: "POST /api/auth/login" returns 403 BUT includes a `tempToken`?
-      // OR we permit login (200) but frontend handles the redirect?
-      // The prompt says: "Si user.status != ACTIVE → responder 403 con { code: "ACCOUNT_PENDING" }"
-      // AND "verifyCode" uses "req.user.id".
-      // This implies we DO need a token.
-      // I will issue a temporary token in the 403 response payload.
-
+      // Pending activation logic
       const tempPayload = { id: user.id, role: 'guest', status: 'PENDING' };
       const tempToken = jwt.sign(tempPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
@@ -97,47 +79,57 @@ exports.login = async (req, res) => {
       });
     }
 
-    const UserSession = require('../models/UserSession');
-    const { Op } = require('sequelize');
+    // --- Session Handling (Fix: TTL + Cleanup) ---
+    // A) Primero limpiamos sesiones muertas/viejas para este usuario
+    await deactivateExpiredSessions(user.id);
 
-    // ... inside login function ...
-
-    // --- Sprint 4: Session Guard ---
-    // Check if there is an ACTIVE and VALID session
+    // B) Verificar si YA tiene sesión activa (que esté dentro del TTL)
+    //    Si lastSeenAt es reciente, sigue siendo un bloqueo válido (multi-dispositivo).
     const activeSession = await UserSession.findOne({
       where: {
         userId: user.id,
-        isActive: true,
-        expiresAt: { [Op.gt]: new Date() } // Not expired
+        isActive: true
+        // Opcional: Podríamos validar expiresAt > now, pero deactivateExpiredSessions ya se encargó de las viejas via lastSeenAt
       }
     });
 
     if (activeSession) {
+      // Bloqueo estricto multi-sesión
       return res.status(409).json({
         message: 'Ya tienes una sesión activa en otro dispositivo.',
         code: 'DUPLICATE_SESSION'
       });
     }
 
-    // 3. Si todo es correcto, crear un Token (JWT)
+    // 3. Crear Token (JWT)
     const payload = {
       id: user.id,
       username: user.username,
-      globalRole: user.globalRole,  // Use globalRole directly, not lowercase
+      globalRole: user.globalRole,
       tenantId: user.tenantId
     };
 
-    // Se utiliza la variable de entorno JWT_SECRET para firmar el token
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+    // Usamos una firma simple o parte del token para identificarlo en BD
+    // En producción ideal: hash del token. Aquí usaremos "tokenSignature" como identificador.
+    // Para simplificar y matchear con middleware, podríamos guardar los últimos chars o el propio token (cuidado con longitud).
+    // El prompt sugiere: "tokenSignature". Usaremos el token real truncado o algo único. 
+    // AuthMiddleware valida JWT decode, así que si guardamos identificador, necesitamos pasar ese id en el token? 
+    // No, el prompt dice: "where: { userId: req.user.id, tokenSignature, isActive: true }".
+    // PERO authMiddleware recibe el token entero. 
+    // Asumiremos tokenSignature = token (o substring) y que authMiddleware lo puede derivar.
+    // Para no romper, guardaremos una substring final del token como firma.
+    const tokenSignature = token.slice(-20);
 
     // Registramos la sesión
     await UserSession.create({
       userId: user.id,
-      tokenSignature: 'active', // Simplified for now, or use token substring
+      tokenSignature: tokenSignature,
       ip: req.ip,
       deviceInfo: req.headers['user-agent'] || 'unknown',
       isActive: true,
-      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000) // 8 hours sync with token
+      lastSeenAt: new Date(),
+      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000) // 8 horas hard limit
     });
 
     res.status(200).json({
@@ -158,6 +150,54 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Error en el servidor', error: error.message });
   }
 };
+
+// Función para Logout
+exports.logout = async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.split(' ')[1];
+    if (!token) return res.status(200).json({ message: 'Logout ok (no token)' }); // Idempotente
+
+    // Necesitamos identificar la sesión.
+    // Si el middleware ya corrió, tenemos req.user
+    if (req.user) {
+      const tokenSignature = token.slice(-20);
+      await UserSession.update(
+        { isActive: false },
+        { where: { userId: req.user.id, tokenSignature, isActive: true } }
+      );
+    }
+    res.status(200).json({ message: 'Sesión cerrada correctamente.' });
+  } catch (error) {
+    console.error('Logout Error:', error);
+    res.status(500).json({ message: 'Error al cerrar sesión' });
+  }
+};
+
+
+// --- Helper: Session Cleanup ---
+const SESSION_TTL_MIN = Number(process.env.SESSION_TTL_MIN || 20);
+
+async function deactivateExpiredSessions(userId) {
+  try {
+    const ttlMs = SESSION_TTL_MIN * 60 * 1000;
+    const cutoff = new Date(Date.now() - ttlMs);
+    const { Op } = require('sequelize');
+
+    // Desactivar sesiones que a pesar de estar isActive=true, no se han visto en X tiempo
+    await UserSession.update(
+      { isActive: false },
+      {
+        where: {
+          userId,
+          isActive: true,
+          lastSeenAt: { [Op.lt]: cutoff }
+        }
+      }
+    );
+  } catch (e) {
+    console.error('Error cleaning sessions:', e);
+  }
+}
 
 exports.getMe = async (req, res) => {
   try {

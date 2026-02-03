@@ -1,20 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const whatsappController = require('../controllers/whatsappController');
+const auth = require('../middleware/authMiddleware');
+const role = require('../middleware/roleMiddleware');
 
-// Se define una ruta POST en /api/webhooks/whatsapp
-// Whaticket enviará sus notificaciones a esta URL.
-router.post('/whatsapp', whatsappController.handleWebhook);
+// Admin Endpoints only
+// Base URL: /api/whatsapp
 
-// Nueva ruta GET para obtener el código QR
-router.get('/qr', whatsappController.getQR);
-router.post('/refresh', whatsappController.refreshSession);
-
-// Whaticket también puede requerir una validación inicial con una petición GET.
-// Esta ruta es un placeholder por si es necesaria.
-router.get('/whatsapp', (req, res) => {
-  console.log("Recibida petición GET de validación de webhook.");
-  res.status(200).send(req.query['hub.challenge'] || 'Webhook listo.');
-});
+// router.get('/status', auth, role(['ADMIN']), whatsappController.getStatus); // (Optional if you implement it)
+router.get('/qr', auth, role(['ADMIN']), whatsappController.getQR);
+router.post('/refresh', auth, role(['ADMIN']), whatsappController.refreshSession);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const { processDailyCutEmail } = require('../services/dailyCutEmailService');
 const auditService = require('../services/auditService');
+const { buildTenantWhere } = require('../utils/tenantScope');
 
 exports.sendDailyCut = async (req, res) => {
     try {
@@ -7,12 +8,18 @@ exports.sendDailyCut = async (req, res) => {
         const branches = Array.isArray(req.body?.branches) ? req.body.branches : [];
         const email = req.body?.email; // explicit override or undefined
 
+        // FIX: Use centralized tenant scope
+        const tenantWhere = buildTenantWhere(req, { allowQueryTenant: false }); // For email actions, maybe restrict? 
+        // Actually processDailyCutEmail takes `tenantFilter`. 
+        // We should pass the RESULT of buildTenantWhere as filtering criteria.
+        // req.tenantFilter was probably a middleware construct, but now we use the utils.
+
         const result = await processDailyCutEmail({
             date,
             branches,
             email,
             userId: req.user?.id,
-            tenantFilter: req.tenantFilter || {}
+            tenantFilter: tenantWhere // Pass valid where clause
         });
 
         if (result.skipped) {
@@ -27,11 +34,6 @@ exports.sendDailyCut = async (req, res) => {
                 details: result.error || 'Error desconocido'
             });
         }
-
-        // AUDIT (Async) via processDailyCutEmail logic? 
-        // Actually processDailyCutEmail handles the "business logic". 
-        // We can log the "trigger" here.
-        auditService.log('SEND_REPORT', 'DAILY_CUT', 0, { date, email }, req.user?.id);
 
         // AUDIT
         auditService.log('SEND_REPORT', 'DAILY_CUT', 0, { date, email }, req.user?.id);
@@ -50,15 +52,19 @@ exports.previewDailyCut = async (req, res) => {
         const targetDate = date || new Date().toISOString().split('T')[0];
         const branchList = branches ? branches.split(',') : [];
 
-        // Reusing logic from dailyCutEmailService (but lighter)
         const { Folio } = require('../models');
         const { Op } = require('sequelize');
         const pdfService = require('../services/pdfService');
 
-        const tenantFilter = req.tenantFilter || {};
+        // FIX: Use centralized tenant scope
+        const tenantWhere = buildTenantWhere(req);
 
         const folios = await Folio.findAll({
-            where: { fecha_entrega: targetDate, estatus_folio: { [Op.ne]: 'Cancelado' }, ...tenantFilter },
+            where: {
+                fecha_entrega: targetDate,
+                estatus_folio: { [Op.ne]: 'Cancelado' },
+                ...tenantWhere // Spread the tenant filter
+            },
             order: [['hora_entrega', 'ASC']],
         });
 
@@ -68,15 +74,26 @@ exports.previewDailyCut = async (req, res) => {
             branches: branchList,
         });
 
+        // 2. Asegurar que lo que mandas es Buffer real
+        if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length < 100) {
+            return res.status(500).json({
+                message: 'PDF inválido',
+                details: 'El servicio de PDF retornó un buffer vacío o corrupto.'
+            });
+        }
+
+        // 1. Siempre setear headers explícitos
         res.set({
             'Content-Type': 'application/pdf',
             'Content-Disposition': `inline; filename="corte-${targetDate}.pdf"`,
             'Content-Length': pdfBuffer.length
         });
-        res.send(pdfBuffer);
+
+        return res.send(pdfBuffer);
 
     } catch (e) {
         console.error('previewDailyCut:', e);
-        res.status(500).json({ message: 'Error generando vista previa', error: e.message });
+        // 3. En catch, no mandes HTML default; manda JSON con details
+        res.status(500).json({ message: 'Error generando vista previa', details: e.message });
     }
 };

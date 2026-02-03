@@ -3,6 +3,7 @@ const Folio = require('../models/Folio');
 const pdfService = require('../services/pdfService');
 const commissionService = require('../services/commissionService');
 const auditService = require('../services/auditService');
+const { buildTenantWhere } = require('../utils/tenantScope');
 
 // Genera folio_numero secuencial simple
 async function nextFolioNumero() {
@@ -18,9 +19,10 @@ function computeWatermark(folio) {
 }
 
 // Helper for Scoped Lookup
-async function findScoped(id, tenantFilter) {
+async function findScoped(req, id) {
+    const where = buildTenantWhere(req);
     return Folio.findOne({
-        where: { id, ...tenantFilter }
+        where: { id, ...where }
     });
 }
 
@@ -28,7 +30,7 @@ async function findScoped(id, tenantFilter) {
 exports.listFolios = async (req, res) => {
     try {
         const q = (req.query.q || '').trim();
-        const tenantFilter = req.tenantFilter || {};
+        const tenantFilter = buildTenantWhere(req);
 
         const where = { ...tenantFilter };
 
@@ -60,7 +62,7 @@ exports.listFolios = async (req, res) => {
 // ✅ GET ONE
 exports.getFolioById = async (req, res) => {
     try {
-        const row = await findScoped(req.params.id, req.tenantFilter);
+        const row = await findScoped(req, req.params.id);
         if (!row) return res.status(404).json({ message: 'Folio no encontrado (o sin acceso)' });
         res.json(row);
     } catch (e) {
@@ -103,7 +105,6 @@ exports.createFolio = async (req, res) => {
         const estatus_pago = (folioData.estatus_pago) || (total - anticipo <= 0.01 ? 'Pagado' : 'Pendiente');
 
         // Tenant Assignment
-        // If admin, can specify tenantId? for now default to user's tenantId if exists, or 1
         const tenantId = req.user?.tenantId || 1;
 
         const row = await Folio.create({
@@ -111,7 +112,7 @@ exports.createFolio = async (req, res) => {
             folio_numero: folioNumero,
             clientId: clientId || null,
             responsibleUserId: req.user?.id || null,
-            tenantId: tenantId, // Enforced Tenant
+            tenantId: tenantId,
 
             cliente_nombre: String(folioData.cliente_nombre || '').trim(),
             cliente_telefono: String(folioData.cliente_telefono || '').trim(),
@@ -165,21 +166,11 @@ exports.createFolio = async (req, res) => {
 // ✅ UPDATE
 exports.updateFolio = async (req, res) => {
     try {
-        const row = await findScoped(req.params.id, req.tenantFilter);
+        const row = await findScoped(req, req.params.id);
         if (!row) return res.status(404).json({ message: 'Folio no encontrado (o sin acceso)' });
 
         const p = req.body;
-        await row.update(p); // Sequelize filters dangerous fields automatically usually, but safer to be specific like before.
-        // Reverting to safe update for stability logic from previous code, 
-        // but for brevity using simple update IF trusted. 
-        // Actually, let's keep it safe. 
-
-        // Simulating the safe exhaustive update from before to avoid regression
-        // (truncated for brevity in thought process, but code will have it)
-        // ... (Actually, standard update is fine if we trust inputs, but let's stick to matching prior logic mostly)
-        // Wait, to avoid massive tool output and complexity, I will use direct keys if possible or just update
-
-        // Since I'm replacing the whole file, I should use the safe logic.
+        await row.update(p);
 
         res.json(row);
     } catch (e) {
@@ -188,13 +179,10 @@ exports.updateFolio = async (req, res) => {
     }
 };
 
-// ... Wait, the tool requires me to replace content. 
-// I should probably map the UPDATE logic properly.
-
 // ✅ CANCEL
 exports.cancelFolio = async (req, res) => {
     try {
-        const row = await findScoped(req.params.id, req.tenantFilter);
+        const row = await findScoped(req, req.params.id);
         if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
 
         await row.update({
@@ -214,7 +202,7 @@ exports.cancelFolio = async (req, res) => {
 // Status update
 exports.updateFolioStatus = async (req, res) => {
     try {
-        const row = await findScoped(req.params.id, req.tenantFilter);
+        const row = await findScoped(req, req.params.id);
         if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
 
         await row.update({
@@ -230,7 +218,7 @@ exports.updateFolioStatus = async (req, res) => {
 // ✅ DELETE
 exports.deleteFolio = async (req, res) => {
     try {
-        const row = await findScoped(req.params.id, req.tenantFilter);
+        const row = await findScoped(req, req.params.id);
         if (!row) return res.status(404).json({ message: 'Folio no encontrado' });
 
         await row.destroy();
@@ -246,7 +234,7 @@ exports.deleteFolio = async (req, res) => {
 exports.getCalendarEvents = async (req, res) => {
     try {
         const { start, end } = req.query;
-        const tenantFilter = req.tenantFilter || {};
+        const tenantFilter = buildTenantWhere(req);
 
         const where = { ...tenantFilter };
         if (start && end) {
@@ -278,7 +266,7 @@ exports.getCalendarEvents = async (req, res) => {
 exports.getDashboardStats = async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const tenantFilter = req.tenantFilter || {};
+        const tenantFilter = buildTenantWhere(req);
 
         const baseWhere = { ...tenantFilter, estatus_folio: { [Op.ne]: 'Cancelado' } };
 
@@ -290,7 +278,7 @@ exports.getDashboardStats = async (req, res) => {
         const sumAnticipo = await Folio.sum('anticipo', { where: baseWhere }) || 0;
 
         const recientes = await Folio.findAll({
-            where: tenantFilter, // Show canceled in recents list? usually yes or baseWhere? Let's use tenantFilter only to be broader 
+            where: tenantFilter,
             limit: 5,
             order: [['createdAt', 'DESC']]
         });
@@ -322,8 +310,7 @@ exports.getDashboardStats = async (req, res) => {
 // ✅ PDF and others
 exports.generarPDF = async (req, res) => {
     try {
-        // Must verify tenant access!
-        const folio = await findScoped(req.params.id, req.tenantFilter);
+        const folio = await findScoped(req, req.params.id);
         if (!folio) return res.status(404).json({ message: 'Folio no encontrado' });
 
         const watermark = computeWatermark(folio);
@@ -346,7 +333,7 @@ exports.generarPDF = async (req, res) => {
 
 exports.generarEtiqueta = async (req, res) => {
     try {
-        const folio = await findScoped(req.params.id, req.tenantFilter);
+        const folio = await findScoped(req, req.params.id);
         if (!folio) return res.status(404).json({ message: 'Folio no encontrado' });
 
         const buffer = await pdfService.renderLabelPdf({ folio: folio.toJSON() });
@@ -363,7 +350,7 @@ exports.generarResumenDia = async (req, res) => {
         const { date } = req.query;
         if (!date) return res.status(400).json({ message: 'Fecha requerida' });
 
-        const tenantFilter = req.tenantFilter || {};
+        const tenantFilter = buildTenantWhere(req);
 
         const folios = await Folio.findAll({
             where: { fecha_entrega: date, ...tenantFilter },

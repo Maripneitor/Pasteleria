@@ -16,8 +16,15 @@ function authorize(roles = [], type = 'global') {
       return res.status(401).json({ message: 'No autenticado.' });
     }
 
-    const userRole = type === 'global' ? req.user.globalRole : req.user.tenantRole;
+    // Role is already normalized in authMiddleware and put in req.user.role
+    const userRole = req.user.role;
 
+    // SUPER_ADMIN bypass
+    if (userRole === 'SUPER_ADMIN') {
+      return next();
+    }
+
+    // Standard check
     if (!roles.includes(userRole)) {
       return res.status(403).json({
         message: 'No tienes permiso para realizar esta acción.',
