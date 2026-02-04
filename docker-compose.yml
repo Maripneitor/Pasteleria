@@ -51,6 +51,8 @@ services:
     volumes:
       - ./server:/app
       - /app/node_modules
+      - ./server/uploads:/app/uploads
+      - ./server/FOLIOS_GENERADOS:/app/FOLIOS_GENERADOS
     networks:
       - default
 

@@ -157,25 +157,16 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-// Sincronización DB y arranque
-// Sincronización DB y arranque
-// Lee DB_SYNC_MODE: 'none' (prod), 'safe' (create only), 'alter' (dev risky)
-const syncMode = process.env.DB_SYNC_MODE || 'none';
+
+// Import dbInit
+const { dbInit } = require('./scripts/initProject');
 
 async function startServer() {
   try {
-    if (syncMode === 'alter') {
-      console.warn("⚠️  WARNING: DB_SYNC_MODE='alter'. Schema updates enabled (Risky).");
-      await sequelize.sync({ alter: true });
-    } else if (syncMode === 'safe') {
-      console.log("ℹ️  DB_SYNC_MODE='safe'. Creating missing tables only.");
-      await sequelize.sync({ alter: false });
-    } else {
-      console.log("🛡️  DB_SYNC_MODE='none' (default). Skipping auto-sync.");
-      await sequelize.authenticate();
-    }
+    // Run Init Script (Auto-Heal)
+    await dbInit();
 
-    console.log('✅ DB Conectada.');
+    console.log('✅ DB Conectada y Sincronizada.');
 
     // Startup Info for Debugging
     const fs = require('fs');
@@ -184,7 +175,6 @@ async function startServer() {
     console.log(`   - PORT: ${PORT}`);
     console.log(`   - NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
     console.log(`   - client/dist exists: ${distExists}`);
-    console.log(`   - DB_SYNC_MODE: ${syncMode}`);
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);

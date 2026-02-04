@@ -1,164 +1,135 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <style>
         body {
             font-family: sans-serif;
-            margin: 5px; /* Reducir margen general */
-            font-size: 8pt; /* Tamaño base más pequeño */
+            margin: 0;
+            padding: 0;
         }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Columnas automáticas, min 140px */
-            gap: 5px; /* Espacio mínimo entre etiquetas */
-            width: 100%;
+
+        /* --- THERMAL FORMAT (80mm) --- */
+        .container.thermal {
+            width: 76mm;
+            /* Margen seguridad */
+            overflow: hidden;
+            padding: 2mm;
         }
-        .card {
-            border: 1px dashed #777; /* Borde más fino */
-            padding: 4px 6px;      /* Reducir padding interno */
-            page-break-inside: avoid;
-            display: flex;         /* Usar flexbox para control interno */
-            flex-direction: column;
-            justify-content: space-between; /* Distribuir espacio */
-            aspect-ratio: 2 / 1.1; /* Forzar proporción cercana a 5x2.5, ajustar el 1.1 */
-            box-sizing: border-box;
-            overflow: hidden; /* Evitar que el contenido se desborde */
-            position: relative;
-        }
-        .folio-number {
-            font-size: 14pt; /* Folio grande y prominente */
-            font-weight: bold;
+
+        .container.thermal .header {
             text-align: center;
-            line-height: 1.1;
-            margin-bottom: 2px; /* Espacio reducido */
-            color: #000;
-            white-space: nowrap; /* Evitar saltos de línea */
-        }
-        .details {
-            display: flex;
-            justify-content: space-between; /* Alinear hora y personas/forma */
-            align-items: center; /* Alinear verticalmente */
-            font-size: 8.5pt; /* Tamaño un poco más grande para detalles */
-            line-height: 1.2;
-            gap: 4px; /* Pequeño espacio entre elementos */
-        }
-        .time {
-            font-weight: bold;
-            white-space: nowrap; /* Evitar saltos de línea */
+            border-bottom: 2px dashed #000;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
         }
 
-        /* ===== INICIO DE LA CORRECCIÓN (CSS) ===== */
-        .shape-persons {
-            display: flex; /* Usar flex */
-            flex-direction: column; /* Apilar verticalmente */
-            align-items: flex-end; /* Alinear a la derecha */
-            white-space: nowrap; 
+        .container.thermal .folio-big {
+            font-size: 24pt;
+            font-weight: 900;
+            display: block;
         }
 
-        /* Estilo para el marcador 'C' */
-        .complement-marker {
-            font-size: 8.5pt;
+        .container.thermal .client-info {
+            font-size: 12pt;
             font-weight: bold;
-            color: #333;
-            background-color: #eee; /* Fondo gris claro */
-            border: 1px solid #bbb; /* Borde sutil */
-            border-radius: 50%; /* Círculo perfecto */
-            width: 16px;
-            height: 16px;
-            display: flex; /* Para centrar la 'C' */
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-            margin-bottom: 2px; /* Espacio entre el círculo y el texto de abajo */
+            margin-bottom: 5px;
         }
-         /* ===== FIN DE LA CORRECCIÓN (CSS) ===== */
 
-        .shape {
-            display: block; /* Forma en una línea */
-            text-transform: capitalize; /* Poner en mayúscula la primera letra */
+        .container.thermal .details {
+            font-size: 10pt;
+            margin-bottom: 5px;
         }
-        .persons {
-            display: block; /* Personas debajo de la forma */
-            font-weight: bold;
-        }
-        h1 { /* Opcional: reducir tamaño del título principal si interfiere */
+
+        .container.thermal .big-date {
             font-size: 14pt;
+            font-weight: bold;
             text-align: center;
-            margin-bottom: 10px;
-        }
-        /* Ocultar ID y Altura Extra para ahorrar espacio */
-        .folio-id, .extra-height {
-            display: none;
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            margin: 5px 0;
+            padding: 2px;
         }
 
-        /* Estilos específicos para impresión (opcional pero recomendado) */
-        @media print {
-            body { margin: 0; font-size: 7.5pt; }
-            .grid { gap: 2px; }
-            .card { border: 1px solid #555; padding: 3px 5px; aspect-ratio: 2 / 1; }
-            .folio-number { font-size: 12pt; }
-            .details { font-size: 8pt; }
-            h1 { display: none; }
-            
-            /* Asegurar que el marcador se imprima bien */
-            .complement-marker {
-                background-color: #eee !important;
-                color: #000 !important;
-                border: 1px solid #888;
-                -webkit-print-color-adjust: exact; /* Forzar impresión de fondo */
-                print-color-adjust: exact;
-            }
+        .container.thermal .qr-section {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .container.thermal .qr-img {
+            width: 40mm;
+            height: 40mm;
+        }
+
+        /* --- A4 / STANDARD FORMAT --- */
+        .container.a4 {
+            width: 100%;
+            border: 1px solid #ddd;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container.a4 .folio-big {
+            font-size: 40pt;
+            color: #ec4899;
+            font-weight: bold;
+        }
+
+        .container.a4 .client-info {
+            font-size: 18pt;
+            margin-top: 10px;
+        }
+
+        .container.a4 .big-date {
+            font-size: 20pt;
+            background: #fdf2f8;
+            padding: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #ec4899;
+        }
+
+        .container.a4 .qr-img {
+            width: 150px;
+            height: 150px;
         }
     </style>
 </head>
+
 <body>
-    <h1>Etiquetas del Día: <%= new Date(folios[0].deliveryDate + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }) %></h1>
-    <div class="grid">
-        <% folios.forEach(folio => { %>
-            <div class="card">
-                
-                <%# Formatear Hora %>
-                <%
-                    let formattedTime = 'Hora N/A';
-                    if (folio.deliveryTime) {
-                        try {
-                            const timeParts = folio.deliveryTime.split(':');
-                            const hour = parseInt(timeParts[0]);
-                            const minute = timeParts[1];
-                            const dateForTime = new Date();
-                            dateForTime.setHours(hour, minute);
-                            // Formato AM/PM conciso
-                            formattedTime = dateForTime.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit', hour12: true });
-                        } catch (e) { formattedTime = 'Hora Inv.'; }
-                    }
-                %>
-
-                <%# Número de Folio (prominente) %>
-                <div class="folio-number"><%= folio.folioNumber %></div>
-
-                <%# Detalles: Hora a la izquierda, Forma/Personas a la derecha %>
-                <div class="details">
-                    <span class="time"><%= formattedTime %></span>
-                    
-                    <span class="shape-persons">
-                        
-                        <% if (folio.labelType === 'complement') { %>
-                            <span class="complement-marker">C</span>
-                        <% } %>
-                        
-                        <span class="shape"><%= folio.shape ? folio.shape.charAt(0).toUpperCase() + folio.shape.slice(1).toLowerCase() : 'N/A' %></span>
-                        <span class="persons"><%= folio.persons %>p</span>
-                    </span>
-                    </div>
-
-                <%# ID y Altura Extra se omiten visualmente por CSS %>
-                <%# Se mantienen en el HTML por si se necesitan en el futuro %>
-                <p class="folio-id" style="display: none;"><strong>ID:</strong> <%= folio.id %></p>
-                <% if (folio.hasExtraHeight) { %>
-                    <p class="extra-height" style="display: none;">¡ALTURA EXTRA!</p>
-                <% } %>
+    <% folios.forEach(folio=> { %>
+        <div class="container <%= format %>">
+            <div class="header">
+                <span class="folio-big">
+                    <%= folio.folioNumber %>
+                </span>
+                <div class="client-info">
+                    <%= folio.clientName %>
+                </div>
             </div>
-        <% }); %>
-    </div>
+
+            <div class="big-date">
+                ENTREGA: <%= folio.deliveryDate %> - <%= folio.deliveryTime %>
+            </div>
+
+            <div class="details">
+                <strong>Especificaciones:</strong><br>
+                <%= folio.persons %> px | <%= folio.shape %>
+                        <% if(folio.hasExtraHeight) { %> | ⬆️ Altura Extra <% } %>
+                                <br><br>
+                                <strong>Descripción:</strong><br>
+                                <%= folio.description %>
+            </div>
+
+            <div class="qr-section" style="position: relative; display: inline-block;">
+                <img src="<%= folio.qrCode %>" class="qr-img" />
+                <!-- Branded Center Logo -->
+                <img src="<%= folio.logoUrl %>"
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20%; height: 20%; pointer-events: none;" />
+            </div>
+        </div>
+        <!-- Page Break if multiple -->
+        <div style="page-break-after: always; height: 1px;"></div>
+        <% }) %>
 </body>
+
 </html>

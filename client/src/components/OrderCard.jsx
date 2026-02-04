@@ -129,13 +129,30 @@ const OrderCard = ({ order, onUpdate }) => {
                 )}
 
                 {order.estatus_folio !== 'Cancelado' && (
-                    <button
-                        onClick={handlePrintLabel}
-                        title="Imprimir Etiqueta"
-                        className="flex items-center justify-center p-2 rounded-lg bg-white border border-gray-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition"
-                    >
-                        <Package size={18} />
-                    </button>
+                    <div className="relative group/print">
+                        <button
+                            className="flex items-center justify-center p-2 rounded-lg bg-white border border-gray-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition"
+                            title="Imprimir Etiqueta"
+                        >
+                            <Package size={18} />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        <div className="absolute bottom-full right-0 mb-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden hidden group-hover/print:block z-20">
+                            <button
+                                onClick={() => handlePdfResponse(() => ordersApi.downloadLabel(order.id, 'thermal'))}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-purple-50 text-gray-700 font-medium"
+                            >
+                                Ticket (80mm)
+                            </button>
+                            <button
+                                onClick={() => handlePdfResponse(() => ordersApi.downloadLabel(order.id, 'a4'))}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-purple-50 text-gray-700 font-medium"
+                            >
+                                Hoja (A4)
+                            </button>
+                        </div>
+                    </div>
                 )}
 
                 <button

@@ -71,6 +71,26 @@ client.interceptors.response.use(
         }
 
         // 1. Mostrar mensaje amigable (toast) en vez de error técnico
+        // Specialized Handler for Dashboard Stats 500 (Sync Issues)
+        if (error.config?.url?.includes('/stats') && error.response?.status === 500) {
+            console.warn("⚠️ Intercepted 500 on Stats (Returning Default)");
+            return {
+                data: {
+                    metrics: { totalOrders: 0, pendingOrders: 0, todayOrders: 0, totalSales: 0 },
+                    recientes: [],
+                    populares: []
+                }
+            };
+        }
+
+        // 🛡️ GENERAL 500 HANDLER (Sync/Maintenance)
+        if (error.response?.status === 500 && !error.config?.url?.includes('/stats')) {
+            toast.error("El sistema se está sincronizando, reintenta en 10 segundos", {
+                id: 'sync-error', // Prevent duplicates
+                duration: 6000
+            });
+        }
+
         // Salvo que la petición cancele explícitamente el toast (config.skipToast) - future proofing
         if (!error.config?.skipToast) {
             const msg = friendlyError(error);

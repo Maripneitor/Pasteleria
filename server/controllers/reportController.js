@@ -38,7 +38,10 @@ exports.sendDailyCut = async (req, res) => {
         }
 
         // AUDIT
-        auditService.log('SEND_REPORT', 'DAILY_CUT', 0, { date, email }, req.user?.id);
+        const userId = req.user?.id || 0;
+        try {
+            auditService.log('SEND_REPORT', 'DAILY_CUT', 0, { date, email }, userId);
+        } catch (auditErr) { console.warn('Audit fail:', auditErr.message); }
 
         return res.json({ ok: true, message: 'Corte guardado y enviado.' });
 

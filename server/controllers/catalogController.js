@@ -63,7 +63,7 @@ exports.updateFlavor = async (req, res) => {
         res.json(row);
     } catch (error) {
         console.error("Error updating flavor", error);
-        res.status(500).json({ message: "Error actualizando sabor" });
+        res.status(500).json({ message: "Error interno al actualizar", error: error.message });
     }
 };
 

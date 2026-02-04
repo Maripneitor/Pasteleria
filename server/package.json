@@ -4,7 +4,8 @@
   "description": "Sistema de gestión de pedidos para la pastelería La Fiesta",
   "main": "server.js",
   "scripts": {
-    "dev": "nodemon server.js",
+    "start": "node scripts/initProject.js && node server.js",
+    "dev": "node scripts/initProject.js && nodemon server.js",
     "seed:admins": "node scripts/seed_admins.js"
   },
   "author": "Isaac",

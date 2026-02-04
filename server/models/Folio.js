@@ -12,7 +12,8 @@ const Folio = sequelize.define('Folio', {
   folio_numero: {
     type: DataTypes.STRING(50),
     allowNull: true,
-    unique: false
+    unique: false,
+    field: 'folioNumber'
   },
 
   // Datos del Cliente
@@ -38,20 +39,32 @@ const Folio = sequelize.define('Folio', {
   // To be safe, I'll keep `deliveryLocation` as `ubicacion_entrega` to match Spanish style if possible, or just keep as is?
   // User 372 CREATE controller doesn't seem to use `deliveryLocation` column. It might be in `diseno_metadata` or just omitted in the snippet.
   // I'll leave `ubicacion_entrega` (string) just in case.
-  ubicacion_entrega: { type: DataTypes.STRING },
+  ubicacion_entrega: { type: DataTypes.STRING }, // General one-line or legacy
+
+  // Detalle de Entrega (Logística)
+  is_delivery: { type: DataTypes.BOOLEAN, defaultValue: false },
+  calle: { type: DataTypes.STRING, allowNull: true },
+  num_ext: { type: DataTypes.STRING, allowNull: true },
+  num_int: { type: DataTypes.STRING, allowNull: true },
+  colonia: { type: DataTypes.STRING, allowNull: true },
+  ubicacion_maps: { type: DataTypes.STRING, allowNull: true },
+  referencias: { type: DataTypes.TEXT, allowNull: true },
 
   // Especificaciones
   tipo_folio: { type: DataTypes.STRING, defaultValue: 'Normal' },
   forma: { type: DataTypes.STRING },
   numero_personas: { type: DataTypes.INTEGER },
+  altura_extra: { type: DataTypes.BOOLEAN, defaultValue: false },
 
   // Arrays (JSON in MySQL)
   sabores_pan: { type: DataTypes.JSON },
   rellenos: { type: DataTypes.JSON },
-  complementos: { type: DataTypes.JSON },
+  complementos: { type: DataTypes.JSON }, // Legacy or simple items
+  accesorios: { type: DataTypes.JSON },   // New simple items list
 
   // Diseño
   descripcion_diseno: { type: DataTypes.TEXT },
+  dedicatoria: { type: DataTypes.TEXT },
   imagen_referencia_url: { type: DataTypes.STRING },
   diseno_metadata: { type: DataTypes.JSON },
 
@@ -60,6 +73,10 @@ const Folio = sequelize.define('Folio', {
   costo_envio: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
   anticipo: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
   total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  resta: {
+    type: DataTypes.VIRTUAL,
+    get() { return this.total - this.anticipo; }
+  },
 
   // Status Pagos
   estatus_pago: { type: DataTypes.STRING, defaultValue: 'Pendiente' },

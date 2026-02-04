@@ -10,10 +10,23 @@ export const OrderProvider = ({ children }) => {
     const [orderData, setOrderData] = useState({
         clientName: '',
         clientPhone: '',
-        products: [], // { id, flavor, filling, design }
+        // Products (Pastel Principal)
+        products: [], // { id, flavor, filling, design... } 
+
+        // New Arrays
+        complements: [], // Complex extra cakes: { personas, flavor, filling... }
+        extras: [],      // Simple items: { qty, name, price }
+
+        // Delivery
         deliveryDate: '',
         deliveryTime: '',
         isDelivery: false,
+        deliveryLocation: '', // General field (legacy or simple)
+        calle: '',
+        colonia: '',
+        referencias: '',
+        shippingCost: 0,
+
         total: 0,
         advance: 0,
         applyCommission: false

@@ -1,6 +1,6 @@
 git add .
 
- git commit -m "v.2.0012" 
+ git commit -m "v.2.0013-inestable" 
 
  git push -u origin main  
 
@@ -8,6 +8,9 @@ git add .
  # 1) levantar DB sola y esperar health
 docker-compose up -d db
 docker-compose ps
+
+
+docker-compose down
 
 # 2) correr reparación (recomendado dentro del contenedor server)
 docker-compose exec pasteleria-server node server/scripts/db_repair.js

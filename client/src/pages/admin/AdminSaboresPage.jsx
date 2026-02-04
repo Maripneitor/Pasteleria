@@ -64,8 +64,12 @@ export default function AdminSaboresPage() {
         }
     };
 
+    const [submitting, setSubmitting] = useState(false);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (submitting) return;
+        setSubmitting(true);
         try {
             if (isEditing) {
                 if (activeTab === 'flavors') await catalogApi.updateFlavor(editId, formData);
@@ -80,6 +84,8 @@ export default function AdminSaboresPage() {
             fetchData();
         } catch {
             toast.error('Error al guardar');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -216,9 +222,10 @@ export default function AdminSaboresPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition shadow-lg"
+                                    disabled={submitting}
+                                    className={`flex-1 py-3 font-bold rounded-xl transition shadow-lg ${submitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-900 hover:bg-black text-white'}`}
                                 >
-                                    Guardar
+                                    {submitting ? 'Guardando...' : 'Guardar'}
                                 </button>
                             </div>
                         </form>

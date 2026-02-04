@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, User, Phone, DollarSign, FileText, Clock, Calendar, CheckCircle } from 'lucide-react';
+import { X, User, Phone, DollarSign, FileText, Clock, Calendar, CheckCircle, Package } from 'lucide-react';
 import { ordersApi } from '../../services/ordersApi';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -129,6 +129,36 @@ const EventDetailModal = ({ eventId, onClose }) => {
 
                         {/* Actions */}
                         <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+                            {/* Print Dropdown */}
+                            <div className="relative group">
+                                <button className="px-4 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm flex items-center gap-2">
+                                    <Package size={20} className="text-purple-600" />
+                                    <span>Etiqueta</span>
+                                </button>
+                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden hidden group-hover:block z-50">
+                                    <button
+                                        onClick={() => {
+                                            import('../../utils/pdfHelper').then(({ handlePdfResponse }) => {
+                                                handlePdfResponse(() => ordersApi.downloadLabel(data.id, 'thermal'));
+                                            });
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm hover:bg-purple-50 text-gray-700 font-medium border-b border-gray-50"
+                                    >
+                                        Ticket (80mm)
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            import('../../utils/pdfHelper').then(({ handlePdfResponse }) => {
+                                                handlePdfResponse(() => ordersApi.downloadLabel(data.id, 'a4'));
+                                            });
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-sm hover:bg-purple-50 text-gray-700 font-medium"
+                                    >
+                                        Hoja (A4)
+                                    </button>
+                                </div>
+                            </div>
+
                             <button
                                 onClick={() => navigate(`/pedidos/${data.id}/editar`)}
                                 className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl transition shadow-lg shadow-pink-200"

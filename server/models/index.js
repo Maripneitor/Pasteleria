@@ -2,6 +2,7 @@ const { sequelize } = require('../config/database');
 const User = require('./user');
 const Client = require('./client');
 const Folio = require('./Folio');
+const FolioComplemento = require('./FolioComplemento');
 const FolioEditHistory = require('./FolioEditHistory');
 const Commission = require('./Commission');
 const AISession = require('./AISession'); // Modelo nuevo para las sesiones de chat
@@ -26,6 +27,10 @@ Folio.belongsTo(User, { as: 'responsibleUser', foreignKey: 'responsibleUserId', 
 
 Client.hasMany(Folio, { foreignKey: 'clientId' });
 Folio.belongsTo(Client, { as: 'client', foreignKey: 'clientId', onDelete: 'SET NULL' });
+
+// --- Relación para Complementos ---
+Folio.hasMany(FolioComplemento, { as: 'complementosList', foreignKey: 'folioId', onDelete: 'CASCADE' });
+FolioComplemento.belongsTo(Folio, { foreignKey: 'folioId', onDelete: 'CASCADE' });
 
 // --- Relación para Comisiones ---
 Folio.hasOne(Commission, { foreignKey: 'folioId', as: 'commission' });
@@ -68,6 +73,7 @@ module.exports = {
   User,
   Client,
   Folio,
+  FolioComplemento,
   FolioEditHistory,
   Commission,
   AISession,

@@ -225,6 +225,238 @@ const StepProduct = () => {
                 )}
             </div>
 
+            {/* --- ADICIONALES (Tabla Simple) --- */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span>🛍️</span> Adicionales / Extras
+                </h3>
+
+                <div className="overflow-x-auto mb-4">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50 text-gray-600 font-semibold border-b">
+                            <tr>
+                                <th className="p-3 text-left w-20">Cant</th>
+                                <th className="p-3 text-left">Descripción</th>
+                                <th className="p-3 text-right w-24">Precio $</th>
+                                <th className="p-3 text-right w-24">Subtotal</th>
+                                <th className="p-3 w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {(orderData.extras || []).map((item, idx) => (
+                                <tr key={idx} className="hover:bg-gray-50/50">
+                                    <td className="p-2">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={item.qty}
+                                            onChange={(e) => {
+                                                const newExtras = [...(orderData.extras || [])];
+                                                newExtras[idx].qty = Number(e.target.value);
+                                                updateOrder({ extras: newExtras });
+                                            }}
+                                            className="w-14 p-1 border rounded text-center"
+                                        />
+                                    </td>
+                                    <td className="p-2">
+                                        <input
+                                            type="text"
+                                            value={item.description}
+                                            onChange={(e) => {
+                                                const newExtras = [...(orderData.extras || [])];
+                                                newExtras[idx].description = e.target.value;
+                                                updateOrder({ extras: newExtras });
+                                            }}
+                                            className="w-full p-1 border rounded"
+                                            placeholder="Ej. Vela mágica"
+                                        />
+                                    </td>
+                                    <td className="p-2">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={item.price}
+                                            onChange={(e) => {
+                                                const newExtras = [...(orderData.extras || [])];
+                                                newExtras[idx].price = Number(e.target.value);
+                                                updateOrder({ extras: newExtras });
+                                            }}
+                                            className="w-20 p-1 border rounded text-right"
+                                        />
+                                    </td>
+                                    <td className="p-3 text-right font-medium text-gray-700">
+                                        ${(item.qty * item.price).toFixed(2)}
+                                    </td>
+                                    <td className="p-2 text-center">
+                                        <button
+                                            onClick={() => {
+                                                const newExtras = orderData.extras.filter((_, i) => i !== idx);
+                                                updateOrder({ extras: newExtras });
+                                            }}
+                                            className="text-gray-400 hover:text-red-500"
+                                        >
+                                            ✕
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
+                    <button
+                        onClick={() => {
+                            const newExtras = [...(orderData.extras || []), { qty: 1, description: '', price: 0 }];
+                            updateOrder({ extras: newExtras });
+                        }}
+                        className="text-sm font-semibold text-pink-600 hover:text-pink-700 flex items-center gap-1"
+                    >
+                        + Agregar Fila
+                    </button>
+                    <div className="text-right">
+                        <span className="text-gray-500 text-sm mr-2">Total Extras:</span>
+                        <span className="font-bold text-gray-800 text-lg">
+                            ${(orderData.extras || []).reduce((acc, curr) => acc + (curr.qty * curr.price), 0).toFixed(2)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- COMPLEMENTOS (Complex Cakes) --- */}
+            <div className="bg-pink-50/50 p-6 rounded-2xl border border-pink-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span>🎂</span> Pasteles Complementarios
+                </h3>
+
+                {(orderData.complements || []).map((comp, idx) => (
+                    <div key={idx} className="bg-white p-4 rounded-xl border border-gray-200 mb-4 shadow-sm relative animate-in fade-in slide-in-from-bottom-2">
+                        <button
+                            onClick={() => {
+                                const newComps = orderData.complements.filter((_, i) => i !== idx);
+                                updateOrder({ complements: newComps });
+                            }}
+                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1"
+                        >
+                            ✕
+                        </button>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                            <div>
+                                <label className="text-xs font-semibold text-gray-500 uppercase">Personas</label>
+                                <input
+                                    type="number"
+                                    value={comp.personas}
+                                    onChange={(e) => {
+                                        const newComps = [...orderData.complements];
+                                        newComps[idx].personas = e.target.value;
+                                        updateOrder({ complements: newComps });
+                                    }}
+                                    className="w-full p-2 border rounded-lg"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-gray-500 uppercase">Forma</label>
+                                <select
+                                    value={comp.forma}
+                                    onChange={(e) => {
+                                        const newComps = [...orderData.complements];
+                                        newComps[idx].forma = e.target.value;
+                                        updateOrder({ complements: newComps });
+                                    }}
+                                    className="w-full p-2 border rounded-lg bg-white"
+                                >
+                                    <option value="Redondo">Redondo</option>
+                                    <option value="Cuadrado">Cuadrado</option>
+                                    <option value="Rectangular">Rectangular</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-gray-500 uppercase">Sabor</label>
+                                {/* Simple Text Input for flexibility in complements for now, or reuse select logic? 
+                                    User asked to accept "ID or Text". Let's use text for simplicity/speed or simple select. 
+                                    Let's use a simple input for now or reuse the select from main product? 
+                                    Let's use a hybrid: Select + "Otro" logic is complex UI. 
+                                    Let's stick to a simple Select using the loaded 'flavors' array if possible.
+                                */}
+                                <select
+                                    value={comp.sabor}
+                                    onChange={(e) => {
+                                        const newComps = [...orderData.complements];
+                                        newComps[idx].sabor = e.target.value;
+                                        updateOrder({ complements: newComps });
+                                    }}
+                                    className="w-full p-2 border rounded-lg bg-white"
+                                >
+                                    <option value="">Seleccionar</option>
+                                    {flavors.map(f => (
+                                        <option key={f.id} value={f.name}>{f.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-gray-500 uppercase">Relleno</label>
+                                <select
+                                    value={comp.relleno}
+                                    onChange={(e) => {
+                                        const newComps = [...orderData.complements];
+                                        newComps[idx].relleno = e.target.value;
+                                        updateOrder({ complements: newComps });
+                                    }}
+                                    className="w-full p-2 border rounded-lg bg-white"
+                                >
+                                    <option value="">Seleccionar</option>
+                                    {fillings.map(f => (
+                                        <option key={f.id} value={f.name}>{f.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="flex-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase">Descripción</label>
+                                <input
+                                    type="text"
+                                    value={comp.descripcion}
+                                    onChange={(e) => {
+                                        const newComps = [...orderData.complements];
+                                        newComps[idx].descripcion = e.target.value;
+                                        updateOrder({ complements: newComps });
+                                    }}
+                                    className="w-full p-2 border rounded-lg"
+                                    placeholder="Detalles..."
+                                />
+                            </div>
+                            <div className="w-32">
+                                <label className="text-xs font-semibold text-gray-500 uppercase">Precio $</label>
+                                <input
+                                    type="number"
+                                    value={comp.precio}
+                                    onChange={(e) => {
+                                        const newComps = [...orderData.complements];
+                                        newComps[idx].precio = e.target.value;
+                                        updateOrder({ complements: newComps });
+                                    }}
+                                    className="w-full p-2 border rounded-lg font-bold text-right text-green-700"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                <button
+                    onClick={() => {
+                        const newComps = [...(orderData.complements || []), {
+                            personas: 10, forma: 'Redondo', sabor: '', relleno: '', precio: 0, descripcion: ''
+                        }];
+                        updateOrder({ complements: newComps });
+                    }}
+                    className="w-full py-3 border-2 border-dashed border-pink-300 rounded-xl text-pink-600 font-bold hover:bg-pink-50 transition-colors"
+                >
+                    + Añadir Pastel Complementario
+                </button>
+            </div>
+
             <div className="flex flex-col items-end gap-2">
                 <span className="text-xs text-red-500 font-medium">
                     {!isValid && (

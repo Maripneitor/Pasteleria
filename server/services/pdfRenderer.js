@@ -1,17 +1,33 @@
-const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
 
-let browserPromise = null;
+async function logPdfError(error) {
+    const logPath = path.join(__dirname, '../logs/pdf_errors.log');
+    const message = `[${new Date().toISOString()}] ERROR: ${error.message}\nSTACK: ${error.stack}\n\n`;
+    const logDir = path.join(__dirname, '../logs');
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+    fs.appendFileSync(logPath, message);
+}
 
 async function getBrowser() {
-    if (!browserPromise) {
-        browserPromise = puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            // Si en PROD te falla Chromium, añade:
-            // executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-            headless: 'new',
-        });
+    try {
+        if (!browserPromise) {
+            browserPromise = puppeteer.launch({
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage', // Ayuda con el error EAGAIN en contenedores
+                    '--single-process'         // Estabilidad en entornos de pocos recursos
+                ],
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
+                headless: 'new',
+            });
+        }
+        return browserPromise;
+    } catch (err) {
+        await logPdfError(err);
+        throw err;
     }
-    return browserPromise;
 }
 
 async function renderHtmlToPdfBuffer(html, pdfOptions = {}) {
@@ -58,9 +74,12 @@ async function renderHtmlToPdfBuffer(html, pdfOptions = {}) {
 
         return buffer;
 
+    } catch (e) {
+        await logPdfError(e);
+        throw e;
     } finally {
         // Always close the page
-        await page.close();
+        if (page) await page.close();
     }
 }
 

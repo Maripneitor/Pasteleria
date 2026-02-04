@@ -59,16 +59,46 @@ const StepDetails = () => {
                 </label>
 
                 {orderData.isDelivery && (
-                    <div className="relative animate-in slide-in-from-top-2">
-                        <MapPin className="absolute left-3 top-3.5 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            name="deliveryLocation"
-                            value={orderData.deliveryLocation || ''}
+                    <div className="space-y-3 animate-in slide-in-from-top-2 pt-2 border-t border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <input
+                                type="text"
+                                name="calle"
+                                value={orderData.calle || ''}
+                                onChange={handleChange}
+                                placeholder="Calle y Número"
+                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                            />
+                            <input
+                                type="text"
+                                name="colonia"
+                                value={orderData.colonia || ''}
+                                onChange={handleChange}
+                                placeholder="Colonia"
+                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                            />
+                        </div>
+                        <textarea
+                            name="referencias"
+                            value={orderData.referencias || ''}
                             onChange={handleChange}
-                            placeholder="Dirección completa de entrega"
-                            className="w-full pl-10 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                            placeholder="Referencias (Color de casa, portón, entre calles...)"
+                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white h-20 resize-none"
                         />
+
+                        <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                            <span className="text-blue-700 font-semibold text-sm">Costo de Envío:</span>
+                            <div className="relative w-32">
+                                <span className="absolute left-3 top-2 text-blue-500 font-bold">$</span>
+                                <input
+                                    type="number"
+                                    name="shippingCost"
+                                    value={orderData.shippingCost || 0}
+                                    onChange={handleChange}
+                                    className="w-full pl-6 p-2 border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 font-bold text-gray-700"
+                                />
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

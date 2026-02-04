@@ -26,7 +26,7 @@ export default function ProductionPage() {
             setOrders(res.data);
         } catch {
             console.error("Error descargando producción");
-            toast.error("Error descargando producción");
+            // toast.error("Error descargando producción"); // Silenced for polling
         } finally {
             setLoading(false);
         }

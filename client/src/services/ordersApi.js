@@ -102,10 +102,10 @@ export const ordersApi = {
         return `${apiUrl}/folios/${id}/pdf?token=${encodeURIComponent(token || '')}`;
     },
 
-    getLabelPdfUrl: (id) => {
+    getLabelPdfUrl: (id, format = 'a4') => {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
         const token = getToken();
-        return `${apiUrl}/folios/${id}/label-pdf?token=${encodeURIComponent(token || '')}`;
+        return `${apiUrl}/folios/${id}/label-pdf?format=${format}&token=${encodeURIComponent(token || '')}`;
     },
 
     getDaySummaryPdfUrl: (date) => {
@@ -119,8 +119,8 @@ export const ordersApi = {
         return await client.get(`/folios/${id}/pdf`, { responseType: 'blob' });
     },
 
-    downloadLabel: async (id) => {
-        return await client.get(`/folios/${id}/label-pdf`, { responseType: 'blob' });
+    downloadLabel: async (id, format = 'a4') => {
+        return await client.get(`/folios/${id}/label-pdf?format=${format}`, { responseType: 'blob' });
     },
 
     downloadDaySummary: async (date) => {
