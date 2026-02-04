@@ -25,11 +25,31 @@ const smartSync = async () => {
             { name: 'colonia', type: sequelize.Sequelize.STRING(255) },
             { name: 'ubicacion_maps', type: sequelize.Sequelize.TEXT },
             { name: 'referencias', type: sequelize.Sequelize.TEXT },
+
             // JSON Fields (Arrays)
             { name: 'accesorios', type: sequelize.Sequelize.JSON },
             { name: 'sabores_pan', type: sequelize.Sequelize.JSON },
             { name: 'rellenos', type: sequelize.Sequelize.JSON },
-            { name: 'complementos', type: sequelize.Sequelize.JSON }
+            { name: 'complementos', type: sequelize.Sequelize.JSON },
+            { name: 'diseno_metadata', type: sequelize.Sequelize.JSON },
+
+            // Design & Metadata
+            { name: 'descripcion_diseno', type: sequelize.Sequelize.TEXT },
+            { name: 'dedicatoria', type: sequelize.Sequelize.TEXT },
+            { name: 'imagen_referencia_url', type: sequelize.Sequelize.STRING(255) },
+
+            // Status & Timestamps
+            { name: 'estatus_folio', type: sequelize.Sequelize.STRING(50), defaultValue: 'Activo' },
+            { name: 'estatus_produccion', type: sequelize.Sequelize.STRING(50), defaultValue: 'Pendiente' },
+            { name: 'estatus_pago', type: sequelize.Sequelize.STRING(50), defaultValue: 'Pendiente' },
+            { name: 'cancelado_en', type: sequelize.Sequelize.DATE },
+            { name: 'motivo_cancelacion', type: sequelize.Sequelize.STRING(255) },
+
+            // Financials (if missing)
+            { name: 'costo_base', type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 },
+            { name: 'costo_envio', type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 },
+            { name: 'anticipo', type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 },
+            { name: 'total', type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 }
         ];
 
         for (const col of columnsToCheck) {

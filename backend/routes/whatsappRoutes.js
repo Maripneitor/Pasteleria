@@ -8,7 +8,8 @@ const role = require('../middleware/roleMiddleware');
 // Base URL: /api/whatsapp
 
 // router.get('/status', auth, role(['ADMIN']), whatsappController.getStatus); // (Optional if you implement it)
-router.get('/qr', auth, role(['ADMIN']), whatsappController.getQR);
+// Public for <img> tag usage
+router.get('/qr', whatsappController.getQR);
 router.post('/refresh', auth, role(['ADMIN']), whatsappController.refreshSession);
 
 module.exports = router;

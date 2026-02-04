@@ -37,12 +37,12 @@ import BrandingPage from './pages/admin/BrandingPage';
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
-import DebugPanel from './components/DebugPanel';
+// DebugPanel removed (diagnostic mode off)
 
 function App() {
   return (
     <>
-      <DebugPanel />
+
       <Toaster position="top-right" toastOptions={{ className: '', style: { border: '1px solid #fbcfe8', padding: '16px', color: '#831843' } }} />
 
       <Routes>

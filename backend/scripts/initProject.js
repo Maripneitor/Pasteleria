@@ -18,8 +18,13 @@ const dbInit = async () => {
     console.log('🚀 Initializing Project Pastelería...');
 
     try {
-        // 1. Authenticate & Sync
+        // 1. Authenticate
         await sequelize.authenticate();
+
+        // 🛡️ AUTO-MIGRATION (Run BEFORE Sync)
+        const smartSync = require('./smartSync');
+        await smartSync();
+
         // Check DB_SYNC_MODE to determine sync strategy
         const syncMode = process.env.DB_SYNC_MODE || 'none';
         if (syncMode === 'alter') {
@@ -31,10 +36,6 @@ const dbInit = async () => {
         } else {
             await sequelize.sync();
             console.log('✅ DB Schema Synced (Standard - No Alter)');
-
-            // 🛡️ AUTO-MIGRATION
-            const smartSync = require('./smartSync');
-            await smartSync();
         }
 
         // 2. Seed Admins

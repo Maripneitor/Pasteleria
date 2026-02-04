@@ -11,7 +11,7 @@ const StepDetails = () => {
     };
 
     const isValid = orderData.deliveryDate && orderData.deliveryTime &&
-        (!orderData.isDelivery || (orderData.isDelivery && orderData.deliveryLocation));
+        (!orderData.isDelivery || (orderData.isDelivery && orderData.calle && orderData.colonia));
 
     return (
         <div className="space-y-6 fade-in">
@@ -99,6 +99,17 @@ const StepDetails = () => {
                                 />
                             </div>
                         </div>
+
+                        {orderData.calle && orderData.colonia && (
+                            <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${orderData.calle}, ${orderData.colonia}`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mt-2 text-sm font-medium"
+                            >
+                                <MapPin size={18} /> Ver ubicación en Google Maps
+                            </a>
+                        )}
                     </div>
                 )}
             </div>
