@@ -9,11 +9,11 @@ const Folio = sequelize.define('Folio', {
   },
 
   // Identificador de folio (muy recomendado)
-  folio_numero: {
+  folioNumber: {
     type: DataTypes.STRING(50),
+    field: 'folio_numero',
     allowNull: true,
     unique: false,
-    field: 'folioNumber'
   },
 
   // Datos del Cliente
@@ -54,7 +54,7 @@ const Folio = sequelize.define('Folio', {
   tipo_folio: { type: DataTypes.STRING, defaultValue: 'Normal' },
   forma: { type: DataTypes.STRING },
   numero_personas: { type: DataTypes.INTEGER },
-  altura_extra: { type: DataTypes.BOOLEAN, defaultValue: false },
+  altura_extra: { type: DataTypes.STRING, defaultValue: 'No' },
 
   // Arrays (JSON in MySQL)
   sabores_pan: { type: DataTypes.JSON },

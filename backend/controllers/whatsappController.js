@@ -128,7 +128,19 @@ exports.getQR = async (req, res) => {
   try {
     const data = gateway.getStatus();
 
-    // Si hay QR (raw string), lo convertimos a imagen base64
+    // Support for Direct Image Source: /api/whatsapp/qr?format=image
+    if (req.query.format === 'image') {
+      if (!data.qr) {
+        // Return placeholder or 404
+        return res.status(404).send('QR Not Ready');
+      }
+      const qrcode = require('qrcode');
+      // Serve as PNG stream
+      res.setHeader('Content-Type', 'image/png');
+      return qrcode.toFileStream(res, data.qr);
+    }
+
+    // Default JSON behavior
     if (data.qr) {
       const qrcode = require('qrcode');
       data.qr = await qrcode.toDataURL(data.qr);

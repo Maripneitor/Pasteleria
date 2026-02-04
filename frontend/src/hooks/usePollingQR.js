@@ -77,7 +77,8 @@ export const usePollingQRV2 = () => {
     // Expose a way to force reload
     const loadQR = async () => {
         try {
-            const res = await client.get('/webhooks/qr');
+            // Updated Endpoint: /api/whatsapp/qr
+            const res = await client.get('/whatsapp/qr');
             setState(res.data);
             return res.data;
         } catch (e) {
@@ -88,7 +89,8 @@ export const usePollingQRV2 = () => {
 
     const restartSession = async () => {
         try {
-            await client.post('/webhooks/restart');
+            // Updated Endpoint: /api/whatsapp/refresh
+            await client.post('/whatsapp/refresh');
             setState({ qr: null, status: 'loading' });
             // Poll will pick it up
         } catch (e) {

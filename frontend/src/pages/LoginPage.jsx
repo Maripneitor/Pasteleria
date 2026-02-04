@@ -8,10 +8,12 @@ import axios from '../config/axios';
 import toast from 'react-hot-toast';
 import AnimatedText from '../components/AnimatedText';
 import InputGroup from '../components/InputGroup';
+import { useAuth } from '../context/AuthContext'; // NEW IMPORT
 
 const LoginPage = () => {
     const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
     const navigate = useNavigate();
+    const { login } = useAuth(); // NEW HOOK
 
     // Paso 2: Health Check al montar el componente
     useEffect(() => {
@@ -46,12 +48,10 @@ const LoginPage = () => {
             // 2. Si llegamos aquí, es éxito (200 OK)
             console.log("Respuesta del servidor:", res.data);
 
-            // 3. Guardamos el token
+            // 3. Actualizamos el Contexto (Token + User State)
             if (res.data.token) {
-                localStorage.setItem('token', res.data.token);
-                if (res.data.user) {
-                    localStorage.setItem('user', JSON.stringify(res.data.user));
-                }
+                // Esta función ya se encarga de guardar en localStorage y actualizar el estado 'user'
+                await login(res.data.token, res.data.user);
 
                 // 4. Feedback al usuario
                 const nombre = res.data.user?.name || res.data.user?.username || "Usuario";

@@ -13,7 +13,7 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./server/RESPALDOS_BD/backup_2025-09-30.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/RESPALDOS_BD/backup_2025-09-30.sql:/docker-entrypoint-initdb.d/init.sql
     # SALUD: Verifica cada 10s si MySQL responde
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DB_PASSWORD}" ]
@@ -23,9 +23,9 @@ services:
       start_period: 30s
 
   # 2. BACKEND (Espera a que la DB esté lista)
-  server:
-    build: ./server
-    container_name: pasteleria-server
+  backend:
+    build: ./backend
+    container_name: pasteleria-backend
     restart: always
     depends_on:
       db:
@@ -40,7 +40,7 @@ services:
       - DB_NAME=${DB_NAME}
       - JWT_SECRET=${JWT_SECRET}
       - DB_PORT=3306 # Force internal port, ignoring local .env
-      - WEBHOOK_URL=http://server:3000/api/webhooks/whatsapp
+      - WEBHOOK_URL=http://backend:3000/api/webhooks/whatsapp
       - DB_SYNC_MODE=none # 🛡️ Safe Mode for Docker: No schema changes on boot
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
@@ -49,47 +49,47 @@ services:
       retries: 3
       start_period: 40s
     volumes:
-      - ./server:/app
+      - ./backend:/app
       - /app/node_modules
-      - ./server/uploads:/app/uploads
-      - ./server/FOLIOS_GENERADOS:/app/FOLIOS_GENERADOS
+      - ./backend/uploads:/app/uploads
+      - ./backend/FOLIOS_GENERADOS:/app/FOLIOS_GENERADOS
     networks:
       - default
 
   # 3. FRONTEND
-  client:
-    build: ./client
-    container_name: pasteleria-client
+  frontend:
+    build: ./frontend
+    container_name: pasteleria-frontend
     restart: always
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=/api
-      - VITE_PROXY_TARGET=http://pasteleria-server:3000
+      - VITE_PROXY_TARGET=http://pasteleria-backend:3000
     volumes:
-      - ./client:/app
+      - ./frontend:/app
       - /app/node_modules
     command: npm run dev -- --host
 
   # 4. WHATSAPP BOT (Configurado para Docker)
   whatsapp:
-    build: ./server
+    build: ./backend
     container_name: pasteleria-whatsapp
     restart: always
     depends_on:
-      - server
+      - backend
     # IMPORTANTE: Forzamos la ruta de Chromium y argumentos de Puppeteer
     environment:
-      - WEBHOOK_URL=http://server:3000/api/webhooks/whatsapp
+      - WEBHOOK_URL=http://backend:3000/api/webhooks/whatsapp
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
     # Mantenemos vivo el contenedor para debuggear si el script falla
     command: node whatsapp-gateway.js
     volumes:
-      - ./server:/app
+      - ./backend:/app
       - /app/node_modules
-      - ./server/.wwebjs_auth:/app/.wwebjs_auth
-      - ./server/.wwebjs_cache:/app/.wwebjs_cache
+      - ./backend/.wwebjs_auth:/app/.wwebjs_auth
+      - ./backend/.wwebjs_cache:/app/.wwebjs_cache
 
 volumes:
   mysql_data:

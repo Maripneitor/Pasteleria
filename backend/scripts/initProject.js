@@ -20,9 +20,22 @@ const dbInit = async () => {
     try {
         // 1. Authenticate & Sync
         await sequelize.authenticate();
-        // Sync with ALTER to update columns without dropping data
-        await sequelize.sync({ alter: true });
-        console.log('✅ DB Schema Synced (Alter)');
+        // Check DB_SYNC_MODE to determine sync strategy
+        const syncMode = process.env.DB_SYNC_MODE || 'none';
+        if (syncMode === 'alter') {
+            await sequelize.sync({ alter: true });
+            console.log('✅ DB Schema Synced (Alter)');
+        } else if (syncMode === 'force') {
+            await sequelize.sync({ force: true });
+            console.log('⚠️ DB Schema Synced (FORCE - DATA LOST)');
+        } else {
+            await sequelize.sync();
+            console.log('✅ DB Schema Synced (Standard - No Alter)');
+
+            // 🛡️ AUTO-MIGRATION
+            const smartSync = require('./smartSync');
+            await smartSync();
+        }
 
         // 2. Seed Admins
         const admins = [

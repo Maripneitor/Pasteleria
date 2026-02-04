@@ -48,7 +48,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/FOLIOS_GENERADOS', express.static(path.join(__dirname, 'FOLIOS_GENERADOS')));
 
 // 📦 SERVIR FRONTEND (PRODUCCIÓN)
-app.use(express.static(path.join(__dirname, '../client/dist')));
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // 👇 RUTAS MAESTRAS (Prefijo sagrado '/api')
 app.get('/api', (req, res) => res.json({ status: 'online', message: 'API Pastelería v2.0' }));
@@ -118,7 +118,7 @@ app.get('/api/health', async (req, res) => {
 // 🚀 FALLBACK SPA (Para React Router)
 // Si no es /api ni archivo estático, devuelve index.html
 app.get('*', (req, res) => {
-  const distPath = path.join(__dirname, '../client/dist/index.html');
+  const distPath = path.join(__dirname, '../frontend/dist/index.html');
   const fs = require('fs');
 
   // Guard: if dist doesn't exist (dev mode), return helpful message
@@ -170,7 +170,7 @@ async function startServer() {
 
     // Startup Info for Debugging
     const fs = require('fs');
-    const distExists = fs.existsSync(path.join(__dirname, '../client/dist/index.html'));
+    const distExists = fs.existsSync(path.join(__dirname, '../frontend/dist/index.html'));
     console.log('🔧 Server Config:');
     console.log(`   - PORT: ${PORT}`);
     console.log(`   - NODE_ENV: ${process.env.NODE_ENV || 'development'}`);

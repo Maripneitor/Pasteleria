@@ -51,8 +51,15 @@ const WhatsAppPage = () => {
                         </div>
                     )}
 
-                    {qr && status !== 'ready' && (
-                        <img src={qr} alt="WhatsApp QR" className="w-full h-full object-contain scale-95 group-hover:scale-100 transition duration-500" />
+                    {/* QR Display - Uses direct backend URL for robustness */}
+                    {status !== 'ready' && (
+                        <img
+                            src={`/api/whatsapp/qr?format=image&t=${Date.now()}`}
+                            alt="WhatsApp QR"
+                            className={`w-full h-full object-contain scale-95 group-hover:scale-100 transition duration-500 ${status === 'loading' ? 'opacity-0' : 'opacity-100'}`}
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                            onLoad={(e) => { e.target.style.display = 'block'; }}
+                        />
                     )}
                 </div>
 
