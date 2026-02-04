@@ -9,6 +9,7 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: 'America/Mexico_City'
     ports:
       - "3307:3306"
     volumes:
@@ -29,7 +30,7 @@ services:
     restart: always
     depends_on:
       db:
-        condition: service_healthy # <--- LA MAGIA: Espera al healthcheck
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
@@ -39,9 +40,10 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
       - JWT_SECRET=${JWT_SECRET}
-      - DB_PORT=3306 # Force internal port, ignoring local .env
+      - DB_PORT=3306
       - WEBHOOK_URL=http://backend:3000/api/webhooks/whatsapp
-      - DB_SYNC_MODE=none # 🛡️ Safe Mode for Docker: No schema changes on boot
+      - DB_SYNC_MODE=${DB_SYNC_MODE:-none} # 🛡️ Safe Mode for Docker: No schema changes on boot (default: none)
+      - TZ=America/Mexico_City
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
       interval: 10s
@@ -66,6 +68,7 @@ services:
     environment:
       - VITE_API_URL=/api
       - VITE_PROXY_TARGET=http://pasteleria-backend:3000
+      - TZ=America/Mexico_City
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -77,12 +80,14 @@ services:
     container_name: pasteleria-whatsapp
     restart: always
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     # IMPORTANTE: Forzamos la ruta de Chromium y argumentos de Puppeteer
     environment:
       - WEBHOOK_URL=http://backend:3000/api/webhooks/whatsapp
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - TZ=America/Mexico_City
     # Mantenemos vivo el contenedor para debuggear si el script falla
     command: node whatsapp-gateway.js
     volumes:

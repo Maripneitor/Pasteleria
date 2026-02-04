@@ -1,5 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const puppeteer = require('puppeteer');
+
+let browserPromise = null;
 
 async function logPdfError(error) {
     const logPath = path.join(__dirname, '../logs/pdf_errors.log');

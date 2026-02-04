@@ -1,0 +1,49 @@
+name: Backend QA CI
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Create .env
+      run: |
+        cp .env.example .env
+        sed -i 's/DB_SYNC_MODE=smart/DB_SYNC_MODE=qa/g' .env
+
+    - name: Docker Compose Up
+      run: docker compose up -d --build
+
+    - name: Wait for db and backend to be healthy
+      run: |
+        DB_ID=$(docker compose ps -q db)
+        BACKEND_ID=$(docker compose ps -q backend)
+        echo "Waiting for DB and Backend health..."
+        timeout 120s bash -c '
+          until [ "$(docker inspect -f "{{.State.Health.Status}}" '"$DB_ID"')" = "healthy" ] \
+            && [ "$(docker inspect -f "{{.State.Health.Status}}" '"$BACKEND_ID"')" = "healthy" ]; do
+            sleep 5
+          done
+        '
+        docker compose ps
+
+    - name: Run Contract Verification (inside container)
+      run: |
+        docker compose exec -T backend npm run qa:contract
+
+    - name: Docker Logs (on failure)
+      if: failure()
+      run: docker compose logs backend

@@ -5,25 +5,30 @@
  * Admin: Ve todo (scope vacío)
  * Owner/Employee: Ve solo su tenantId
  */
-const tenantScope = (req, res, next) => {
+const { Tenant, Branch } = require('../models');
+
+const tenantScope = async (req, res, next) => {
     try {
         const user = req.user;
 
         if (!user) {
-            // Si no hay usuario (auth falló o no se usó), bloquear o dejar pasar vacío?
-            // Mejor asumir seguro: si no hay user, deny all o empty set?
-            // AuthMiddleware debe correr antes.
             return res.status(401).json({ message: 'Auth requerido para scope' });
         }
 
-        // Admin ve todo
-        if (user.role === 'admin') {
+        // INJECTION: Load models
+        if (user.tenantId) {
+            req.tenant = await Tenant.findByPk(user.tenantId);
+        }
+        if (user.branchId) {
+            req.branch = await Branch.findByPk(user.branchId);
+        }
+
+        // SCALING: Logic for scope
+        if (user.role === 'SUPER_ADMIN') {
             req.tenantFilter = {};
             req.isGlobalAdmin = true;
         } else {
-            // Owner y Employee filtran por su tenantId
-            // Si tenantId es null (legacy), filtrar por null o ID 1?
-            // Asumimos tenantId obligatorio en tokens nuevos
+            // Force strict caching
             const tenantId = user.tenantId || 1;
             req.tenantFilter = { tenantId: tenantId };
             req.isGlobalAdmin = false;

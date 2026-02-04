@@ -12,13 +12,13 @@
         .header {
             display: flex;
             justify-content: space-between;
-            border-bottom: 3px solid #ec4899;
+            border-bottom: 3px solid <%=(config && config.primaryColor) || '#ec4899' %>;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
 
         .logo h1 {
-            color: #ec4899;
+            color: <%=(config && config.primaryColor) || '#ec4899' %>;
             margin: 0;
             font-size: 28px;
         }
@@ -43,17 +43,18 @@
         }
 
         th {
-            background: #fbcfe8;
-            color: #831843;
+            background: <%=(config && config.primaryColor) ? config.primaryColor + '20': '#fbcfe8' %>;
+            /* 20% opacity */
+            color: <%=(config && config.primaryColor) || '#831843' %>;
         }
 
         .section-title {
             font-size: 18px;
             font-weight: bold;
-            color: #8b5cf6;
+            color: <%=(config && config.primaryColor) || '#8b5cf6' %>;
             margin-top: 20px;
             margin-bottom: 10px;
-            border-left: 5px solid #8b5cf6;
+            border-left: 5px solid <%=(config && config.primaryColor) || '#8b5cf6' %>;
             padding-left: 10px;
         }
 
@@ -118,7 +119,7 @@
                 <% if (config && config.logoUrl) { %>
                     <img src="<%= config.logoUrl %>" style="max-height: 80px; max-width: 250px;" alt="Logo" />
                     <% if (config.businessName) { %>
-                        <h2 style="font-size: 16px; margin: 5px 0 0 0; color: #ec4899;">
+                        <h2 style="font-size: 16px; margin: 5px 0 0 0; color: <%= config.primaryColor || '#ec4899' %>;">
                             <%= config.businessName %>
                         </h2>
                         <% } %>
@@ -128,6 +129,11 @@
                                 </h1>
                                 <p>Pastelería Artesanal</p>
                                 <% } %>
+                                    <% if (config && config.pdfHeaderText) { %>
+                                        <p style="font-size: 10px; color: #666; margin-top: 5px;">
+                                            <%= config.pdfHeaderText %>
+                                        </p>
+                                        <% } %>
             </div>
             <div class="info">
                 <p><strong>Folio:</strong> #<%= folio.folio_numero || folio.id %>
@@ -196,6 +202,11 @@
                 <img src="<%= qrCode %>" />
                 <p style="font-size: 10px;">Escanear para Ver en Web</p>
                 <% } %>
+                    <% if (config && config.pdfFooterText) { %>
+                        <p style="font-size: 9px; color: #888; white-space: pre-wrap;">
+                            <%= config.pdfFooterText %>
+                        </p>
+                        <% } %>
         </div>
         <div class="totals" style="text-align: right;">
             <p>Total: $<%= folio.total %>

@@ -5,7 +5,27 @@ const { renderHtmlToPdfBuffer } = require('./pdfRenderer');
 
 exports.renderFolioPdf = async ({ folio, watermark, templateConfig }) => {
     try {
-        const tpl = path.join(__dirname, '..', 'templates', 'folio-pdf.ejs');
+        const tpl = path.join(__dirname, '..', 'templates', 'folio-pdf.ejs'); // FIX: Correct path to templates
+
+        // 1. Fetch Tenant Config if not provided
+        let config = templateConfig || {};
+        if (!templateConfig && folio.tenantId) {
+            try {
+                const { Tenant } = require('../models');
+                const tenant = await Tenant.findByPk(folio.tenantId);
+                if (tenant) {
+                    config = {
+                        businessName: tenant.businessName,
+                        logoUrl: tenant.logoUrl,
+                        primaryColor: tenant.primaryColor,
+                        pdfHeaderText: tenant.pdfHeaderText,
+                        pdfFooterText: tenant.pdfFooterText
+                    };
+                }
+            } catch (e) {
+                console.error('Error fetching tenant for PDF:', e);
+            }
+        }
 
         const baseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
         const qrUrl = await QRCode.toDataURL(`${baseUrl}/folios/${folio.id}`, { errorCorrectionLevel: 'H' });
@@ -14,7 +34,7 @@ exports.renderFolioPdf = async ({ folio, watermark, templateConfig }) => {
             folio,
             watermark,
             qrCode: qrUrl,
-            config: templateConfig || {} // Default empty
+            config // Inject Dynamic Config
         });
 
         return renderHtmlToPdfBuffer(html, {

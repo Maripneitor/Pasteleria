@@ -15,7 +15,9 @@ exports.getAllClients = async (req, res) => {
 // CREAR un nuevo cliente
 exports.createClient = async (req, res) => {
   try {
-    const newClient = await Client.create(req.body);
+    const tenantId = req.user?.tenantId || 1;
+    const clientData = { ...req.body, tenantId }; // Ensure tenant isolation
+    const newClient = await Client.create(clientData);
     res.status(201).json(newClient);
   } catch (error) {
     if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {

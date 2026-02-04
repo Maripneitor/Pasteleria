@@ -57,10 +57,34 @@ app.get('/api', (req, res) => res.json({ status: 'online', message: 'API Pastele
 app.use('/api/auth', authRoutes);
 
 app.use('/api/folios', folioRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/clients', clientRoutes);
-app.use('/api/webhooks', whatsappRoutes);
-app.use('/api/ai-sessions', aiSessionRoutes);
+// Middleware de Autenticación (JWT)
+const authMiddleware = require('./middleware/authMiddleware');
+const tenantScope = require('./middleware/tenantScope');
+const requireBranch = require('./middleware/requireBranch');
+
+// Rutas Públicas
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/health', (req, res) => res.json({ status: 'ok', db: 'up' }));
+app.use('/api/webhooks', require('./routes/webhookRoutes'));
+app.use('/api/activation', require('./routes/activationRoutes')); // Some are public/protected internal
+
+// Rutas Protegidas (Auth + Tenant + Branch Strictness)
+// Note: We apply requireBranch after auth/tenant middleware to ensure user is populated
+// Routes that require active branch assignment for non-owners:
+app.use('/api/folios', authMiddleware, tenantScope, requireBranch, require('./routes/folioRoutes'));
+app.use('/api/clients', authMiddleware, tenantScope, requireBranch, require('./routes/clientRoutes'));
+app.use('/api/catalog', authMiddleware, tenantScope, requireBranch, require('./routes/catalogRoutes'));
+app.use('/api/ingredients', authMiddleware, tenantScope, requireBranch, require('./routes/ingredientRoutes'));
+app.use('/api/production', authMiddleware, tenantScope, requireBranch, require('./routes/productionRoutes'));
+app.use('/api/reports', authMiddleware, tenantScope, requireBranch, require('./routes/reportRoutes'));
+app.use('/api/cash', authMiddleware, tenantScope, requireBranch, require('./routes/cashRoutes'));
+
+// Semi-protected (Might not need branch, just auth)
+app.use('/api/upload', authMiddleware, tenantScope, require('./routes/uploadRoutes'));
+app.use('/api/users', authMiddleware, tenantScope, require('./routes/userRoutes'));
+app.use('/api/ai-sessions', authMiddleware, tenantScope, require('./routes/aiSessionRoutes'));
+app.use('/api/pdf-templates', authMiddleware, tenantScope, require('./routes/pdfTemplateRoutes'));
+
 // 🔄 Legacy Adapter: POST /api/ai/session/message
 // Montamos explícitamente SOLO la ruta necesaria, sin exponer todo el router de sesiones.
 app.post('/api/ai/session/message',
@@ -69,16 +93,8 @@ app.post('/api/ai/session/message',
 );
 app.use('/api/dictation', dictationRoutes);
 app.use('/api/ai/draft', aiDraftRoutes);
-app.use('/api/activation', require('./routes/activationRoutes')); // Sprint 4
-app.use('/api/users', require('./routes/userRoutes')); // Sprint 4 - Pending Users
-app.use('/api/reports', require('./routes/reportRoutes'));
-app.use('/api/catalog', require('./routes/catalogRoutes'));
-app.use('/api/ingredients', require('./routes/ingredientRoutes'));
 app.use('/api/commissions', require('./routes/commissionRoutes'));
-app.use('/api/production', require('./routes/productionRoutes'));
-app.use('/api/cash', require('./routes/cashRoutes')); // Caja
 app.use('/api/audit', require('./routes/auditRoutes')); // Auditoría
-app.use('/api/upload', require('./routes/uploadRoutes')); // Imágenes de Referencia
 app.use('/api/pdf-templates', pdfTemplateRoutes);
 
 // Base API route (for testing/info)

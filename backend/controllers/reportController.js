@@ -10,10 +10,7 @@ exports.sendDailyCut = async (req, res) => {
         const force = req.body?.force === true;
 
         // FIX: Use centralized tenant scope
-        const tenantWhere = buildTenantWhere(req, { allowQueryTenant: false }); // For email actions, maybe restrict? 
-        // Actually processDailyCutEmail takes `tenantFilter`. 
-        // We should pass the RESULT of buildTenantWhere as filtering criteria.
-        // req.tenantFilter was probably a middleware construct, but now we use the utils.
+        const tenantWhere = buildTenantWhere(req, { allowQueryTenant: false });
 
         const result = await processDailyCutEmail({
             date,

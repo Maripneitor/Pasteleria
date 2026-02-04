@@ -21,15 +21,26 @@ exports.generateCode = async (req, res) => {
             }
         }
 
-        // 3. Generate Code (6 digits)
+        // 3. Validation: Branch IS REQUIRED for employees
+        const targetBranchId = req.body.branchId || req.user.branchId;
+        if (!targetBranchId && req.body.role !== 'OWNER' && req.body.role !== 'ABMIN') {
+            // Exception: Owners generating codes for other Owners? (Unlikely workflow, usually manual)
+            // Strict Rule: Activation Code MUST bind to a branch unless it's a special SuperAdmin case.
+            // User Request says: "Generar ActivationCode sin branch_id -> FAIL" implies strictness.
+            return res.status(400).json({ message: 'El código de activación debe estar asociado a una sucursal.' });
+        }
+
+        // 4. Generate Code (6 digits)
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-        // 4. Save
+        // 5. Save
         const newCode = await ActivationCode.create({
             code,
             ownerId: req.user.id,
-            tenantId: req.user.tenantId || req.body.tenantId || 0, // Admin might provide tenantId
+            tenantId: req.user.tenantId || req.body.tenantId || 0,
+            branchId: targetBranchId || null,
+            targetRole: req.body.role || 'USER',
             expiresAt
         });
 
@@ -81,11 +92,19 @@ exports.verifyCode = async (req, res) => {
         }
 
         // Activate User
+        let userRole = activationEntry.targetRole || 'USER';
+        // Fix: DB ENUM only supports SUPER_ADMIN, ADMIN, USER. 
+        // Logic: USER + ownerId = EMPLOYEE. 
+        if (userRole === 'EMPLOYEE' || userRole === 'employee') {
+            userRole = 'USER';
+        }
+
         await User.update({
             status: 'ACTIVE',
             tenantId: activationEntry.tenantId,
+            branchId: activationEntry.branchId, // Link branch
             ownerId: activationEntry.ownerId, // Link hierarchy
-            globalRole: 'USER' // Default to USER (tenant role via tenant_users)
+            globalRole: userRole.toUpperCase() // Default to USER
         }, { where: { id: userId }, transaction: t });
 
         // Mark Code Used

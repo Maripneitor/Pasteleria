@@ -21,21 +21,40 @@ const dbInit = async () => {
         // 1. Authenticate
         await sequelize.authenticate();
 
-        // 🛡️ AUTO-MIGRATION (Run BEFORE Sync)
-        const smartSync = require('./smartSync');
-        await smartSync();
+        // 2. Check DB_SYNC_MODE
+        // Modes: 
+        // - 'none': Do nothing (Production/SAFE)
+        // - 'qa': Sync only (create tables if missing, no alter)
+        // - 'smart': Run smartSync (add cols) + Sync
+        // - 'alter': Full alter (Dev only)
 
-        // Check DB_SYNC_MODE to determine sync strategy
         const syncMode = process.env.DB_SYNC_MODE || 'none';
-        if (syncMode === 'alter') {
-            await sequelize.sync({ alter: true });
-            console.log('✅ DB Schema Synced (Alter)');
-        } else if (syncMode === 'force') {
-            await sequelize.sync({ force: true });
-            console.log('⚠️ DB Schema Synced (FORCE - DATA LOST)');
-        } else {
+        console.log(`[DB_INIT] mode=${syncMode} action=starting`);
+
+        if (syncMode === 'none') {
+            console.log('[DB_INIT] mode=none -> Skipping Schema Sync (Safe Mode)');
+            // No action needed
+        }
+        else if (syncMode === 'qa') {
+            console.log('[DB_INIT] mode=qa -> Running Standard Sync (No Alter)');
             await sequelize.sync();
-            console.log('✅ DB Schema Synced (Standard - No Alter)');
+        }
+        else if (syncMode === 'smart') {
+            console.log('[DB_INIT] mode=smart -> Running SmartSync + Standard Sync');
+            const smartSync = require('./smartSync');
+            await smartSync(); // Add missing columns safely
+            await sequelize.sync(); // Ensure tables exist
+        }
+        else if (syncMode === 'alter') {
+            console.log('[DB_INIT] mode=alter -> Running Sync with { alter: true }');
+            await sequelize.sync({ alter: true });
+        }
+        else if (syncMode === 'force') {
+            console.log('[DB_INIT] mode=force -> ⚠️ DESTRUCTIVE RESET (Force)');
+            await sequelize.sync({ force: true });
+        }
+        else {
+            console.warn(`[DB_INIT] Unknown mode '${syncMode}' -> Defaulting to 'none'`);
         }
 
         // 2. Seed Admins

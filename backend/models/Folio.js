@@ -93,7 +93,8 @@ const Folio = sequelize.define('Folio', {
   motivo_cancelacion: { type: DataTypes.STRING, allowNull: true },
 
   // Tenant
-  tenantId: { type: DataTypes.BIGINT, defaultValue: 1 }
+  tenantId: { type: DataTypes.BIGINT, defaultValue: 1 },
+  branchId: { type: DataTypes.BIGINT, allowNull: true, comment: 'FK to Branch' }
 
 }, {
   tableName: 'folios',

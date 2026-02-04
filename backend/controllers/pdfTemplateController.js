@@ -27,7 +27,10 @@ exports.createTemplate = async (req, res) => {
 
 exports.updateTemplate = async (req, res) => {
     try {
-        const row = await PdfTemplate.findByPk(req.params.id);
+        const tenantFilter = buildTenantWhere(req);
+        const where = { id: req.params.id, ...tenantFilter };
+
+        const row = await PdfTemplate.findOne({ where });
         if (!row) return res.status(404).json({ message: 'Template not found' });
 
         await row.update(req.body);

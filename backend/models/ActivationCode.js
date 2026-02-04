@@ -13,9 +13,14 @@ const ActivationCode = sequelize.define('ActivationCode', {
         comment: 'Who generated this code (The Owner)'
     },
     tenantId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         allowNull: false,
-        comment: 'Which tenant/branch this code assigns to'
+        comment: 'Which tenant this code assigns to'
+    },
+    branchId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Which specific branch this code assigns to'
     },
     targetRole: { // Opcional: para forzarrol (ej. employee)
         type: DataTypes.STRING,

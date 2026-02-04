@@ -25,9 +25,14 @@ const User = sequelize.define('User', {
     allowNull: false
   },
   tenantId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.BIGINT,
     allowNull: true,
     comment: 'ID de la sucursal/negocio principal'
+  },
+  branchId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'ID de la sucursal física asignada'
   },
   globalRole: {
     type: DataTypes.ENUM('SUPER_ADMIN', 'ADMIN', 'USER'),

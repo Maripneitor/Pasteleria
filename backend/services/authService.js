@@ -67,12 +67,17 @@ class AuthService {
     }
 
     async login({ email, username, password, ip, userAgent }) {
-        // 1. Find User
+        // 1. Find User with Organization and Branch info
+        // We use string alias as defined in models/index.js
         const user = await User.findOne({
             where: sequelize.or(
                 { email: email || '' },
                 { username: username || (email || '') }
-            )
+            ),
+            include: [
+                { association: 'organization' },
+                { association: 'assignedBranch' }
+            ]
         });
 
         if (!user) {
@@ -125,6 +130,7 @@ class AuthService {
             username: user.username,
             globalRole: user.globalRole,
             tenantId: user.tenantId,
+            branchId: user.branchId, // Added
             ownerId: user.ownerId
         };
 
@@ -151,9 +157,12 @@ class AuthService {
                 username: user.username,
                 role: effectiveRole,
                 tenantId: user.tenantId,
+                branchId: user.branchId,
                 ownerId: user.ownerId,
                 status: user.status
-            }
+            },
+            tenant: user.organization, // Inyected
+            branch: user.assignedBranch  // Inyected
         };
     }
 

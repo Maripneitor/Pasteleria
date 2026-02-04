@@ -1,13 +1,48 @@
-node_modules
-/server/node_modules
-/client/node_modules
+# Environment & Config
 .env
-/server/.env
+.env.local
+.env.*.local
+config/config.js
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build & Runtime
+dist/
+build/
+coverage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# WhatsApp Sessions (Puppeteer/WWebJS)
+.wwebjs_auth/
+.wwebjs_cache/
+.wwebjs_temp/
+backend/.wwebjs_auth/
+backend/.wwebjs_cache/
+
+# Generated Content & Uploads
+uploads/
+backend/uploads/
+FOLIOS_GENERADOS/
+backend/FOLIOS_GENERADOS/
+pdf/
+backend/pdf/
+
+# Database Dumps & Backups
+*.sql
+*.sqlite
+backend/RESPALDOS_BD/
+
+# IDE & OS
 .DS_Store
-dist
-build
-folios.json
-folios_final.json
-output_folios.json
-pdf
-folio_1.json
+.idea/
+.vscode/
+*.swp
+thumbs.db

@@ -52,7 +52,8 @@ module.exports = async function (req, res, next) {
       ...decoded,
       id: decoded.id, // Explicit
       role: normalizeRole(decoded.globalRole || decoded.role, decoded.ownerId), // Normalize with context
-      tenantId: decoded.tenantId || null
+      tenantId: decoded.tenantId || null,
+      branchId: decoded.branchId || null
     };
 
     // --- Heartbeat: Update session lastSeenAt ---

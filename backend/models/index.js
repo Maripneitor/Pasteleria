@@ -16,6 +16,10 @@ const CakeFlavor = require('./CakeFlavor');
 const AuditLog = require('./AuditLog');
 const { CashCut, CashMovement } = require('./CashModels');
 
+// --- Multi-Tenant Models ---
+const Tenant = require('./Tenant');
+const Branch = require('./Branch');
+
 // --- Sprint 4: Control & Limits ---
 const ActivationCode = require('./ActivationCode');
 const UserSession = require('./UserSession');
@@ -58,10 +62,22 @@ CashMovement.belongsTo(User, { as: 'performer', foreignKey: 'performedByUserId' 
 User.hasMany(AISession, { foreignKey: 'userId', as: 'aiSessions' });
 AISession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// --- Relaciones Multi-Tenant ---
+Tenant.hasMany(Branch, { foreignKey: 'tenantId', as: 'branches' });
+Branch.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+
+Tenant.hasMany(User, { foreignKey: 'tenantId', as: 'users' });
+User.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'organization' });
+
+Branch.hasMany(User, { foreignKey: 'branchId', as: 'branchUsers' });
+User.belongsTo(Branch, { foreignKey: 'branchId', as: 'assignedBranch' });
+
 // --- Relaciones Sprint 4 (Control) ---
 // Owner generates codes
 User.hasMany(ActivationCode, { foreignKey: 'ownerId', as: 'generatedCodes' });
 ActivationCode.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
+ActivationCode.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+Branch.hasMany(ActivationCode, { foreignKey: 'branchId', as: 'activationCodes' });
 
 // User has sessions
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
@@ -86,5 +102,7 @@ module.exports = {
   CashMovement,
   ActivationCode,
   UserSession,
-  PdfTemplate
+  PdfTemplate,
+  Tenant,
+  Branch
 };

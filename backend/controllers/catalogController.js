@@ -1,13 +1,15 @@
 const CakeFlavor = require('../models/CakeFlavor');
 const Filling = require('../models/Filling');
 
+const { buildTenantWhere } = require('../utils/tenantScope');
+
 // --- FLAVORS ---
 exports.getFlavors = async (req, res) => {
     try {
-        const tenantId = req.user?.tenantId || 1;
+        const tenantFilter = buildTenantWhere(req);
         const includeInactive = req.query.includeInactive === '1' || req.query.includeInactive === 'true';
 
-        const where = { tenantId };
+        const where = { ...tenantFilter };
         if (!includeInactive) {
             where.isActive = true;
         }
@@ -28,7 +30,8 @@ exports.toggleFlavorActive = async (req, res) => {
         const { id } = req.params;
         const { isActive } = req.body;
 
-        const row = await CakeFlavor.findByPk(id);
+        const tenantFilter = buildTenantWhere(req);
+        const row = await CakeFlavor.findOne({ where: { id, ...tenantFilter } });
         if (!row) return res.status(404).json({ message: "No encontrado" });
 
         await row.update({ isActive: Boolean(isActive) });
@@ -56,7 +59,8 @@ exports.createFlavor = async (req, res) => {
 exports.updateFlavor = async (req, res) => {
     try {
         const { id } = req.params;
-        const row = await CakeFlavor.findByPk(id);
+        const tenantFilter = buildTenantWhere(req);
+        const row = await CakeFlavor.findOne({ where: { id, ...tenantFilter } });
         if (!row) return res.status(404).json({ message: "No encontrado" });
 
         await row.update(req.body); // update name, isActive, etc.
@@ -70,10 +74,10 @@ exports.updateFlavor = async (req, res) => {
 // --- FILLINGS ---
 exports.getFillings = async (req, res) => {
     try {
-        const tenantId = req.user?.tenantId || 1;
+        const tenantFilter = buildTenantWhere(req);
         const includeInactive = req.query.includeInactive === '1' || req.query.includeInactive === 'true';
 
-        const where = { tenantId };
+        const where = { ...tenantFilter };
         if (!includeInactive) {
             where.isActive = true;
         }
@@ -94,7 +98,8 @@ exports.toggleFillingActive = async (req, res) => {
         const { id } = req.params;
         const { isActive } = req.body;
 
-        const row = await Filling.findByPk(id);
+        const tenantFilter = buildTenantWhere(req);
+        const row = await Filling.findOne({ where: { id, ...tenantFilter } });
         if (!row) return res.status(404).json({ message: "No encontrado" });
 
         await row.update({ isActive: Boolean(isActive) });
@@ -122,7 +127,8 @@ exports.createFilling = async (req, res) => {
 exports.updateFilling = async (req, res) => {
     try {
         const { id } = req.params;
-        const row = await Filling.findByPk(id);
+        const tenantFilter = buildTenantWhere(req);
+        const row = await Filling.findOne({ where: { id, ...tenantFilter } });
         if (!row) return res.status(404).json({ message: "No encontrado" });
 
         await row.update(req.body);

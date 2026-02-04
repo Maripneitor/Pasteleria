@@ -12,7 +12,7 @@ const PdfTemplate = sequelize.define('PdfTemplate', {
         allowNull: false
     },
     tenantId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         defaultValue: 1,
         allowNull: false
     },
