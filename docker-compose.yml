@@ -15,6 +15,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./backend/RESPALDOS_BD/backup_2025-09-30.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/RESPALDOS_BD/02_update_schema.sql:/docker-entrypoint-initdb.d/z_update_schema.sql
     # SALUD: Verifica cada 10s si MySQL responde
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DB_PASSWORD}" ]

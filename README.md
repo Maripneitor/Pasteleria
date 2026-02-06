@@ -1,25 +1,50 @@
 # Sistema de Gestión para Pastelería
 
-## 🚀 Cómo correr el proyecto
+## 🚀 Quickstart Docker (Recomendado)
 
-### 1. Iniciar Base de Datos y Servicios
+### 1. Iniciar Entorno Completo (Backend + DB + Frontend)
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
-### 2. Iniciar Backend (Local)
+### 2. Verificar Salud del Sistema (QA Smoke)
 ```bash
-cd server
-npm install
-npm run dev
+docker compose exec backend npm run qa:smoke
 ```
 
-### 3. Iniciar Frontend
+### 3. Verificar Contratos de API (QA Contract)
 ```bash
-cd client
-npm install
-npm run dev
+docker compose exec backend npm run qa:contract
 ```
+
+### 🔄 Modos de Sincronización DB (Importante)
+El proyecto usa `DB_SYNC_MODE` en `docker-compose.yml` para controlar cambios en el esquema:
+- **`none`**: (Default SAFE) No toca el esquema. Recomendado para Producción y CI.
+- `smart`: Agrega columnas faltantes automáticamente. Ideal para desarrollo local.
+- `alter`: Usa `sequelize.sync({ alter: true })`. Uso legacy.
+
+**Para desarrollo local (habilitar smart sync):**
+1. Copia el ejemplo: `cp docker-compose.override.example.yml docker-compose.override.yml`
+2. Reinicia: `docker compose up -d`
+
+
+---
+
+### Desarrollo Local (Sin Docker)
+Si prefieres correr localmente:
+1. **DB**: Asegúrate de tener MySQL corriendo y configura `.env`.
+2. **Backend**:
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+   ```
+3. **Frontend**:
+   ```bash
+   cd client
+   npm install
+   npm run dev
+   ```
 
 ---
 

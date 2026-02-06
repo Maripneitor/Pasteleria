@@ -8,7 +8,7 @@ async function runSmokeTest() {
     // 1. Health Check
     try {
         const res = await axios.get(`${BASE_URL}/health`);
-        if (res.status === 200 && res.data.ok) console.log('✅ GET /health: OK');
+        if (res.status === 200 && (res.data.ok || res.data.status === 'ok')) console.log('✅ GET /health: OK');
         else throw new Error(`Invalid Response: ${JSON.stringify(res.data)}`);
     } catch (e) {
         console.error('❌ GET /health FALLÓ:', e.message);

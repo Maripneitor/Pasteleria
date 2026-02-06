@@ -5,6 +5,11 @@ const { renderHtmlToPdfBuffer } = require('./pdfRenderer');
 
 exports.renderFolioPdf = async ({ folio, watermark, templateConfig }) => {
     try {
+        // QA Mode Mock
+        if (process.env.QA_MODE === '1') {
+            return Buffer.from('MOCK_PDF_CONTENT:FOLIO');
+        }
+
         const tpl = path.join(__dirname, '..', 'templates', 'folio-pdf.ejs'); // FIX: Correct path to templates
 
         // 1. Fetch Tenant Config if not provided
@@ -53,6 +58,9 @@ exports.renderFolioPdf = async ({ folio, watermark, templateConfig }) => {
 
 exports.renderLabelPdf = async ({ folio, format = 'a4' }) => {
     try {
+        if (process.env.QA_MODE === '1') {
+            return Buffer.from('MOCK_PDF_CONTENT:LABEL');
+        }
         const tpl = path.join(__dirname, '..', 'templates', 'labelsTemplate.ejs');
         const baseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
 
@@ -123,6 +131,9 @@ exports.renderLabelPdf = async ({ folio, format = 'a4' }) => {
 
 exports.renderOrdersPdf = async ({ folios, date, branches }) => {
     try {
+        if (process.env.QA_MODE === '1') {
+            return Buffer.from('MOCK_PDF_CONTENT:ORDERS');
+        }
         const tpl = path.join(__dirname, '..', 'templates', 'ordersTemplate.ejs');
 
         // Robust ViewModel mapping
@@ -173,6 +184,9 @@ exports.renderOrdersPdf = async ({ folios, date, branches }) => {
 
 exports.renderCommissionsPdf = async ({ reportData, from, to }) => {
     try {
+        if (process.env.QA_MODE === '1') {
+            return Buffer.from('MOCK_PDF_CONTENT:COMMISSIONS');
+        }
         const tpl = path.join(__dirname, '..', 'templates', 'commissionReport.ejs');
 
         const html = await ejs.renderFile(tpl, {

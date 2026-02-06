@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      # ⚠️ DEVELOPMENT ONLY: Auto-sync DB schema (creates tables/columns)
+      - DB_SYNC_MODE=smart

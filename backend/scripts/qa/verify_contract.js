@@ -9,6 +9,7 @@ const { requestJson, log, BASE_URL } = require('./_http');
 const { loginAndGetToken } = require('./_auth');
 const { ok, fail, section, getExitCode, chalk } = require('./_report');
 const { sequelize } = require('../../models');
+const { seedContractData } = require('./seed_contract_data'); // Import Seed
 
 const CONTRACT_PATH = path.join(__dirname, '../../docs/expected_contract.json');
 
@@ -29,6 +30,10 @@ async function verifyContract() {
     const contract = JSON.parse(fs.readFileSync(CONTRACT_PATH, 'utf8'));
     let token = null;
 
+    // 0. Seed Data
+    section('SEEDING');
+    await seedContractData();
+
     // 1. Auth
     section('AUTHENTICATION');
     try {
@@ -41,9 +46,27 @@ async function verifyContract() {
 
     // 2. API Endpoints
     section('API ENDPOINTS');
+
+    // Get a valid Folio ID for parameters
+    const { Folio } = require('../../models');
+    const validFolio = await Folio.findOne({ order: [['createdAt', 'DESC']] });
+    const validFolioId = validFolio ? validFolio.id : 1;
+    if (!validFolio) console.log(chalk.yellow('Warning: No Folio found for parameter replacement'));
+
     for (const ep of contract.apiEndpoints) {
         const { name, method, path, auth } = ep;
-        const url = `${BASE_URL}${path}`;
+        let url = `${BASE_URL}${path}`;
+
+        // Replace :id
+        if (url.includes(':id')) {
+            url = url.replace(':id', validFolioId);
+        }
+
+        // Inject date param for day-summary-pdf
+        if (url.includes('day-summary-pdf')) {
+            const today = new Date().toISOString().split('T')[0];
+            url += `?date=${today}`;
+        }
 
         // Test 1: Unauthenticated (if auth required)
         if (auth === 'required') {
@@ -62,7 +85,8 @@ async function verifyContract() {
 
         // Test 2: Authenticated (or Public) - Expect Success 2xx
         try {
-            const res = await requestJson({ method, url, token });
+            const body = ep.body || undefined;
+            const res = await requestJson({ method, url, token, body });
             if (res.status >= 200 && res.status < 300) {
                 ok(`[${method}] ${path} working (${res.status})`);
             } else {

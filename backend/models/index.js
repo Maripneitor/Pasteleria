@@ -24,6 +24,9 @@ const Branch = require('./Branch');
 const ActivationCode = require('./ActivationCode');
 const UserSession = require('./UserSession');
 const PdfTemplate = require('./PdfTemplate');
+const SaaSContract = require('./SaaSContract');
+const SaaSCommissionLedger = require('./SaaSCommissionLedger');
+const DailySalesStats = require('./DailySalesStats');
 
 // --- Relaciones Principales ---
 User.hasMany(Folio, { foreignKey: 'responsibleUserId' });
@@ -83,6 +86,17 @@ Branch.hasMany(ActivationCode, { foreignKey: 'branchId', as: 'activationCodes' }
 User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions' });
 UserSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
+// --- Relaciones SaaS ---
+Tenant.hasOne(SaaSContract, { foreignKey: 'tenantId', as: 'saasContract' });
+SaaSContract.belongsTo(Tenant, { foreignKey: 'tenantId' });
+
+Tenant.hasMany(SaaSCommissionLedger, { foreignKey: 'tenantId', as: 'commissions' });
+SaaSCommissionLedger.belongsTo(Tenant, { foreignKey: 'tenantId' });
+
+// --- Relaciones Stats ---
+Tenant.hasMany(DailySalesStats, { foreignKey: 'tenantId' });
+Branch.hasMany(DailySalesStats, { foreignKey: 'branchId' });
+
 // --- Exportación de todos los modelos ---
 module.exports = {
   sequelize,
@@ -104,5 +118,8 @@ module.exports = {
   UserSession,
   PdfTemplate,
   Tenant,
-  Branch
+  Branch,
+  SaaSContract,
+  SaaSCommissionLedger,
+  DailySalesStats
 };

@@ -30,7 +30,7 @@ const User = sequelize.define('User', {
     comment: 'ID de la sucursal/negocio principal'
   },
   branchId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.BIGINT,
     allowNull: true,
     comment: 'ID de la sucursal física asignada'
   },

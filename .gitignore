@@ -46,3 +46,6 @@ backend/RESPALDOS_BD/
 .vscode/
 *.swp
 thumbs.db
+
+# Docker local overrides
+docker-compose.override.yml

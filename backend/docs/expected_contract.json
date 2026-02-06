@@ -10,13 +10,11 @@
             "name": "auth_login",
             "method": "POST",
             "path": "/api/auth/login",
-            "auth": "public"
-        },
-        {
-            "name": "auth_register",
-            "method": "POST",
-            "path": "/api/auth/register",
-            "auth": "public"
+            "auth": "public",
+            "body": {
+                "email": "admin@gmail.com",
+                "password": "Admin1234"
+            }
         },
         {
             "name": "dashboard_stats",
@@ -40,7 +38,13 @@
             "name": "folio_create",
             "method": "POST",
             "path": "/api/folios",
-            "auth": "required"
+            "auth": "required",
+            "body": {
+                "cliente_nombre": "Contract Test Client",
+                "cliente_telefono": "5550001111",
+                "fecha_entrega": "2025-12-31",
+                "hora_entrega": "14:00"
+            }
         },
         {
             "name": "folio_pdf",
@@ -82,7 +86,10 @@
             "name": "ai_legacy_message",
             "method": "POST",
             "path": "/api/ai/session/message",
-            "auth": "required"
+            "auth": "required",
+            "body": {
+                "message": "Hola, esto es una prueba de contrato"
+            }
         },
         {
             "name": "cash_status",

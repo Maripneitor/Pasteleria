@@ -45,6 +45,9 @@ const smartSync = async () => {
             { name: 'cancelado_en', type: sequelize.Sequelize.DATE },
             { name: 'motivo_cancelacion', type: sequelize.Sequelize.STRING(255) },
 
+            // New Strict Status
+            { name: 'status', type: sequelize.Sequelize.ENUM('DRAFT', 'CONFIRMED', 'IN_PRODUCTION', 'READY', 'DELIVERED', 'CANCELLED'), defaultValue: 'DRAFT' },
+
             // Financials (if missing)
             { name: 'costo_base', type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 },
             { name: 'costo_envio', type: sequelize.Sequelize.DECIMAL(10, 2), defaultValue: 0 },

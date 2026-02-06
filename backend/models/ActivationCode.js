@@ -18,7 +18,7 @@ const ActivationCode = sequelize.define('ActivationCode', {
         comment: 'Which tenant this code assigns to'
     },
     branchId: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         allowNull: true,
         comment: 'Which specific branch this code assigns to'
     },

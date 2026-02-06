@@ -94,7 +94,14 @@ const Folio = sequelize.define('Folio', {
 
   // Tenant
   tenantId: { type: DataTypes.BIGINT, defaultValue: 1 },
-  branchId: { type: DataTypes.BIGINT, allowNull: true, comment: 'FK to Branch' }
+  branchId: { type: DataTypes.BIGINT, allowNull: true, comment: 'FK to Branch' },
+
+  // Machine State (Strict)
+  status: {
+    type: DataTypes.ENUM('DRAFT', 'CONFIRMED', 'IN_PRODUCTION', 'READY', 'DELIVERED', 'CANCELLED'),
+    defaultValue: 'DRAFT',
+    allowNull: false
+  }
 
 }, {
   tableName: 'folios',

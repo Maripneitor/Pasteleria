@@ -19,16 +19,23 @@ async function getBrowser() {
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage', // Ayuda con el error EAGAIN en contenedores
-                    '--single-process'         // Estabilidad en entornos de pocos recursos
+                    '--disable-dev-shm-usage',
+                    '--single-process'
                 ],
                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
                 headless: 'new',
+            }).then(browser => {
+                browser.on('disconnected', () => {
+                    console.log('[PDF] Browser disconnected. Resetting singleton.');
+                    browserPromise = null;
+                });
+                return browser;
             });
         }
         return browserPromise;
     } catch (err) {
         await logPdfError(err);
+        browserPromise = null; // Reset on launch error
         throw err;
     }
 }
@@ -38,7 +45,19 @@ async function renderHtmlToPdfBuffer(html, pdfOptions = {}) {
     const browser = await getBrowser();
 
     // Create page
-    const page = await browser.newPage();
+    let page = null;
+    try {
+        page = await browser.newPage();
+    } catch (err) {
+        // If newPage fails, browser might be acting up but not disconnected yet?
+        // Force reset
+        if (browserPromise) {
+            const b = await browserPromise;
+            if (b) b.close().catch(() => null);
+            browserPromise = null;
+        }
+        throw err;
+    }
 
     try {
         // Evita que “se cuelgue” por requests eternos
@@ -82,7 +101,11 @@ async function renderHtmlToPdfBuffer(html, pdfOptions = {}) {
         throw e;
     } finally {
         // Always close the page
-        if (page) await page.close();
+        if (page) {
+            try {
+                await page.close();
+            } catch (e) { /* ignore safe close */ }
+        }
     }
 }
 

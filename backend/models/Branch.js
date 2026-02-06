@@ -3,7 +3,7 @@ const { sequelize } = require('../config/database');
 
 const Branch = sequelize.define('Branch', {
     id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT,
         autoIncrement: true,
         primaryKey: true
     },

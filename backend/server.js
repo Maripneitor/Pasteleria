@@ -96,6 +96,9 @@ app.use('/api/ai/draft', aiDraftRoutes);
 app.use('/api/commissions', require('./routes/commissionRoutes'));
 app.use('/api/audit', require('./routes/auditRoutes')); // Auditoría
 app.use('/api/pdf-templates', pdfTemplateRoutes);
+app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/ai/orders', require('./routes/aiOrderRoutes'));
+app.use('/api/super', require('./routes/superAdminRoutes'));
 
 // Base API route (for testing/info)
 app.get('/api/', (req, res) => {
