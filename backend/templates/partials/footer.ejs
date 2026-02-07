@@ -1,0 +1,11 @@
+<div class="footer">
+    <div style="text-align: left; max-width: 70%;">
+        <%= (config && config.pdfFooterText) || 'Gracias por su preferencia.' %>
+    </div>
+    <div style="text-align: right;">
+        <% if (locals.qrCode) { %>
+            <img src="<%= qrCode %>" style="width: 50px; height: 50px;">
+            <% } %>
+                <div style="font-size: 7pt; margin-top: 2px;">Pag. 1/1</div>
+    </div>
+</div>

@@ -1,206 +1,266 @@
-const ejs = require('ejs');
+const { Folio, FolioComplemento, Client, Tenant, Branch } = require('../models');
+const { renderPdf } = require('./pdfRenderer');
 const path = require('path');
 const QRCode = require('qrcode');
-const { renderHtmlToPdfBuffer } = require('./pdfRenderer');
 
-exports.renderFolioPdf = async ({ folio, watermark, templateConfig }) => {
+/* --- HELPERS --- */
+
+/**
+ * Normalizes branding config ensuring safe defaults.
+ * @param {number|string} tenantId 
+ */
+const { TenantConfig } = require('../models');
+
+/**
+ * Normalizes branding config ensuring safe defaults.
+ * @param {number|string} tenantId 
+ */
+async function getTenantBranding(tenantId) {
     try {
-        // QA Mode Mock
-        if (process.env.QA_MODE === '1') {
-            return Buffer.from('MOCK_PDF_CONTENT:FOLIO');
+        const config = await TenantConfig.findOne({ where: { tenantId } });
+
+        if (config) {
+            return {
+                businessName: config.businessName || 'Mi Pastelería',
+                logoUrl: normalizeLogo(config.logoUrl),
+                primaryColor: config.primaryColor || '#ec4899',
+                // pdfHeaderText: '', // Not in TenantConfig 
+                pdfFooterText: config.footerText || 'Gracias por su preferencia.'
+            };
         }
 
-        const tpl = path.join(__dirname, '..', 'templates', 'folio-pdf.ejs'); // FIX: Correct path to templates
-
-        // 1. Fetch Tenant Config if not provided
-        let config = templateConfig || {};
-        if (!templateConfig && folio.tenantId) {
-            try {
-                const { Tenant } = require('../models');
-                const tenant = await Tenant.findByPk(folio.tenantId);
-                if (tenant) {
-                    config = {
-                        businessName: tenant.businessName,
-                        logoUrl: tenant.logoUrl,
-                        primaryColor: tenant.primaryColor,
-                        pdfHeaderText: tenant.pdfHeaderText,
-                        pdfFooterText: tenant.pdfFooterText
-                    };
-                }
-            } catch (e) {
-                console.error('Error fetching tenant for PDF:', e);
-            }
+        // Fallback to Tenant model (Legacy)
+        const tenant = await Tenant.findByPk(tenantId);
+        if (tenant) {
+            return {
+                businessName: tenant.businessName || 'Mi Pastelería',
+                logoUrl: normalizeLogo(tenant.logoUrl),
+                primaryColor: tenant.primaryColor || '#ec4899',
+                pdfFooterText: 'Gracias por su compra'
+            };
         }
 
-        const baseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
-        const qrUrl = await QRCode.toDataURL(`${baseUrl}/folios/${folio.id}`, { errorCorrectionLevel: 'H' });
+        return getDefaultBranding();
 
-        const html = await ejs.renderFile(tpl, {
-            folio,
-            watermark,
-            qrCode: qrUrl,
-            config // Inject Dynamic Config
-        });
-
-        return renderHtmlToPdfBuffer(html, {
-            format: 'A4',
-            margin: { top: '2cm', right: '2cm', bottom: '2cm', left: '2cm' }
-        });
     } catch (error) {
-        console.error("Error en pdfService:", error);
-        // Detect puppeteer launch errors
-        if (error.message.includes('launch') || error.message.includes('browser')) {
-            throw new Error("Error: Dependencias de PDF no listas en esta máquina o error de Puppeteer.");
-        }
+        console.error('Error fetching tenant branding:', error);
+        return getDefaultBranding();
+    }
+}
+
+function getDefaultBranding() {
+    return {
+        businessName: 'Pastelería',
+        primaryColor: '#ec4899',
+        logoUrl: null,
+        pdfHeaderText: '',
+        pdfFooterText: 'Gracias por su compra'
+    };
+}
+
+function normalizeLogo(url) {
+    if (!url) return null;
+    if (url.startsWith('http') || url.startsWith('data:image')) return url;
+    // Local file path? Try to resolve if needed, but safer to ignore if strict
+    // If it's a relative path from uploads, we could map it to absolute file:// path
+    // For now, assume HTTP or Base64 is expected.
+    return null;
+}
+
+/**
+ * Finds order ensuring it belongs to the Tenant/Branch scope.
+ */
+async function findOrderScoped(orderId, ctx) {
+    const { tenantId, branchId, role } = ctx;
+
+    const where = {
+        id: orderId,
+        tenantId: tenantId
+    };
+
+    // Branch scoping for non-admins
+    if (branchId && role !== 'SUPER_ADMIN' && role !== 'ADMIN' && role !== 'OWNER') {
+        where.branchId = branchId;
+    }
+
+    const order = await Folio.findOne({
+        where,
+        include: [
+            { model: Client, as: 'client', required: false }, // Join client
+            { model: FolioComplemento, as: 'complementosList', required: false } // Join complements
+        ]
+    });
+
+    if (!order) {
+        const error = new Error('Pedido no encontrado o sin acceso.');
+        error.status = 404;
         throw error;
     }
-};
 
-exports.renderLabelPdf = async ({ folio, format = 'a4' }) => {
-    try {
-        if (process.env.QA_MODE === '1') {
-            return Buffer.from('MOCK_PDF_CONTENT:LABEL');
-        }
-        const tpl = path.join(__dirname, '..', 'templates', 'labelsTemplate.ejs');
-        const baseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
+    return order;
+}
 
-        // Dynamic QR Logic: Prefer Google Maps Location if available
-        let targetUrl = `${baseUrl}/folios/${folio.id}`;
-        if (folio.ubicacion_maps && folio.ubicacion_maps.startsWith('http')) {
-            targetUrl = folio.ubicacion_maps;
-        }
+function formatMoney(amount) {
+    return Number(amount || 0).toFixed(2);
+}
 
-        const qrUrl = await QRCode.toDataURL(targetUrl, { errorCorrectionLevel: 'H' });
+function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+    // dateStr might be YYYY-MM-DD (DATEONLY) or ISO
+    const d = new Date(dateStr);
+    // Adjust for timezone if needed, but DATEONLY usually parses to UTC 00:00. 
+    // If it's YYYY-MM-DD string, let's keep it simple or use locale
+    // Ideally use date-fns or similar, but built-in:
+    return d.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
 
-        // Simple SVG Logo for Center Overlay (La Fiesta - LF)
-        const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="white" stroke="#ec4899" stroke-width="4"/><text x="50" y="68" font-family="Arial" font-size="45" font-weight="bold" text-anchor="middle" fill="#ec4899">LF</text></svg>`;
-        const logoUrl = `data:image/svg+xml;base64,${Buffer.from(logoSvg).toString('base64')}`;
+/**
+ * Maps Sequelize Folio model to the Plain Object expected by EJS templates.
+ */
+async function toOrderDTO(order, branding) {
+    const plain = order.get({ plain: true });
 
-        const mappedFolio = {
-            id: folio.id,
-            folioNumber: folio.folio_numero || folio.id,
-            deliveryDate: folio.fecha_entrega,
-            deliveryTime: folio.hora_entrega,
-            shape: folio.tipo_folio,
-            persons: folio.numero_personas,
-            clientName: folio.cliente_nombre, // Ensure these are mapped
-            description: folio.descripcion_diseno || 'Sin descripción',
-            hasExtraHeight: folio.altura_extra,
-            qrCode: qrUrl,
-            logoUrl: logoUrl
-        };
+    // Generate QR Code for Web View
+    const baseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
+    // Link to public tracking or admin view? Usually admin view for internal, tracking for client.
+    // Let's assume tracking for client is safer context-wise? Or admin folio link.
+    // Prompt says "web view".
+    const qrUrl = await QRCode.toDataURL(`${baseUrl}/folios/${plain.id}`, { margin: 2, scale: 4 });
+    const mapsLink = plain.ubicacion_maps && plain.ubicacion_maps.startsWith('http') ? plain.ubicacion_maps : null;
 
-        const html = await ejs.renderFile(tpl, {
-            folios: [mappedFolio],
-            date: new Date().toLocaleDateString(),
-            format // 'thermal' or 'a4'
-        });
+    // Parse JSON fields if they are strings (MySQL 8 with Sequelize handles JSON/JSONB automatically, but safety check)
+    const parseList = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        try { return JSON.parse(val); } catch (e) { return []; }
+    };
 
-        // Configuración Dual
-        let pdfOptions = {};
+    const sabores = parseList(plain.sabores_pan);
+    const rellenos = parseList(plain.rellenos);
+    const tiers = parseList(plain.diseno_metadata?.tiers || []); // Tiers often stored in metadata or JSON
+    // Note: Folio model definition didn't show 'tiers' column, but 'diseno_metadata' JSON.
+    // Also check `FolioComplemento` relation which serves as 'complementos' (additionals cake).
 
-        if (format === 'thermal') {
-            pdfOptions = {
-                width: '80mm',
-                height: 'auto', // Continuous roll
-                margin: { top: '0', right: '0', bottom: '0', left: '0' },
-                pageRanges: '1'
-            };
-        } else {
-            // A4 Default (Existing behavior)
-            pdfOptions = {
-                width: '10cm', // Used to be fixed size stickers? Or A4 page?
-                // Step 95 showed: width: '10cm', height: '15cm' for label. 
-                // Creating a full A4 sheet of labels is complex if we only have one.
-                // Let's keep the "Sticker" size for the 'a4' / 'normal' option to not break legacy, 
-                // OR assume A4 means printing this single label on an A4 sheet. 
-                // Given the '10cm x 15cm' previous config, that was likely a label printer size too (4x6 inch).
-                // Let's stick to the previous dimensions for 'normal/a4' unless user requested full sheet.
-                // User said "Hoja Completa (A4)". I should set format A4.
-                format: 'A4',
-                margin: { top: '1cm', right: '1cm', bottom: '1cm', left: '1cm' }
-            };
-        }
+    // Additional items (candles etc) stored in `complementos` JSON column (legacy) or `accesorios`?
+    // Model has `complementos` (JSON) and `accesorios` (JSON).
+    // And also `FolioComplemento` (Table).
+    // Let's map `FolioComplemento` table as 'Pasteles Adicionales' (structure wise).
+    // And `complementos` JSON as 'Artículos Extra' (candles)? 
+    // The prompt says "items/additionals".
 
-        return renderHtmlToPdfBuffer(html, pdfOptions);
-    } catch (e) {
-        console.error("Error renderLabelPdf:", e);
-        throw e;
-    }
-};
+    const additionals = [
+        ...parseList(plain.complementos).map(c => ({ name: c.name || c, price: c.price || 0 })),
+        ...parseList(plain.accesorios).map(c => ({ name: c.name || c, price: c.price || 0 }))
+    ];
 
-exports.renderOrdersPdf = async ({ folios, date, branches }) => {
-    try {
-        if (process.env.QA_MODE === '1') {
-            return Buffer.from('MOCK_PDF_CONTENT:ORDERS');
-        }
-        const tpl = path.join(__dirname, '..', 'templates', 'ordersTemplate.ejs');
+    // Format Complements (Pasteles Extra)
+    const complementosList = (plain.complementosList || []).map(c => ({
+        persons: c.personas,
+        shape: c.forma,
+        flavor: c.sabor_pan,
+        filling: c.relleno,
+        description: c.descripcion,
+        price: c.precio
+    }));
 
-        // Robust ViewModel mapping
-        const mappedFolios = folios.map(f => {
-            const total = parseFloat(f.total || 0);
-            const anticipo = parseFloat(f.anticipo || 0);
-            const balance = total - anticipo;
+    return {
+        id: plain.id,
+        folioNumber: plain.folio_numero || plain.id,
+        folioType: plain.tipo_folio || 'Normal',
+        shape: plain.forma,
+        persons: plain.numero_personas,
+        createdAt: plain.createdAt,
 
-            return {
-                folioNumber: f.folio_numero,
-                deliveryDate: f.fecha_entrega,
-                deliveryTime: f.hora_entrega,
-                client: {
-                    name: f.cliente_nombre,
-                    phone: f.cliente_telefono,
-                    phone2: f.cliente_telefono_extra
-                },
-                deliveryLocation: f.ubicacion_entrega || 'En Sucursal',
-                total: total,
-                deliveryCost: parseFloat(f.costo_envio || 0),
-                advancePayment: anticipo,
-                balance: balance,
-                additional: Array.isArray(f.complementos) ? f.complementos : [],
-                // Ensure array fields are present for template
-                sabores: Array.isArray(f.sabores_pan) ? f.sabores_pan : [],
-                rellenos: Array.isArray(f.rellenos) ? f.rellenos : [],
-                descripcion: f.descripcion_diseno || ''
-            };
-        });
+        // Delivery
+        formattedDeliveryDate: plain.fecha_entrega, // Already YYYY-MM-DD usually
+        formattedDeliveryTime: plain.hora_entrega,
+        deliveryLocation: plain.ubicacion_entrega || 'En Sucursal',
+        ubicacion_maps_link: mapsLink,
 
-        const html = await ejs.renderFile(tpl, {
-            folios: mappedFolios,
-            date,
-            reportType: 'Resumen del Día',
-            branches: branches || []
-        });
+        // Items
+        sabores: sabores,
+        rellenos: rellenos,
+        cubierta: plain.diseno_metadata?.cubierta || null,
+        designDescription: plain.descripcion_diseno,
+        dedication: plain.dedicatoria,
+        imageUrls: plain.imagen_referencia_url ? [plain.imagen_referencia_url] : [], // TODO: support multiple
 
-        return renderHtmlToPdfBuffer(html, {
+        // Tiers (Pisos)
+        tiers: tiers.map(t => ({
+            persons: t.personas || t.persons,
+            panes: parseList(t.sabores || t.panes),
+            rellenos: parseList(t.rellenos),
+            notas: t.notas
+        })),
+
+        // Financials
+        total: plain.total,
+        advancePayment: plain.anticipo,
+        balance: plain.total - plain.anticipo,
+        basePrice: plain.costo_base,
+        deliveryCost: plain.costo_envio,
+        totalExtras: 0, // Calculate if needed
+
+        // Client
+        client: {
+            name: plain.cliente_nombre || 'Cliente General',
+            phone: plain.cliente_telefono || '',
+            email: plain.client?.email || ''
+        },
+
+        // Lists
+        additionals: additionals, // Extras (candles)
+        complements: complementosList, // Extra Cakes
+
+        // Metadata
+        isPaid: plain.estatus_pago === 'Pagado',
+        status: plain.status // DRAFT, CONFIRMED, etc.
+    };
+}
+
+
+/* --- EXPORTS --- */
+
+exports.generateComandaPdf = async (orderId, ctx) => {
+    // 1. Fetch Data
+    const order = await findOrderScoped(orderId, ctx);
+    const branding = await getTenantBranding(ctx.tenantId);
+
+    // 2. Map to DTO
+    const orderDTO = await toOrderDTO(order, branding);
+
+    // 3. Render
+    return await renderPdf({
+        templateName: 'comanda',
+        data: {
+            folio: orderDTO,
+            qrCode: await QRCode.toDataURL(`${orderDTO.folioNumber}`, { margin: 0 }) // Short QR for production internal use?
+        },
+        branding,
+        options: {
             format: 'A4',
-            landscape: true,
-            margin: { top: '1cm', right: '1cm', bottom: '1cm', left: '1cm' }
-        });
-    } catch (e) {
-        console.error("Error renderOrdersPdf:", e);
-        throw e;
-    }
+            printBackground: true,
+            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
+        }
+    });
 };
 
-exports.renderCommissionsPdf = async ({ reportData, from, to }) => {
-    try {
-        if (process.env.QA_MODE === '1') {
-            return Buffer.from('MOCK_PDF_CONTENT:COMMISSIONS');
-        }
-        const tpl = path.join(__dirname, '..', 'templates', 'commissionReport.ejs');
+exports.generateNotaVentaPdf = async (orderId, ctx) => {
+    const order = await findOrderScoped(orderId, ctx);
+    const branding = await getTenantBranding(ctx.tenantId);
+    const orderDTO = await toOrderDTO(order, branding);
 
-        const html = await ejs.renderFile(tpl, {
-            reportData,
-            from,
-            to
-        });
-
-        return renderHtmlToPdfBuffer(html, {
+    return await renderPdf({
+        templateName: 'nota-venta',
+        data: {
+            folio: orderDTO,
+            qrCode: await QRCode.toDataURL(process.env.PUBLIC_APP_URL ? `${process.env.PUBLIC_APP_URL}/folios/${order.id}` : `ID:${order.id}`)
+        },
+        branding,
+        options: {
             format: 'A4',
-            margin: { top: '2cm', right: '2cm', bottom: '2cm', left: '2cm' }
-        });
-    } catch (e) {
-        console.error("Error renderCommissionsPdf:", e);
-        throw e;
-    }
+            printBackground: true,
+            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
+        }
+    });
 };

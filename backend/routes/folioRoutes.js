@@ -23,6 +23,51 @@ router.post('/', uploadReference.array('referenceImages', 5), folioController.cr
 
 router.get('/:id/pdf', folioController.generarPDF);
 router.get('/:id/label-pdf', folioController.generarEtiqueta); // Nueva ruta
+
+// New PDF Service Routes
+const folioPdfController = require('../controllers/folioPdfController');
+
+/**
+ * @swagger
+ * /api/folios/{id}/pdf/comanda:
+ *   get:
+ *     summary: Descargar Comanda PDF
+ *     tags: [Folios]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Archivo PDF
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *
+ * /api/folios/{id}/pdf/nota:
+ *   get:
+ *     summary: Descargar Nota de Venta PDF
+ *     tags: [Folios]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Archivo PDF
+ */
+router.get('/:id/pdf/comanda', folioPdfController.getFolioComandaPdf);
+router.get('/:id/pdf/nota', folioPdfController.getFolioNotaPdf);
 router.get('/:id', folioController.getFolioById);
 router.put('/:id', uploadReference.array('referenceImages', 5), folioController.updateFolio);
 

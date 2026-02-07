@@ -1,0 +1,33 @@
+<div class="header">
+    <div class="header-branding">
+        <% if (config && config.logoUrl) { %>
+            <img src="<%= config.logoUrl %>" class="logo-img" alt="Logo">
+            <% } %>
+                <div class="business-name">
+                    <%= (config && config.businessName) || 'Pastelería' %>
+                </div>
+                <div style="font-size: 9pt; color: #666;">
+                    <%= (config && config.pdfHeaderText) || '' %>
+                </div>
+    </div>
+
+    <div class="header-meta">
+        <div class="folio-badge">FOLIO #<%= folio.folioNumber || folio.id %>
+        </div>
+        <div style="font-size: 10pt;">
+            <strong>Entrega:</strong>
+            <%= folio.formattedDeliveryDate %><br>
+                <strong>Hora:</strong>
+                <%= folio.formattedDeliveryTime %>
+        </div>
+        <div style="margin-top: 4px; font-size: 9pt; color: #555;">
+            Creado: <%= new Date(folio.createdAt).toLocaleDateString() %>
+        </div>
+    </div>
+</div>
+
+<% if (folio.isPaid) { %>
+    <div class="watermark paid-watermark">PAGADO</div>
+    <% } else if (folio.status==='CANCELLED' ) { %>
+        <div class="watermark cancel-watermark">CANCELADO</div>
+        <% } %>

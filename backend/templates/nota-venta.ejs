@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <%- include('partials/styles', { config: config }) %>
+</head>
+
+<body>
+    <div class="page-container">
+        <%- include('partials/header', { config: config, folio: folio }) %>
+
+            <!-- SECCIÓN 1: CLIENTE -->
+            <div class="section">
+                <div class="section-title">Datos del Cliente</div>
+                <div class="grid-2">
+                    <div>
+                        <div class="data-row"><span class="data-label">Nombre:</span> <span class="data-value">
+                                <%= folio.client.name %>
+                            </span></div>
+                        <div class="data-row"><span class="data-label">Teléfono:</span> <span class="data-value">
+                                <%= folio.client.phone %>
+                            </span></div>
+                        <% if (folio.client.email) { %>
+                            <div class="data-row"><span class="data-label">Email:</span> <span class="data-value">
+                                    <%= folio.client.email %>
+                                </span></div>
+                            <% } %>
+                    </div>
+                    <div>
+                        <div class="data-row"><span class="data-label">Entrega:</span> <span class="data-value">
+                                <%= folio.deliveryLocation %>
+                            </span></div>
+                        <% if (folio.ubicacion_maps_link) { %>
+                            <div style="font-size: 8pt; text-align: right;"><a
+                                    href="<%= folio.ubicacion_maps_link %>">Ver Mapa</a></div>
+                            <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: RESUMEN PEDIDO -->
+            <div class="section">
+                <div class="section-title">Detalle del Pedido</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Detalle</th>
+                            <th class="text-right">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Pastel Principal -->
+                        <tr>
+                            <td>Pastel <%= folio.folioType %>
+                            </td>
+                            <td>
+                                <%= folio.shape %>, <%= folio.persons %> personas<br>
+                                        <small>
+                                            <%= (folio.sabores || []).join(', ') %></small>
+                        </td>
+                        <td class="text-right">$<%= parseFloat(folio.basePrice || folio.total - (folio.totalExtras || 0)).toFixed(2) %></td>
+                    </tr>
+                    
+                    <!-- Adicionales -->
+                    <% if (folio.additionals && folio.additionals.length > 0) { %>
+                        <% folio.additionals.forEach(add => { %>
+                            <tr>
+                                <td>Adicional</td>
+                                <td><%= add.name %></td>
+                                <td class="text-right">$<%= parseFloat(add.price).toFixed(2) %></td>
+                            </tr>
+                        <% }); %>
+                    <% } %>
+
+                    <!-- Envío -->
+                    <% if (folio.deliveryCost > 0) { %>
+                        <tr>
+                            <td>Servicio de Envío</td>
+                            <td>Domicilio</td>
+                            <td class="text-right">$<%= parseFloat(folio.deliveryCost).toFixed(2) %></td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SECCIÓN 3: TOTALES -->
+        <div class="section">
+            <div style="margin-left: auto; width: 50%;">
+                <div class="data-row text-large">
+                    <span class="data-label">Total:</span> 
+                    <span class="data-value text-bold">$<%= parseFloat(folio.total).toFixed(2) %></span>
+                </div>
+                <div class="data-row" style="color: #28a745;">
+                    <span class="data-label">Anticipo:</span> 
+                    <span class="data-value text-bold">-$<%= parseFloat(folio.advancePayment).toFixed(2) %></span>
+                </div>
+                <hr>
+                <div class="data-row text-large">
+                    <span class="data-label">RESTA A PAGAR:</span> 
+                    <span class="data-value text-bold" style="color: <%= folio.balance > 0 ? ' #dc3545' : '#28a745' %>
+                                                ;">
+                                                $<%= parseFloat(folio.balance).toFixed(2) %>
+                                                    </span>
+            </div>
+            <% if (folio.balance> 0) { %>
+                <div style="text-align: right; font-size: 8pt; margin-top: 5px; color: #666;">
+                    * Pendiente al entregar
+                </div>
+                <% } %>
+    </div>
+    </div>
+
+    <!-- TÉRMINOS -->
+    <div class="section" style="font-size: 8pt; color: #777;">
+        <strong>Términos y Condiciones:</strong>
+        <p style="margin: 2px 0;">
+            1. Los tiempos de entrega son aproximados.<br>
+            2. Para cambios en el diseño se requiere 72 horas de anticipación.<br>
+            3. En caso de cancelación el anticipo no es reembolsable.
+        </p>
+    </div>
+
+    <%- include('partials/footer', { config: config, qrCode: locals.qrCode }) %>
+        </div>
+</body>
+
+</html>

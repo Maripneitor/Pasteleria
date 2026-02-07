@@ -56,22 +56,31 @@ module.exports = async function (req, res, next) {
       branchId: decoded.branchId || null
     };
 
-    // --- Heartbeat: Update session lastSeenAt ---
-    const tokenSignature = token.length > 20 ? token.slice(-20) : token;
+    // --- REFUERZO DE SEGURIDAD ---
+    // Si es EMPLOYEE, debe tener branchId (regla de negocio estricta)
+    if (req.user.role === 'EMPLOYEE' && !req.user.branchId) {
+      return res.status(403).json({ message: 'Acceso Denegado: Empleado sin sucursal asignada.' });
+    }
 
-    try {
-      await UserSession.update(
+    // --- Heartbeat: Update session lastSeenAt ---
+    // Intenta actualizar sesión, pero no bloquea si falla (fire & forget)
+    // Solo si el token tiene firma (evita overhead en tokens muy cortos de prueba)
+    if (token.length > 20) {
+      const tokenSignature = token.slice(-20);
+      UserSession.update(
         { lastSeenAt: new Date() },
         { where: { userId: decoded.id, tokenSignature, isActive: true } }
-      );
-    } catch (sessionErr) {
-      console.error('Session heartbeat error:', sessionErr);
+      ).catch(err => {
+        // Silently ignore session update errors to avoid blocking requests
+        // console.error('Session heartbeat error:', err.message);
+      });
     }
 
     // 6. Next
     next();
   } catch (error) {
     console.error('Auth Middleware Error:', error.message);
-    res.status(401).json({ message: 'Token no válido.' });
+    // Explicit 401 for bad tokens
+    return res.status(401).json({ message: 'Token no válido o expirado.' });
   }
 };

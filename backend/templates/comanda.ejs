@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <%- include('partials/styles', { config: config }) %>
+</head>
+
+<body>
+    <div class="page-container">
+        <%- include('partials/header', { config: config, folio: folio }) %>
+
+            <!-- SECCIÓN 1: DATOS OPERATIVOS -->
+            <div class="section">
+                <div class="section-title">Detalles de Producción</div>
+                <div class="grid-2">
+                    <div>
+                        <div class="data-row"><span class="data-label">Tipo:</span> <span class="data-value">
+                                <%= folio.folioType %>
+                            </span></div>
+                        <div class="data-row"><span class="data-label">Forma:</span> <span class="data-value">
+                                <%= folio.shape %>
+                            </span></div>
+                        <div class="data-row"><span class="data-label">Personas:</span> <span class="data-value">
+                                <%= folio.persons %>
+                            </span></div>
+                    </div>
+                    <div>
+                        <div class="data-row"><span class="data-label">Fecha Entrega:</span> <span
+                                class="data-value text-bold">
+                                <%= folio.formattedDeliveryDate %>
+                            </span></div>
+                        <div class="data-row"><span class="data-label">Hora:</span> <span class="data-value text-bold">
+                                <%= folio.formattedDeliveryTime %>
+                            </span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: SABORES Y RELLENOS -->
+            <div class="section">
+                <div class="section-title">Sabores y Rellenos</div>
+                <div class="data-row">
+                    <span class="data-label">Pan(es):</span>
+                    <span class="data-value">
+                        <%= (folio.sabores || []).join(', ') || ' N/A' %>
+                    </span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">Relleno(s):</span>
+                    <span class="data-value">
+                        <%= (folio.rellenos || []).join(', ') || ' N/A' %>
+                    </span>
+                </div>
+                <% if (folio.cubierta) { %>
+                    <div class="data-row">
+                        <span class="data-label">Cubierta:</span>
+                        <span class="data-value">
+                            <%= folio.cubierta %>
+                        </span>
+                    </div>
+                    <% } %>
+            </div>
+
+            <!-- SECCIÓN 3: PISOS (Si aplica) -->
+            <% if (folio.tiers && folio.tiers.length> 0) { %>
+                <div class="section">
+                    <div class="section-title">Estructura (Pisos)</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Personas</th>
+                                <th>Pan</th>
+                                <th>Relleno</th>
+                                <th>Notas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% folio.tiers.forEach((tier, idx)=> { %>
+                                <tr>
+                                    <td>
+                                        <%= idx + 1 %>
+                                    </td>
+                                    <td>
+                                        <%= tier.persons %>
+                                    </td>
+                                    <td>
+                                        <%= tier.panes ? tier.panes.join(', ') : '' %></td>
+                                <td><%= tier.rellenos ? tier.rellenos.join(' , ') : '' %></td>
+                                <td><%= tier.notas %></td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+
+        <!-- SECCIÓN 4: DECORACIÓN Y NOTAS -->
+        <div class="section alert-box">
+            <div class="section-title">Instrucciones de Decoración</div>
+            <p style="white-space: pre-wrap;"><%= folio.designDescription || ' Sin instrucciones específicas.' %>
+                                            </p>
+
+                                            <% if (folio.dedication) { %>
+                                                <div
+                                                    style="margin-top: 10px; padding-top: 5px; border-top: 1px dashed #ccc;">
+                                                    <strong>Dedicatoria:</strong> "<%= folio.dedication %>"
+                                                </div>
+                                                <% } %>
+                </div>
+
+                <!-- IMÁGENES DE REFERENCIA -->
+                <% if (folio.imageUrls && folio.imageUrls.length> 0) { %>
+                    <div class="page-break"></div>
+                    <div class="section">
+                        <div class="section-title">Referencias Visuales</div>
+                        <div style="text-align: center;">
+                            <% folio.imageUrls.forEach(url=> { %>
+                                <img src="<%= url %>"
+                                    style="max-width: 90%; max-height: 400px; margin: 10px; border: 1px solid #ddd;">
+                                <% }); %>
+                        </div>
+                    </div>
+                    <% } %>
+
+                        <%- include('partials/footer', { config: config, qrCode: locals.qrCode }) %>
+    </div>
+</body>
+
+</html>

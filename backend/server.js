@@ -25,6 +25,8 @@ const clientRoutes = require('./routes/clientRoutes');
 app.use('/api/folios', folioRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/clients', clientRoutes);
+app.use('/api/branches', require('./routes/branchRoutes'));
+app.use('/api/tenant', require('./routes/tenantConfigRoutes')); // ✅ NEW Tenant Config API
 
 // Fix: WhatsApp Admin vs Webhooks separation
 app.use('/api/whatsapp', whatsappRoutes); // Admin (QR, Refresh)
@@ -37,10 +39,9 @@ const pdfTemplateRoutes = require('./routes/pdfTemplateRoutes');
 // Conectar DB
 const { conectarDB } = require('./config/database');
 const { sequelize } = require('./models');
-conectarDB();
 
-// Cron Jobs
-require('./cronJobs');
+// Nota: conectarDB() y cronJobs se ejecutan en bootstrap()
+
 
 // Servir archivos estáticos
 const path = require('path');
@@ -134,6 +135,12 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// 📄 Swagger Documentation
+const { swaggerSpec, swaggerUi } = require('./docs/swagger');
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
+console.log('📄 Swagger Docs available at /api/docs');
+
 // 🚀 FALLBACK SPA (Para React Router)
 // Si no es /api ni archivo estático, devuelve index.html
 app.get('*', (req, res) => {
@@ -177,31 +184,52 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Import dbInit
-const { dbInit } = require('./scripts/initProject');
+// Import dbInit removed in favor of explicit bootstrap logic
+// const { dbInit } = require('./scripts/initProject');
 
-async function startServer() {
+async function bootstrap() {
   try {
-    // Run Init Script (Auto-Heal)
-    await dbInit();
+    console.log('🚀 Iniciando servidor (Bootstrap)...');
 
-    console.log('✅ DB Conectada y Sincronizada.');
+    // 1. Conexión DB
+    await conectarDB();
+    console.log('✅ DB Conectada.');
 
-    // Startup Info for Debugging
-    const fs = require('fs');
-    const distExists = fs.existsSync(path.join(__dirname, '../frontend/dist/index.html'));
-    console.log('🔧 Server Config:');
-    console.log(`   - PORT: ${PORT}`);
-    console.log(`   - NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`   - client/dist exists: ${distExists}`);
+    // 2. Sync / Migrations
+    const mode = (process.env.DB_SYNC_MODE || 'none').toLowerCase();
+    console.log(`🔧 DB_SYNC_MODE=${mode}`);
 
+    if (mode === 'alter') {
+      console.log('⚠️ Ejecutando sequelize.sync({ alter: true })');
+      await sequelize.sync({ alter: true });
+    } else if (mode === 'smart') {
+      console.log('ℹ️ Ejecutando sequelize.sync() (Create only)');
+      await sequelize.sync();
+    } else if (mode === 'none') {
+      console.log('🛡️ Skipping sync (Mode: none)');
+    } else {
+      console.warn(`⚠️ Modo desconocido '${mode}'. Se asume 'none'.`);
+    }
+
+    // 3. Iniciar CronJobs (Solo tras DB lista)
+    // Se requiere aquí dentro para garantizar que los modelos estén listos y sincronizados
+    const initCronJobs = require('./cronJobs');
+    initCronJobs();
+    console.log('✅ CronJobs inicializados.');
+
+    // 4. Iniciar Worker de Emails (Async)
+    const { startEmailWorker } = require('./workers/emailWorker');
+    startEmailWorker();
+
+    // 4. Levantar servidor
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
     });
-  } catch (err) {
-    console.error('❌ Error fatal iniciando servidor:', err);
+
+  } catch (error) {
+    console.error('❌ FATAL bootstrap error:', error);
     process.exit(1);
   }
 }
 
-startServer();
+bootstrap();

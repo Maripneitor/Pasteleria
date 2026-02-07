@@ -6,7 +6,7 @@ const requireBranch = (req, res, next) => {
 
         // Owners and Super Admins bypass strict branch check
         // (They operate at Tenant Level)
-        if (role === 'OWNER' || role === 'SUPER_ADMIN') {
+        if (role === 'OWNER' || role === 'SUPER_ADMIN' || role === 'ADMIN') {
             return next();
         }
 
@@ -14,6 +14,14 @@ const requireBranch = (req, res, next) => {
         if (!branchId) {
             return res.status(403).json({
                 message: 'Acceso Denegado: Tu usuario no está asignado a ninguna sucursal. Contacta al dueño.'
+            });
+        }
+
+        // STRICT CHECK: If request tries to modify/access another branch ID explicitly
+        const targetBranchId = req.params.branchId || req.body.branchId || req.query.branchId;
+        if (targetBranchId && String(targetBranchId) !== String(branchId)) {
+            return res.status(403).json({
+                message: 'Acceso Denegado: No puedes operar en una sucursal distinta a la asignada.'
             });
         }
 

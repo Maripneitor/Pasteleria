@@ -19,6 +19,8 @@ const { CashCut, CashMovement } = require('./CashModels');
 // --- Multi-Tenant Models ---
 const Tenant = require('./Tenant');
 const Branch = require('./Branch');
+const EmailQueue = require('./EmailQueue');
+const TenantConfig = require('./TenantConfig'); // ✅ New TenantConfig Model
 
 // --- Sprint 4: Control & Limits ---
 const ActivationCode = require('./ActivationCode');
@@ -65,13 +67,21 @@ CashMovement.belongsTo(User, { as: 'performer', foreignKey: 'performedByUserId' 
 User.hasMany(AISession, { foreignKey: 'userId', as: 'aiSessions' });
 AISession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-// --- Relaciones Multi-Tenant ---
+// --- Relaciones Multi-Tenant CORE ---
+// Tenant - Branch
+// Tenant - Branch
 Tenant.hasMany(Branch, { foreignKey: 'tenantId', as: 'branches' });
 Branch.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 
+// Tenant - TenantConfig (1:1)
+Tenant.hasOne(TenantConfig, { foreignKey: 'tenantId', as: 'config', onDelete: 'CASCADE' });
+TenantConfig.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+
+// Tenant - User
 Tenant.hasMany(User, { foreignKey: 'tenantId', as: 'users' });
 User.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'organization' });
 
+// Branch - User
 Branch.hasMany(User, { foreignKey: 'branchId', as: 'branchUsers' });
 User.belongsTo(Branch, { foreignKey: 'branchId', as: 'assignedBranch' });
 
@@ -119,6 +129,8 @@ module.exports = {
   PdfTemplate,
   Tenant,
   Branch,
+  EmailQueue,
+  TenantConfig, // ✅ Export
   SaaSContract,
   SaaSCommissionLedger,
   DailySalesStats

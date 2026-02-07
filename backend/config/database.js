@@ -8,9 +8,9 @@ const sequelize = new Sequelize(
   process.env.DB_PASSWORD,
   {
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
+    port: Number(process.env.DB_PORT || 3306),
     dialect: 'mysql',
-    logging: false, // Se mantiene desactivado para no llenar la consola con logs de SQL.
+    logging: process.env.DB_DEBUG === 'true' ? console.log : false,
     dialectOptions: {
       charset: 'utf8mb4',
       // Soporte para BIGINT (evita bugs de string vs number en IDs)
@@ -24,8 +24,10 @@ const conectarDB = async () => {
   try {
     // Verifica que la conexión con la base de datos se ha establecido correctamente.
     await sequelize.authenticate();
+    console.log('✅ Conexión a la base de datos establecida correctamente.');
   } catch (error) {
     console.error('❌ No se pudo conectar a la base de datos:', error);
+    throw error;
   }
 };
 
