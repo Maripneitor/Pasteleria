@@ -5,7 +5,7 @@ import { getToken, clearToken } from '../utils/auth';
 const client = axios.create({
     baseURL: (() => {
         const envUrl = import.meta.env.VITE_API_URL;
-        if (!envUrl) return '/api';
+        if (!envUrl) return 'http://localhost:3000/api';
 
         // Remove specific unwanted suffix if present
         let url = envUrl.replace(/\/apiservices\/?$/, '');
@@ -16,10 +16,7 @@ const client = axios.create({
         // Identify if it already ends in /api
         if (url.endsWith('/api')) return url;
 
-        // Should we force /api suffix? 
         // If the user provided 'http://localhost:3000', we likely want 'http://localhost:3000/api'
-        // If they provided '/api', we returned it above.
-        // If they provided '', we returned '/api' above.
         return `${url}/api`;
     })(),
     headers: {
@@ -101,6 +98,11 @@ client.interceptors.response.use(
 
         // 2. Manejo de Auth (401)
         if (error.response?.status === 401) {
+            // Don't redirect if it's a login attempt failure (let the component handle "Invalid credentials")
+            if (error.config?.url?.includes('/auth/login')) {
+                return Promise.reject(error);
+            }
+
             clearToken();
             // Optional delay to let user read toast before redirect? No, immediate is safer.
             window.location.href = '/login';

@@ -8,6 +8,33 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // Helper: Decode JWT locally
+    const decodeJwt = (token) => {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (e) {
+            console.error("Failed to decode JWT manually", e);
+            return null;
+        }
+    };
+
+    const mapUserFromPayload = (payload) => {
+        if (!payload) return null;
+        return {
+            id: payload.id || payload.userId || payload.sub,
+            name: payload.name || payload.fullName || payload.username || payload.email, // Fallback chain
+            email: payload.email,
+            role: (payload.role || 'USER').toUpperCase(),
+            tenantId: payload.tenantId,
+            branchId: payload.branchId
+        };
+    };
+
     // Load user on mount
     useEffect(() => {
         const loadUser = async () => {
@@ -18,17 +45,29 @@ export const AuthProvider = ({ children }) => {
             }
 
             try {
-                // Ensure default header is set (axios config might do this, but safe to ensure)
-                // api.defaults.headers.common['Authorization'] = `Bearer ${token}`; 
-                // Using axios interceptor is better, assuming it's set up in config/axios.js
-                // I'll trust config/axios.js deals with localStorage token or I need to check it.
-                // Re-reading config/axios.js via tool if needed, but standard request:
+                // A) Intentar fetch /auth/me
                 const res = await api.get('/auth/me');
-                setUser(res.data);
+                setUser(res.data.user || res.data.data || res.data);
             } catch (error) {
-                console.error("Auth Load Error:", error);
-                localStorage.removeItem('token');
-                setUser(null);
+                console.warn("Auth Load: /auth/me failed or 401. Falling back to JWT decode if possible.", error);
+
+                // Si 401, el interceptor de axios ya hizo el trabajo sucio (limpiar token y redireccionar si aplica),
+                // pero aquí debemos limpiar estado.
+                if (error.response?.status === 401) {
+                    localStorage.removeItem('token');
+                    setUser(null);
+                } else {
+                    // B) Fallback a decodificación local (si fue error de red o 404, pero tenemos token)
+                    const payload = decodeJwt(token);
+                    if (payload) {
+                        const mapped = mapUserFromPayload(payload);
+                        setUser(mapped);
+                    } else {
+                        // Token inválido o corrupto
+                        localStorage.removeItem('token');
+                        setUser(null);
+                    }
+                }
             } finally {
                 setLoading(false);
             }
@@ -43,19 +82,45 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
         } else {
             // Fetch if not provided partial
-            const res = await api.get('/auth/me');
-            setUser(res.data);
+            try {
+                const res = await api.get('/auth/me');
+                setUser(res.data.user || res.data.data || res.data);
+            } catch (e) {
+                // Fallback decode
+                const payload = decodeJwt(token);
+                if (payload) setUser(mapUserFromPayload(payload));
+            }
         }
     };
 
     const logout = () => {
         clearToken(); // Helper removes token
         setUser(null);
-        // Optional: window.location.href = '/login' handled by component
+        window.location.href = '/login';
+    };
+
+    // RBAC Helpers
+    const hasRole = (roles) => {
+        if (!user || !user.role) return false;
+        // roles can be string (single) or array
+        const rolesArray = Array.isArray(roles) ? roles : [roles];
+        return rolesArray.includes(user.role);
+    };
+
+    const isOwnerOrAdmin = () => {
+        return hasRole(['OWNER', 'ADMIN', 'SUPER_ADMIN']); // Include SUPER_ADMIN just in case
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{
+            user,
+            loading,
+            isAuthenticated: !!user,
+            login,
+            logout,
+            hasRole,
+            isOwnerOrAdmin
+        }}>
             {!loading && children}
         </AuthContext.Provider>
     );

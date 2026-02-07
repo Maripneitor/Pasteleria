@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart, Building } from 'lucide-react';
 import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiAssistantTray from './AiAssistantTray';
@@ -76,7 +76,7 @@ const MainLayout = () => {
                     <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Principal</div>
                     <NavItem path="/" icon={LayoutDashboard} label="Dashboard" isActive={checkActive('/')} onClick={handleNavClick} />
                     <NavItem path="/pedidos/nuevo" icon={PlusCircle} label="Nuevo Pedido" isActive={checkActive('/pedidos/nuevo')} onClick={handleNavClick} />
-                    <NavItem path="/pedidos" icon={Package} label="Pedidos" isActive={checkActive('/pedidos')} onClick={handleNavClick} />
+                    <NavItem path="/pedidos" icon={Package} label="Mis Pedidos" isActive={checkActive('/pedidos') && !checkActive('/pedidos/nuevo')} onClick={handleNavClick} />
                     <NavItem path="/calendario" icon={Calendar} label="Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
 
                     {/* Operational */}
@@ -85,9 +85,10 @@ const MainLayout = () => {
                     <NavItem path="/produccion" icon={ClipboardList} label="Producción" isActive={checkActive('/produccion')} onClick={handleNavClick} />
 
                     {/* Admin / Owner Only */}
-                    {['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
+                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
                         <>
                             <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Sistema</div>
+                            <NavItem path="/sucursales" icon={Building} label="Sucursales" isActive={checkActive('/sucursales')} onClick={handleNavClick} />
                             <NavItem path="/auditoria" icon={FileText} label="Auditoría" isActive={checkActive('/auditoria')} onClick={handleNavClick} />
                             <NavItem path="/usuarios" icon={Users} label="Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
 
@@ -165,8 +166,8 @@ const MainLayout = () => {
                                         <div className="flex justify-between text-xs">
                                             <span className="text-gray-400">Rol Global</span>
                                             <span className={`font-bold px-2 py-0.5 rounded-full uppercase text-[10px] ${user?.role === 'SUPER_ADMIN' ? 'text-purple-700 bg-purple-100' :
-                                                    user?.role === 'ADMIN' ? 'text-blue-700 bg-blue-100' :
-                                                        'text-gray-700 bg-gray-100'
+                                                user?.role === 'ADMIN' ? 'text-blue-700 bg-blue-100' :
+                                                    'text-gray-700 bg-gray-100'
                                                 }`}>
                                                 {user?.role === 'SUPER_ADMIN' ? 'Super Admin' :
                                                     user?.role === 'ADMIN' ? 'Admin' :
