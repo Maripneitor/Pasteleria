@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useOrder } from '../../context/OrderContext';
 import { DollarSign, CheckCircle } from 'lucide-react';
-import { createOrder } from '../../services/ordersApi';
+import foliosApi from '../../services/folios';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,13 +69,13 @@ const StepPayment = () => {
                 folio_numero: null // Dejar que backend genere
             };
 
-            await createOrder(payload);
+            const newFolio = await foliosApi.createFolio(payload);
 
             // 🔥 Avisar a toda la app que cambió la data
             window.dispatchEvent(new Event('folios:changed'));
 
             toast.success('¡Pedido Creado Exitosamente!');
-            navigate('/pedidos');
+            navigate(`/folios/${newFolio.id}`); // Navigate to the new detailed view logic
         } catch (error) {
             console.error(error);
             toast.error(error.response?.data?.message || 'Error al crear pedido');

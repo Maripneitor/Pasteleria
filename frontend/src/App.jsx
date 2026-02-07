@@ -11,6 +11,10 @@ import NewOrderPage from './pages/NewOrderPage';
 import CalendarPage from './pages/CalendarPage';
 import TeamPage from './pages/TeamPage';
 import WhatsAppPage from './pages/WhatsAppPage';
+import BranchesPage from './pages/branches/BranchesPage'; // NEW MODULE
+import FoliosPage from './pages/folios/FoliosPage'; // NEW MODULE
+import NewFolioWizard from './pages/folios/NewFolioWizard'; // NEW MODULE
+import FolioDetailPage from './pages/folios/FolioDetailPage'; // NEW MODULE
 
 // 🆕 Páginas Nuevas (Routing Repair)
 import OrdersPage from './pages/OrdersPage';
@@ -57,9 +61,20 @@ function App() {
           <Route element={<MainLayout />}>
             <Route index element={<DashboardPage />} />
             {/* 🛠 Wizard & Operatives (All Roles) */}
-            <Route path="pedidos/nuevo" element={<NewOrderPage />} />
-            <Route path="pedidos" element={<OrdersPage />} />
+            <Route path="pedidos/nuevo" element={<NewFolioWizard />} />
+            <Route path="folios/new" element={<Navigate to="/pedidos/nuevo" replace />} />
+
+            <Route path="pedidos" element={<FoliosPage />} />
+            <Route path="folios" element={<Navigate to="/pedidos" replace />} />
+
+            <Route path="folios/:id" element={<FolioDetailPage />} />
+            <Route path="pedidos/:id" element={<Navigate to={`/folios/:id`} replace />} />
+
+            {/* Legacy Edit Route - could be migrated later */}
             <Route path="pedidos/:id/editar" element={<EditOrderPage />} />
+
+            <Route path="sucursales" element={<BranchesPage />} />
+            <Route path="branches" element={<Navigate to="/sucursales" replace />} />
             <Route path="caja" element={<CashRegister />} />
             <Route path="produccion" element={<ProductionPage />} />
             <Route path="produccion/detalle/:id" element={<OrderDetailsProduction />} />
