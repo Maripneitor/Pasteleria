@@ -35,6 +35,33 @@ const catalogApi = {
     toggleFilling: async (id, isActive) => {
         const res = await client.patch(`/catalog/fillings/${id}/active`, { isActive });
         return res.data;
+    },
+    // PRODUCTS
+    getProducts: async (includeInactive = false) => {
+        const res = await client.get(`/catalog/products?includeInactive=${includeInactive}`);
+        return res.data;
+    },
+    createProduct: async (data) => {
+        const res = await client.post('/catalog/products', data);
+        return res.data;
+    },
+    toggleProduct: async (id, isActive) => {
+        const res = await client.patch(`/catalog/products/${id}/active`, { isActive });
+        return res.data;
+    },
+
+    // DECORATIONS
+    getDecorations: async (includeInactive = false) => {
+        const res = await client.get(`/catalog/decorations?includeInactive=${includeInactive}`);
+        return res.data;
+    },
+    createDecoration: async (data) => {
+        const res = await client.post('/catalog/decorations', data);
+        return res.data;
+    },
+    toggleDecoration: async (id, isActive) => {
+        const res = await client.patch(`/catalog/decorations/${id}/active`, { isActive });
+        return res.data;
     }
 };
 

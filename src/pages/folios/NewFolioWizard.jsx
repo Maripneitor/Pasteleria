@@ -3,12 +3,39 @@ import { useNavigate } from 'react-router-dom';
 import OrderWizardLayout from '../../components/OrderWizardLayout';
 import { useOrder } from '../../context/OrderContext';
 import foliosApi from '../../services/folios';
+import catalogApi from '../../services/catalogApi'; // NEW
+import ClientAutocomplete from './wizard/ClientAutocomplete'; // NEW
 import toast from 'react-hot-toast';
 
 const NewFolioWizard = () => {
     const { step, setStep, orderData, updateOrder, nextStep, prevStep } = useOrder();
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
+
+    // Catalog State
+    const [flavors, setFlavors] = useState([]);
+    const [fillings, setFillings] = useState([]);
+    const [products, setProducts] = useState([]); // NEW
+
+    // Load Catalogs on Mount
+    React.useEffect(() => {
+        const loadCatalogs = async () => {
+            try {
+                const [fData, cData, pData] = await Promise.all([
+                    catalogApi.getFlavors(false),
+                    catalogApi.getFillings(false),
+                    catalogApi.getProducts(false) // NEW
+                ]);
+                setFlavors(fData);
+                setFillings(cData);
+                setProducts(pData); // NEW
+            } catch (error) {
+                console.error("Error loading catalogs", error);
+                toast.error("Error cargando catálogos");
+            }
+        };
+        loadCatalogs();
+    }, []);
 
     // --- Steps Renderers ---
 
@@ -17,25 +44,26 @@ const NewFolioWizard = () => {
         <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-700">Datos del Cliente</h2>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                <input
-                    type="text"
-                    value={orderData.clientName}
-                    onChange={(e) => updateOrder({ clientName: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
-                    placeholder="Ej. Juan Pérez"
+                <ClientAutocomplete
+                    selectedClient={orderData.selectedClient}
+                    onSelect={(client) => {
+                        updateOrder({
+                            selectedClient: client,
+                            clientName: client ? client.name : '',
+                            clientPhone: client ? client.phone : ''
+                        });
+                    }}
                 />
             </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                <input
-                    type="tel"
-                    value={orderData.clientPhone}
-                    onChange={(e) => updateOrder({ clientPhone: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
-                    placeholder="Ej. 55 1234 5678"
-                />
-            </div>
+
+            {/* Fallback Display if needed */}
+            {orderData.selectedClient && (
+                <div className="bg-pink-50 p-4 rounded-xl border border-pink-100 mt-2">
+                    <p className="font-bold text-gray-800">{orderData.clientName}</p>
+                    <p className="text-sm text-gray-600">{orderData.clientPhone}</p>
+                </div>
+            )}
+
             <div className="flex justify-end mt-6">
                 <button
                     onClick={nextStep}
@@ -48,29 +76,68 @@ const NewFolioWizard = () => {
         </div>
     );
 
-    // Step 2: Products (Simplified for compatibility)
+    // Step 2: Products (From Catalog)
     const renderStep2 = () => (
         <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-700">Detalles del Pastel</h2>
+
+            {/* PRODUCT BASE SELECTION */}
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Producto Base (Pastel)</label>
+                <select
+                    value={orderData.productId || ''}
+                    onChange={(e) => {
+                        const id = e.target.value;
+                        const product = products.find(p => p.id.toString() === id);
+                        updateOrder({
+                            productId: id,
+                            productName: product ? product.name : '',
+                            // Optionally set base price if needed
+                            // total: product ? product.price : orderData.total
+                        });
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded-lg"
+                >
+                    <option value="">Seleccione Producto Base</option>
+                    {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} - ${p.price}</option>
+                    ))}
+                </select>
+            </div>
+
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sabor del Pan</label>
-                <input
-                    type="text"
-                    value={orderData.flavorText || ''}
-                    onChange={(e) => updateOrder({ flavorText: e.target.value })}
+                <select
+                    value={orderData.flavorId || ''}
+                    onChange={(e) => {
+                        const id = e.target.value;
+                        const flavor = flavors.find(f => f.id.toString() === id);
+                        updateOrder({ flavorId: id, flavorText: flavor ? flavor.name : '' });
+                    }}
                     className="w-full p-2 border border-gray-300 rounded-lg"
-                    placeholder="Ej. Vainilla, Chocolate..."
-                />
+                >
+                    <option value="">Seleccione Sabor</option>
+                    {flavors.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                </select>
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Relleno</label>
-                <input
-                    type="text"
-                    value={orderData.fillingText || ''}
-                    onChange={(e) => updateOrder({ fillingText: e.target.value })}
+                <select
+                    value={orderData.fillingId || ''}
+                    onChange={(e) => {
+                        const id = e.target.value;
+                        const filling = fillings.find(f => f.id.toString() === id);
+                        updateOrder({ fillingId: id, fillingText: filling ? filling.name : '' });
+                    }}
                     className="w-full p-2 border border-gray-300 rounded-lg"
-                    placeholder="Ej. Fresa, Ganache..."
-                />
+                >
+                    <option value="">Seleccione Relleno</option>
+                    {fillings.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                </select>
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Descripción / Diseño</label>
@@ -85,7 +152,8 @@ const NewFolioWizard = () => {
                 <button onClick={prevStep} className="text-gray-500 hover:text-gray-700">Atrás</button>
                 <button
                     onClick={nextStep}
-                    className="bg-pink-500 text-white px-6 py-2 rounded-lg hover:bg-pink-600 transition"
+                    disabled={!orderData.flavorId || !orderData.fillingId || !orderData.productId} // Validation
+                    className="bg-pink-500 text-white px-6 py-2 rounded-lg hover:bg-pink-600 transition disabled:bg-gray-300"
                 >
                     Siguiente
                 </button>
@@ -135,23 +203,24 @@ const NewFolioWizard = () => {
         setSubmitting(true);
         try {
             // Build Payload
+            // Build Payload
             const payload = {
-                clientName: orderData.clientName,
-                clientPhone: orderData.clientPhone, // If backend supports it
+                cliente_nombre: orderData.clientName,
+                cliente_telefono: orderData.clientPhone,
+                clientId: orderData.selectedClient?.id || null, // NEW Field
                 fecha_entrega: orderData.deliveryDate,
                 hora_entrega: orderData.deliveryTime,
                 descripcion_diseno: orderData.designDescription,
 
-                // Compatibility Fallback for Catalogs
-                sabores_pan: JSON.stringify([orderData.flavorText || 'Estándar']),
-                rellenos: JSON.stringify([orderData.fillingText || 'Estándar']),
-
-                // Hardcoded IDs if required by backend constraints (assuming 1 exists or is default)
-                // For now, sending text in JSON fields as established in legacy support strategy.
+                // Compatibility and Real Data
+                sabores_pan: [orderData.flavorText || 'Estándar'],
+                rellenos: [orderData.fillingText || 'Estándar'],
+                flavorIds: [orderData.flavorId], // Array as per prompt
+                fillingIds: [orderData.fillingId], // Array as per prompt
 
                 total: parseFloat(orderData.total || 0),
                 anticipo: parseFloat(orderData.advance || 0),
-                status: 'PENDING'
+                status: 'CONFIRMED'
             };
 
             const newFolio = await foliosApi.createFolio(payload);

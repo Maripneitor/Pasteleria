@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import foliosApi, { openPdfInNewTab } from '../../services/folios';
+import foliosApi, { downloadPdfBlob } from '../../services/folios';
 import { ArrowLeft, FileText, Calendar, User, DollarSign, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -30,20 +30,20 @@ const FolioDetailPage = () => {
     const handleOpenComanda = async () => {
         try {
             const blob = await foliosApi.getComandaPdfBlob(id);
-            openPdfInNewTab(blob, `comanda-${id}.pdf`);
+            downloadPdfBlob(blob, `comanda-${id}.pdf`);
         } catch (e) {
             console.error(e);
-            toast.error('Error abriendo Comanda');
+            toast.error(e.message || 'Error descargando Comanda');
         }
     };
 
     const handleOpenNota = async () => {
         try {
             const blob = await foliosApi.getNotaPdfBlob(id);
-            openPdfInNewTab(blob, `nota-${id}.pdf`);
+            downloadPdfBlob(blob, `nota-${id}.pdf`);
         } catch (e) {
             console.error(e);
-            toast.error('Error abriendo Nota');
+            toast.error(e.message || 'Error descargando Nota');
         }
     };
 
@@ -79,14 +79,14 @@ const FolioDetailPage = () => {
                         className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition"
                     >
                         <FileText size={18} />
-                        Ver Comanda
+                        Descargar Comanda
                     </button>
                     <button
                         onClick={handleOpenNota}
                         className="flex items-center gap-2 bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg font-medium shadow-md transition"
                     >
                         <DollarSign size={18} />
-                        Ver Nota de Venta
+                        Descargar Nota
                     </button>
                 </div>
             </div>

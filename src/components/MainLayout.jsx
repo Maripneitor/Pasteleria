@@ -91,8 +91,10 @@ const MainLayout = () => {
                             <NavItem path="/sucursales" icon={Building} label="Sucursales" isActive={checkActive('/sucursales')} onClick={handleNavClick} />
                             <NavItem path="/auditoria" icon={FileText} label="Auditoría" isActive={checkActive('/auditoria')} onClick={handleNavClick} />
                             <NavItem path="/usuarios" icon={Users} label="Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
+                            <NavItem path="/clients" icon={Users} label="Directorio Clientes" isActive={checkActive('/clients')} onClick={handleNavClick} />
 
                             <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
+                            <NavItem path="/catalogs" icon={Tags} label="Catálogos y Precios" isActive={checkActive('/catalogs')} onClick={handleNavClick} />
                             <NavItem path="/admin/stats" icon={BarChart} label="Reportes" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
                             <NavItem path="/admin/sabores" icon={Tags} label="Sabores y Catálogo" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
                             {user?.role === 'SUPER_ADMIN' && ( // Only SUPER_ADMIN sees commissions
