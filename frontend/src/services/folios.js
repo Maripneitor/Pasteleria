@@ -19,12 +19,13 @@ const foliosApi = {
         return res.data;
     },
 
-    // PDF Fetchers (Blob strategy for Auth headers)
+    // PDF Fetchers (Blob strategy with Error Handling)
     getComandaPdfBlob: async (id) => {
         const res = await client.get(`/folios/${id}/pdf/comanda`, {
             responseType: 'blob',
             headers: { 'Accept': 'application/pdf' }
         });
+        await checkForBlobError(res.data);
         return res.data;
     },
 
@@ -33,26 +34,39 @@ const foliosApi = {
             responseType: 'blob',
             headers: { 'Accept': 'application/pdf' }
         });
+        await checkForBlobError(res.data);
         return res.data;
     }
 };
 
 export default foliosApi;
 
-// Helper to open Blob in new tab
-export const openPdfInNewTab = (blob, filename = 'document.pdf') => {
+// Helper to check if blob is actually a JSON error
+const checkForBlobError = async (blob) => {
+    if (blob.type === 'application/json') {
+        const text = await blob.text();
+        try {
+            const json = JSON.parse(text);
+            throw new Error(json.message || 'Error generando PDF');
+        } catch (e) {
+            // Rethrow the parsed error, or the original if parsing failed
+            throw e instanceof Error ? e : new Error('Error generando PDF');
+        }
+    }
+};
+
+// Helper to force download of Blob
+export const downloadPdfBlob = (blob, filename = 'document.pdf') => {
     const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
     const link = document.createElement('a');
     link.href = url;
-    link.target = '_blank';
-    // If we wanted to force download:
-    // link.setAttribute('download', filename);
-    // document.body.appendChild(link);
-    // link.click();
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
 
-    // Open in new tab:
-    window.open(url, '_blank');
-
-    // Cleanup after a delay to allow load
-    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    // Cleanup
+    setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    }, 100);
 };

@@ -1,7 +1,10 @@
+const fs = require('fs');
+
 // Middleware to enforce strict hierarchy
 // Rule: Users (non-owners) MUST be assigned to a branch to operate.
 const requireBranch = (req, res, next) => {
     try {
+        // fs.appendFileSync('trace.log', `[${req.method} ${req.originalUrl}] Entered requireBranch middleware\n`);
         const { role, branchId } = req.user;
 
         // Owners and Super Admins bypass strict branch check

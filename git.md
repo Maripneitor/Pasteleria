@@ -1,6 +1,6 @@
 git add .
 
- git commit -m "v.2.2-Estable" 
+ git commit -m "v.2.2.1-Inestable" 
 
  git push -u origin main  
 

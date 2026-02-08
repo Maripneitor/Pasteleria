@@ -15,6 +15,8 @@ import BranchesPage from './pages/branches/BranchesPage'; // NEW MODULE
 import FoliosPage from './pages/folios/FoliosPage'; // NEW MODULE
 import NewFolioWizard from './pages/folios/NewFolioWizard'; // NEW MODULE
 import FolioDetailPage from './pages/folios/FolioDetailPage'; // NEW MODULE
+import CatalogsPage from './pages/catalogs/CatalogsPage'; // SPRINT F3
+import ClientsPage from './pages/clients/ClientsPage'; // SPRINT F3
 
 // 🆕 Páginas Nuevas (Routing Repair)
 import OrdersPage from './pages/OrdersPage';
@@ -40,6 +42,7 @@ import BrandingPage from './pages/admin/BrandingPage';
 
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { OrderProvider } from './context/OrderContext';
 
 // DebugPanel removed (diagnostic mode off)
 
@@ -61,7 +64,11 @@ function App() {
           <Route element={<MainLayout />}>
             <Route index element={<DashboardPage />} />
             {/* 🛠 Wizard & Operatives (All Roles) */}
-            <Route path="pedidos/nuevo" element={<NewFolioWizard />} />
+            <Route path="pedidos/nuevo" element={
+              <OrderProvider>
+                <NewFolioWizard />
+              </OrderProvider>
+            } />
             <Route path="folios/new" element={<Navigate to="/pedidos/nuevo" replace />} />
 
             <Route path="pedidos" element={<FoliosPage />} />
@@ -98,6 +105,10 @@ function App() {
             <Route path="configuracion" element={<LocalSettings />} />
             <Route path="usuarios/pendientes" element={<PendingUsersPage />} />
             <Route path="admin/branding" element={<BrandingPage />} />
+
+            {/* Sprint F3: Management */}
+            <Route path="catalogs" element={<CatalogsPage />} />
+            <Route path="clients" element={<ClientsPage />} />
           </Route>
         </Route>
 

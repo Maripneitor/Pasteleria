@@ -7,8 +7,11 @@
  */
 const { Tenant, Branch } = require('../models');
 
+const fs = require('fs');
+
 const tenantScope = async (req, res, next) => {
     try {
+        // fs.appendFileSync('trace.log', `[${req.method} ${req.originalUrl}] Entered tenantScope middleware\n`);
         const user = req.user;
 
         if (!user) {

@@ -25,6 +25,8 @@ function normalizeRole(globalRole, ownerId) {
   return 'USER'; // Default fallback
 }
 
+const fs = require('fs');
+
 module.exports = async function (req, res, next) {
   let token;
   const authHeader = req.header('Authorization');

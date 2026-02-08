@@ -62,10 +62,10 @@ const FoliosPage = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {folios.map(folio => (
-                        <div key={folio.id} onClick={() => navigate(`/folios/${folio.id}`)} className="cursor-pointer">
+                        <div key={folio.id} onClick={() => navigate(`/folios/${folio.id}`)} className="cursor-pointer block h-full">
                             <OrderCard
                                 order={folio}
-                                onUpdate={fetchFolios} // Refresh list on update
+                                onUpdate={fetchFolios}
                             />
                         </div>
                     ))}

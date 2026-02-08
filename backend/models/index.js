@@ -21,6 +21,8 @@ const Tenant = require('./Tenant');
 const Branch = require('./Branch');
 const EmailQueue = require('./EmailQueue');
 const TenantConfig = require('./TenantConfig'); // ✅ New TenantConfig Model
+const Product = require('./Product');
+const Decoration = require('./Decoration');
 
 // --- Sprint 4: Control & Limits ---
 const ActivationCode = require('./ActivationCode');
@@ -131,6 +133,8 @@ module.exports = {
   Branch,
   EmailQueue,
   TenantConfig, // ✅ Export
+  Product,
+  Decoration,
   SaaSContract,
   SaaSCommissionLedger,
   DailySalesStats

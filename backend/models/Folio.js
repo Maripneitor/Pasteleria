@@ -105,7 +105,14 @@ const Folio = sequelize.define('Folio', {
 
 }, {
   tableName: 'folios',
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    {
+      unique: true,
+      fields: ['tenantId', 'folio_numero'],
+      name: 'uq_folios_tenant_folioNumber'
+    }
+  ]
 });
 
 module.exports = Folio;
