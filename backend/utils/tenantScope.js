@@ -21,7 +21,7 @@ function buildTenantWhere(req, { tenantField = 'tenantId', allowQueryTenant = tr
         return {};
     }
 
-    const role = user.globalRole;
+    const role = user.role;
 
     // SUPER_ADMIN ve todo
     if (role === 'SUPER_ADMIN') {

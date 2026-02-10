@@ -330,11 +330,45 @@ class FolioService {
         // Or generic render:
         const { renderPdf } = require('./pdfRenderer');
 
-        // Simple DTO for legacy compat or new simple view
+        const f = folio.toJSON();
+
+        // Map DB fields to Template DTO
+        const folioData = {
+            folioNumber: f.folioNumber,
+            dayColor: '#f8f9fa', // Default
+            textColor: '#000000',
+            formattedDeliveryDate: f.fecha_entrega,
+            formattedDeliveryTime: f.hora_entrega,
+            client: {
+                name: f.cliente_nombre || 'Cliente',
+                phone: f.cliente_telefono || '',
+                phone2: f.cliente_telefono_extra || ''
+            },
+            deliveryLocation: f.ubicacion_entrega || 'En Sucursal',
+            persons: f.numero_personas || 0,
+            shape: f.forma || 'Redondo',
+            folioType: f.tipo_folio || 'Normal',
+            cakeFlavor: Array.isArray(f.sabores_pan) ? f.sabores_pan.join(', ') : (f.sabores_pan || ''),
+            filling: Array.isArray(f.rellenos) ? f.rellenos.join(', ') : (f.rellenos || ''),
+            hasExtraHeight: f.altura_extra === 'Sí',
+            total: f.total || 0,
+            deliveryCost: f.costo_envio || 0,
+            advancePayment: f.anticipo || 0,
+            balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
+            designDescription: f.descripcion_diseno || '',
+            dedication: f.dedicatoria || '',
+            complements: f.complementos || [],
+            additional: [],
+            accessories: f.accesorios || '',
+            isPaid: f.estatus_pago === 'Pagado',
+            status: f.estatus_folio,
+            imageUrls: f.imagen_referencia_url ? [f.imagen_referencia_url] : []
+        };
+
         const buffer = await renderPdf({
-            templateName: 'folioTemplate', // Or the one the user wants
-            data: { folio: folio.toJSON(), watermark: computeWatermark(folio) },
-            branding: {} // fetch branding if needed
+            templateName: 'folioTemplate',
+            data: { folio: folioData, watermark: computeWatermark(f) },
+            branding: {}
         });
 
         return { buffer, filename: `${folio.folioNumber}.pdf` };
