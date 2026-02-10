@@ -1,0 +1,155 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { Building, Users, AlertCircle, CheckCircle, Save } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const TenantsPage = () => {
+    const [tenants, setTenants] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [editingId, setEditingId] = useState(null);
+    const [editLimit, setEditLimit] = useState(2);
+
+    const fetchTenants = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/super/tenants`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setTenants(res.data);
+        } catch (error) {
+            console.error("Error fetching tenants", error);
+            toast.error("Error al cargar dueños");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTenants();
+    }, []);
+
+    const startEdit = (tenant) => {
+        setEditingId(tenant.id);
+        setEditLimit(tenant.maxBranches);
+    };
+
+    const saveLimit = async (tenantId) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/super/tenants/${tenantId}/limit`,
+                { maxBranches: editLimit },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            toast.success("Límite actualizado");
+            setEditingId(null);
+            fetchTenants();
+        } catch (error) {
+            console.error(error);
+            toast.error("Error al actualizar límite");
+        }
+    };
+
+    if (loading) return <div className="p-8 text-center text-gray-500">Cargando Dueños...</div>;
+
+    return (
+        <div className="space-y-6">
+            <header className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <Building className="text-pink-600" /> Gestión de Dueños (Tenants)
+                    </h1>
+                    <p className="text-gray-500 text-sm mt-1">Controla los límites y acceso de cada pastelería.</p>
+                </div>
+                <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-bold">
+                    Total: {tenants.length} Clientes
+                </div>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {tenants.map(tenant => (
+                    <div key={tenant.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center text-pink-600 font-bold text-lg">
+                                    {tenant.businessName.charAt(0)}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-800">{tenant.businessName}</h3>
+                                    <span className="text-xs text-gray-400">ID: {tenant.id}</span>
+                                </div>
+                            </div>
+                            {editingId === tenant.id ? (
+                                <button
+                                    onClick={() => saveLimit(tenant.id)}
+                                    className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200"
+                                    title="Guardar"
+                                >
+                                    <Save size={18} />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => startEdit(tenant)}
+                                    className="p-2 bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200"
+                                    title="Editar Límite"
+                                >
+                                    <SettingsIcon size={18} />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                <span className="text-sm text-gray-600 flex items-center gap-2">
+                                    <StoreIcon size={16} /> Sucursales
+                                </span>
+                                {editingId === tenant.id ? (
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            value={editLimit}
+                                            onChange={(e) => setEditLimit(e.target.value)}
+                                            className="w-16 p-1 text-center border rounded text-sm font-bold"
+                                            min="1"
+                                        />
+                                    </div>
+                                ) : (
+                                    <span className={`text-sm font-bold ${tenant.branchCount >= tenant.maxBranches ? 'text-orange-500' : 'text-green-600'}`}>
+                                        {tenant.branchCount} / {tenant.maxBranches}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                <span className="text-sm text-gray-600 flex items-center gap-2">
+                                    <Users size={16} /> Usuarios Admin
+                                </span>
+                                <span className="text-sm font-medium text-gray-800">
+                                    {tenant.users && tenant.users.length > 0 ? tenant.users.length : 0}
+                                </span>
+                            </div>
+
+                            <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
+                                <span>Activo desde: {new Date(tenant.lastActive || Date.now()).toLocaleDateString()}</span>
+                                <div className="flex items-center gap-1 text-green-600 font-bold">
+                                    <CheckCircle size={12} /> Activo
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// Simple icon wrapper if needed, or import directly
+const SettingsIcon = ({ size }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
+);
+
+const StoreIcon = ({ size }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /><path d="M2 7h20" /><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7" /></svg>
+);
+
+export default TenantsPage;

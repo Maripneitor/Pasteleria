@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart, Building } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart, Building, MessageCircle } from 'lucide-react';
 import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiAssistantTray from './AiAssistantTray';
@@ -107,6 +107,16 @@ const MainLayout = () => {
                     {/* 5. Admin Usuarios */}
                     {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
                         <NavItem path="/usuarios" icon={Users} label="Admin Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
+                    )}
+
+                    {/* Gestion de Dueños (SuperAdmin) */}
+                    {['SUPER_ADMIN'].includes(user?.role) && (
+                        <NavItem path="/admin/tenants" icon={Building} label="Gestión de Dueños" isActive={checkActive('/admin/tenants')} onClick={handleNavClick} />
+                    )}
+
+                    {/* WhatsApp Conexión */}
+                    {['SUPER_ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/admin/whatsapp" icon={MessageCircle} label="Conexión WhatsApp" isActive={checkActive('/admin/whatsapp')} onClick={handleNavClick} />
                     )}
 
                     {/* 6. Gestión de Sabores y Rellenos */}

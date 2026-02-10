@@ -39,6 +39,7 @@ import PendingUsersPage from './pages/PendingUsersPage';
 import CommissionsPage from './pages/CommissionsPage';
 import ReportsPage from './pages/ReportsPage';
 import BrandingPage from './pages/admin/BrandingPage';
+import TenantsPage from './pages/admin/TenantsPage';
 
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -57,7 +58,6 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/activacion" element={<ActivationLockPage />} /> {/* Sprint 4 */}
-        <Route path="/admin/whatsapp" element={<WhatsAppPage />} />
 
         {/* 🔒 Rutas Protegidas */}
         <Route element={<ProtectedRoute />}>
@@ -109,6 +109,10 @@ function App() {
             {/* Sprint F3: Management */}
             <Route path="catalogs" element={<CatalogsPage />} />
             <Route path="clients" element={<ClientsPage />} />
+
+            {/* SuperAdmin Management */}
+            <Route path="admin/tenants" element={<TenantsPage />} />
+            <Route path="admin/whatsapp" element={<WhatsAppPage />} />
           </Route>
         </Route>
 
