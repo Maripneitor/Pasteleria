@@ -25,9 +25,7 @@ const WizardContent = () => {
 
 const NewOrderPage = () => {
     return (
-        <OrderProvider>
-            <WizardContent />
-        </OrderProvider>
+        <WizardContent />
     );
 };
 

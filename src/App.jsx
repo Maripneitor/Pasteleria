@@ -64,11 +64,7 @@ function App() {
           <Route element={<MainLayout />}>
             <Route index element={<DashboardPage />} />
             {/* 🛠 Wizard & Operatives (All Roles) */}
-            <Route path="pedidos/nuevo" element={
-              <OrderProvider>
-                <NewFolioWizard />
-              </OrderProvider>
-            } />
+            <Route path="pedidos/nuevo" element={<NewFolioWizard />} />
             <Route path="folios/new" element={<Navigate to="/pedidos/nuevo" replace />} />
 
             <Route path="pedidos" element={<FoliosPage />} />
