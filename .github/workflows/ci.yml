@@ -40,9 +40,9 @@ jobs:
         '
         docker compose ps
 
-    - name: Run Contract Verification (inside container)
+    - name: Run Full QA Suite (inside container)
       run: |
-        docker compose exec -T backend npm run qa:contract
+        docker compose exec -T backend npm run qa:full
 
     - name: Docker Logs (on failure)
       if: failure()
