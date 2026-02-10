@@ -3,22 +3,7 @@ import axios from 'axios';
 import { getToken, clearToken } from '../utils/auth';
 
 const client = axios.create({
-    baseURL: (() => {
-        const envUrl = import.meta.env.VITE_API_URL;
-        if (!envUrl) return 'http://localhost:3000/api';
-
-        // Remove specific unwanted suffix if present
-        let url = envUrl.replace(/\/apiservices\/?$/, '');
-
-        // Remove trailing slash
-        url = url.replace(/\/$/, '');
-
-        // Identify if it already ends in /api
-        if (url.endsWith('/api')) return url;
-
-        // If the user provided 'http://localhost:3000', we likely want 'http://localhost:3000/api'
-        return `${url}/api`;
-    })(),
+    baseURL: 'http://localhost:3000/api', // Hardcoded as per troubleshooting guide
     headers: {
         'Content-Type': 'application/json'
     }

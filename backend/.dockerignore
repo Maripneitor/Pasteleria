@@ -1,6 +1,7 @@
-/.git
-/node_modules
-.dockerignore
+node_modules
+npm-debug.log
 .env
-Dockerfile
-fly.toml
+.git
+.gitignore
+.wwebjs_auth
+.wwebjs_cache

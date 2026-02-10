@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "seed:admins": "node scripts/seed_full.js",
     "seed:full": "node scripts/seed_full.js",
+    "fix:db": "node scripts/fix_db.js",
     "qa:smoke": "node scripts/smoke_test.js",
     "qa:contract": "node scripts/qa/verify_contract.js",
     "qa:full": "node scripts/qa/role_smoke.js"

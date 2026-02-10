@@ -71,8 +71,8 @@ const folioPdfController = require('../controllers/folioPdfController');
  *       200:
  *         description: Archivo PDF
  */
-router.get('/:id/pdf/comanda', folioPdfController.getFolioComandaPdf);
-router.get('/:id/pdf/nota', folioPdfController.getFolioNotaPdf);
+router.get('/:id/pdf/comanda', folioController.generarPDF);
+router.get('/:id/pdf/nota', folioController.generarPDF);
 router.get('/:id', folioController.getFolioById);
 router.put('/:id', uploadReference.array('referenceImages', 5), folioController.updateFolio);
 

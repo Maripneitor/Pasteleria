@@ -330,12 +330,31 @@ class FolioService {
         // Or generic render:
         const { renderPdf } = require('./pdfRenderer');
 
+        // Helper to get color by day
+        const getDayColor = (dateStr) => {
+            const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const colors = {
+                'Lunes': '#0d6efd',
+                'Martes': '#6f42c1',
+                'Miércoles': '#fd7e14',
+                'Jueves': '#198754',
+                'Viernes': '#d63384',
+                'Sábado': '#ffc107',
+                'Domingo': '#adb5bd'
+            };
+            // Ensure date is treated as local day or UTC day correctly.
+            // Since fecha_entrega is YYYY-MM-DD, let's parse it as UTC to avoid timezone shifts
+            const d = new Date(dateStr);
+            const dayName = days[d.getUTCDay()];
+            return colors[dayName] || '#f8f9fa';
+        };
+
         const f = folio.toJSON();
 
         // Map DB fields to Template DTO
         const folioData = {
             folioNumber: f.folioNumber,
-            dayColor: '#f8f9fa', // Default
+            dayColor: getDayColor(f.fecha_entrega), // Dynamic Color
             textColor: '#000000',
             formattedDeliveryDate: f.fecha_entrega,
             formattedDeliveryTime: f.hora_entrega,

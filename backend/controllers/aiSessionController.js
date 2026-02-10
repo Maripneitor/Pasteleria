@@ -108,13 +108,39 @@ const setPriority = async (req, res) => {
     }
 };
 
-// PLACEHOLDERS to fix crash
+// --- New Session Management Functions ---
+
 const getActiveSessions = async (req, res) => {
-    res.json([]);
+    try {
+        // Fetch sessions for the current user
+        // If tenant-scoped, filter by tenantId (req.user.tenantId)
+        const sessions = await AISession.findAll({
+            where: {
+                tenantId: req.user.tenantId,
+                // optionally filter by userId if we want private sessions
+                // responsibleUserId: req.user.id 
+            },
+            order: [['updatedAt', 'DESC']],
+            limit: 20
+        });
+        res.json(sessions);
+    } catch (error) {
+        console.error("GetSessions Error:", error);
+        res.status(500).json({ message: "Error cargando sesiones" });
+    }
 };
 
 const getSessionById = async (req, res) => {
-    res.status(404).json({ message: "Session not found" });
+    try {
+        const { id } = req.params;
+        const session = await AISession.findOne({
+            where: { id, tenantId: req.user.tenantId }
+        });
+        if (!session) return res.status(404).json({ message: 'Sesión no encontrada' });
+        res.json(session);
+    } catch (error) {
+        res.status(500).json({ message: "Error cargando sesión" });
+    }
 };
 
 // Manejo de mensajes legacy (Adapter Pattern)

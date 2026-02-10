@@ -22,6 +22,41 @@ const aiService = {
             console.error('AI Service Error:', error);
             throw error;
         }
+    },
+
+    /**
+     * Parses a natural language order intent
+     * @param {string} text - The order description
+     * @returns {Promise<object>} - { valid, draft, aiAnalysis }
+     */
+    parseOrderIntent: async (text) => {
+        try {
+            const response = await client.post('/ai/orders/parse', { text });
+            return response.data;
+        } catch (error) {
+            console.error('AI Parse Error:', error);
+            throw error;
+        }
+    },
+
+    getSessions: async () => {
+        try {
+            const response = await client.get('/ai-sessions');
+            return response.data;
+        } catch (error) {
+            console.error('Get Sessions Error:', error);
+            return [];
+        }
+    },
+
+    deleteSession: async (id) => {
+        try {
+            await client.delete(`/ai-sessions/${id}`);
+            return true;
+        } catch (error) {
+            console.error('Delete Session Error:', error);
+            return false;
+        }
     }
 };
 

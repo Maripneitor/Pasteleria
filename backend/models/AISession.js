@@ -30,6 +30,20 @@ const AISession = sequelize.define('AISession', {
   priority: { type: DataTypes.ENUM('normal', 'alta', 'urgente'), defaultValue: 'normal' },
   customerPhone: { type: DataTypes.STRING, allowNull: true },
   customerName: { type: DataTypes.STRING, allowNull: true },
+  // Multi-tenant & User Ownership
+  tenantId: {
+    type: DataTypes.INTEGER,
+    allowNull: true // Allow null for legacy/public sessions if any
+  },
+  userId: { // Renaming or aliasing responsibleUserId? Let's keep consistency with controller
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  responsibleUserId: { // Explicit field if needed, or just map to userId
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  summary: DataTypes.STRING // Title of the session
 }, { tableName: 'ai_sessions' });
 
 module.exports = AISession;
