@@ -1,5 +1,5 @@
 services:
-  # 1. BASE DE DATOS (Con Healthcheck para evitar errores rojos)
+  # 1. BASE DE DATOS (MySQL 8)
   db:
     image: mysql:8.0
     container_name: pasteleria-db
@@ -11,20 +11,19 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: 'America/Mexico_City'
     ports:
-      - "3307:3306"
+      - "3306:3306" # Standard port for easier access
     volumes:
       - mysql_data:/var/lib/mysql
     #      - ./backend/RESPALDOS_BD/backup_2025-09-30.sql:/docker-entrypoint-initdb.d/init.sql
     #      - ./backend/RESPALDOS_BD/02_update_schema.sql:/docker-entrypoint-initdb.d/z_update_schema.sql
-    # SALUD: Verifica cada 10s si MySQL responde
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DB_PASSWORD}" ]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 10s
 
-  # 2. BACKEND (Espera a que la DB esté lista)
+  # 2. BACKEND (Node.js + Puppeteer)
   backend:
     build: ./backend
     container_name: pasteleria-backend
@@ -43,14 +42,17 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - DB_PORT=3306
       - WEBHOOK_URL=http://backend:3000/api/webhooks/whatsapp
-      - DB_SYNC_MODE=${DB_SYNC_MODE:-none} # 🛡️ Safe Mode for Docker: No schema changes on boot (default: none)
+      # Auto-sync schema in dev mode for zero-config
+      - DB_SYNC_MODE=${DB_SYNC_MODE:-alter}
       - TZ=America/Mexico_City
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health" ]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 15s
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -59,7 +61,7 @@ services:
     networks:
       - default
 
-  # 3. FRONTEND
+  # 3. FRONTEND (Vite Dev Server)
   frontend:
     build: ./frontend
     container_name: pasteleria-frontend
@@ -68,14 +70,17 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=/api
-      - VITE_PROXY_TARGET=http://pasteleria-backend:3000
       - TZ=America/Mexico_City
+      # Proxy handling is done in vite.config.js, but env var helps if dynamic
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    # Ensure host exposure
     command: npm run dev -- --host
+    networks:
+      - default
 
-  # 4. WHATSAPP BOT (Configurado para Docker)
+  # 4. WHATSAPP GATEWAY (Opcional - Worker)
   whatsapp:
     build: ./backend
     container_name: pasteleria-whatsapp
@@ -83,19 +88,19 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    # IMPORTANTE: Forzamos la ruta de Chromium y argumentos de Puppeteer
     environment:
       - WEBHOOK_URL=http://backend:3000/api/webhooks/whatsapp
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
       - TZ=America/Mexico_City
-    # Mantenemos vivo el contenedor para debuggear si el script falla
     command: node whatsapp-gateway.js
     volumes:
       - ./backend:/app
       - /app/node_modules
       - ./backend/.wwebjs_auth:/app/.wwebjs_auth
       - ./backend/.wwebjs_cache:/app/.wwebjs_cache
+    networks:
+      - default
 
 volumes:
   mysql_data:

@@ -28,12 +28,23 @@ const tenantScope = async (req, res, next) => {
 
         // SCALING: Logic for scope
         if (user.role === 'SUPER_ADMIN') {
-            req.tenantFilter = {};
-            req.isGlobalAdmin = true;
+            // SuperAdmin can optionally filter by specific tenant via query/body
+            // If no tenant specified, they see everything (empty filter)
+            const targetTenantId = req.query.tenantId || req.body.tenantId;
+            if (targetTenantId) {
+                req.tenantFilter = { tenantId: targetTenantId };
+                req.isGlobalAdmin = false; // Acting as specific tenant
+            } else {
+                req.tenantFilter = {};
+                req.isGlobalAdmin = true;
+            }
         } else {
-            // Force strict caching
-            const tenantId = user.tenantId || 1;
-            req.tenantFilter = { tenantId: tenantId };
+            // Force strict caching & isolation
+            if (!user.tenantId) {
+                // Fallback for edge case users without tenant (should not happen in prod)
+                return res.status(403).json({ message: 'Usuario sin organización asignada.' });
+            }
+            req.tenantFilter = { tenantId: user.tenantId };
             req.isGlobalAdmin = false;
         }
 

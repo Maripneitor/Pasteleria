@@ -10,7 +10,16 @@ const Flavor = sequelize.define('Flavor', {
     name: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true
+        unique: false // Removed unique constraint as same flavor name can exist in different tenants
+    },
+    tenantId: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+        defaultValue: 1
+    },
+    isActive: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
     },
     isNormal: {
         type: DataTypes.BOOLEAN,

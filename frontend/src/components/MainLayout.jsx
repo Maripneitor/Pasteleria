@@ -72,36 +72,56 @@ const MainLayout = () => {
 
                 {/* Nav Links */}
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-                    {/* Common */}
-                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Principal</div>
-                    <NavItem path="/" icon={LayoutDashboard} label="Dashboard" isActive={checkActive('/')} onClick={handleNavClick} />
-                    <NavItem path="/pedidos/nuevo" icon={PlusCircle} label="Nuevo Pedido" isActive={checkActive('/pedidos/nuevo')} onClick={handleNavClick} />
-                    <NavItem path="/pedidos" icon={Package} label="Mis Pedidos" isActive={checkActive('/pedidos') && !checkActive('/pedidos/nuevo')} onClick={handleNavClick} />
-                    <NavItem path="/calendario" icon={Calendar} label="Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
+                    {/* 1. Bandeja de Entrada */}
+                    <NavItem path="/" icon={LayoutDashboard} label="Bandeja de Entrada" isActive={checkActive('/')} onClick={handleNavClick} />
 
-                    {/* Operational */}
-                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Operaciones</div>
-                    <NavItem path="/caja" icon={DollarSign} label="Caja y Cortes" isActive={checkActive('/caja')} onClick={handleNavClick} />
-                    <NavItem path="/produccion" icon={ClipboardList} label="Producción" isActive={checkActive('/produccion')} onClick={handleNavClick} />
+                    {/* 2. Ver Calendario */}
+                    <NavItem path="/calendario" icon={Calendar} label="Ver Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
 
-                    {/* Admin / Owner Only */}
+                    {/* 3. + Nuevo Folio (Primary Action) */}
+                    <div className="my-4">
+                        <Link
+                            to="/pedidos/nuevo"
+                            onClick={handleNavClick}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 
+                                ${checkActive('/pedidos/nuevo')
+                                    ? "bg-pink-600 text-white shadow-lg shadow-pink-200 font-bold"
+                                    : "bg-pink-50 text-pink-700 hover:bg-pink-100 font-bold"}`}
+                        >
+                            <PlusCircle size={20} />
+                            <span>+ Nuevo Folio</span>
+                        </Link>
+                    </div>
+
+                    {/* 4. Dictar Pedido (AI) */}
+                    <button
+                        onClick={() => { setIsAiOpen(true); handleNavClick(); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 text-gray-600 hover:bg-purple-50 hover:text-purple-700 font-medium text-left"
+                    >
+                        <Bot size={20} className="text-purple-500" />
+                        <span>Dictar Pedido</span>
+                    </button>
+
+                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
+
+                    {/* 5. Admin Usuarios */}
                     {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
-                        <>
-                            <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Sistema</div>
-                            <NavItem path="/sucursales" icon={Building} label="Sucursales" isActive={checkActive('/sucursales')} onClick={handleNavClick} />
-                            <NavItem path="/auditoria" icon={FileText} label="Auditoría" isActive={checkActive('/auditoria')} onClick={handleNavClick} />
-                            <NavItem path="/usuarios" icon={Users} label="Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
-                            <NavItem path="/clients" icon={Users} label="Directorio Clientes" isActive={checkActive('/clients')} onClick={handleNavClick} />
+                        <NavItem path="/usuarios" icon={Users} label="Admin Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
+                    )}
 
-                            <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
-                            <NavItem path="/catalogs" icon={Tags} label="Catálogos y Precios" isActive={checkActive('/catalogs')} onClick={handleNavClick} />
-                            <NavItem path="/admin/stats" icon={BarChart} label="Reportes" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
-                            <NavItem path="/admin/sabores" icon={Tags} label="Sabores y Catálogo" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
-                            {user?.role === 'SUPER_ADMIN' && ( // Only SUPER_ADMIN sees commissions
-                                <NavItem path="/admin/comisiones" icon={PieChart} label="Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
-                            )}
-                            <NavItem path="/configuracion" icon={Settings} label="Configuración" isActive={checkActive('/configuracion')} onClick={handleNavClick} />
-                        </>
+                    {/* 6. Gestión de Sabores y Rellenos */}
+                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/admin/sabores" icon={Tags} label="Gestión de Sabores" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
+                    )}
+
+                    {/* 7. Estadísticas */}
+                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/admin/stats" icon={BarChart} label="Estadísticas" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
+                    )}
+
+                    {/* 8. Reporte de Comisiones */}
+                    {['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
+                        <NavItem path="/admin/comisiones" icon={PieChart} label="Reporte de Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
                     )}
                 </nav>
 

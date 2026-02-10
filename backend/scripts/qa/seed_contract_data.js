@@ -6,71 +6,76 @@ async function seedContractData() {
 
     try {
         await sequelize.authenticate();
+        const { Tenant, Branch } = require('../../models');
 
-        // 1. Ensure Admin User has a Branch
-        const admin = await User.findOne({ where: { email: 'admin@gmail.com' } });
-        if (admin) {
-            console.log(chalk.blue(`  - Admin Found: ${admin.id}, Branch: ${admin.branchId}`));
-            if (!admin.branchId) {
-                // Ensure Branch 1 Exists
-                const { Branch } = require('../../models');
-                const b1 = await Branch.findByPk(1);
-                if (!b1) {
-                    console.log(chalk.yellow('  - Branch 1 missing. Creating dummy branch...'));
-
-                    // Create Branch 1 for Tenant 1
-                    try {
-                        const newBranch = await Branch.create({
-                            id: 1, // Force ID 1
-                            tenantId: 1,
-                            name: 'Sucursal Matriz',
-                            address: 'Calle Falsa 123',
-                            phone: '555-555-5555',
-                            status: 'ACTIVE'
-                        });
-                        console.log(chalk.green('  - Created Branch 1'));
-                    } catch (err) {
-                        console.error('Error creating branch:', err);
-                        // Try finding it again (race condition?)
-                    }
-
-                    // Need a tenant. Admin doesn't have tenantId? 
-                    // Admin usually GLOBAL. 
-                    // But if we assign branch, it implies a Tenant. 
-                    // If Admin is Global, they shouldn't belong to a branch?
-                    // User requirements: "permitir 'cambiar de sucursal' con header" (Option B) 
-                    // OR "volver a stricto: branchless = solo OWNER y SUPER_ADMIN" (Option A).
-
-                    // IF I chose Option A: ADMIN MUST have a branch.
-                    // Meaning ADMIN acts as an EMPLOYEE of a Tenant?
-                    // If Admin is Platform Admin (Global), then they shouldn't be tied to a specific branch of a specific tenant?
-                    // Wait. "ADMIN" in this system...
-                    // "Opción A: volver a estricto: branchless roles = solo OWNER y SUPER_ADMIN."
-                    // This implies ADMIN is *Tenant* Admin?
-                    // If so, they need `tenantId`.
-
-                    // The token shows "tenantId": null.
-                    // If Admin is Global Admin (Platform), then they *should* be Super Admin?
-                    // The prompt said: "Option A... volver a stricto. branchless roles = solo OWNER y SUPER_ADMIN".
-                    // And "ADMIN sigue teniendo branchId obligatorio".
-                    // This implies ADMIN is a Tenant-level role that manages a branch (like Manager?).
-
-                    // So, yes, Admin needs `tenantId` AND `branchId`.
-
-                    admin.tenantId = 1;
-                    admin.branchId = 1;
-                    await admin.save();
-                    console.log(chalk.blue('  - Assigned Tenant 1 / Branch 1 to Admin'));
-                } else {
-                    admin.branchId = 1;
-                    // Also ensure TenantId
-                    if (!admin.tenantId) admin.tenantId = 1;
-                    await admin.save();
-                    console.log(chalk.blue('  - Updated Admin with Branch 1'));
-                }
+        // 0. Ensure Tenant 1 Exists (Required for Admin and Branch)
+        let tenant1 = await Tenant.findByPk(1);
+        if (!tenant1) {
+            console.log(chalk.yellow('  - Tenant 1 missing. Creating dummy tenant...'));
+            try {
+                tenant1 = await Tenant.create({
+                    id: 1,
+                    name: process.env.DEFAULT_TENANT_NAME || 'Mi Pastelería',
+                    plan: 'PRO',
+                    status: 'ACTIVE'
+                });
+                console.log(chalk.green('  - Created Tenant 1'));
+            } catch (err) {
+                console.error('Error creating tenant:', err);
             }
+        }
+
+        // 0.5 Ensure Branch 1 Exists (Required for Admin)
+        let branch1 = await Branch.findByPk(1);
+        if (!branch1) {
+            console.log(chalk.yellow('  - Branch 1 missing. Creating dummy branch...'));
+            try {
+                branch1 = await Branch.create({
+                    id: 1,
+                    tenantId: 1,
+                    name: 'Sucursal Matriz',
+                    address: 'Calle Falsa 123',
+                    phone: '555-555-5555',
+                    status: 'ACTIVE'
+                });
+                console.log(chalk.green('  - Created Branch 1'));
+            } catch (err) {
+                console.error('Error creating branch:', err);
+            }
+        }
+
+        // 1. Ensure Admin User Exists & Has Branch
+        const email = process.env.ADMIN_EMAIL || 'admin@gmail.com';
+        const password = process.env.ADMIN_PASSWORD || 'admin123';
+
+        let admin = await User.findOne({ where: { email } });
+
+        if (!admin) {
+            console.log(chalk.yellow(`  - Admin (${email}) not found. Creating...`));
+            const bcrypt = require('bcryptjs'); // Ensure bcrypt is available
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            admin = await User.create({
+                name: 'Admin QA',
+                username: 'admin_qa',
+                email,
+                password: hashedPassword,
+                globalRole: 'SUPER_ADMIN',
+                tenantId: 1,
+                branchId: 1,
+                status: 'ACTIVE'
+            });
+            console.log(chalk.green(`  - Created Admin User: ${email}`));
         } else {
-            console.log(chalk.red('  - ADMIN USER NOT FOUND'));
+            console.log(chalk.blue(`  - Admin Found: ${admin.id}, Branch: ${admin.branchId}`));
+        }
+
+        // Ensure Branch/Tenant assignment (Update existing user only)
+        if (!admin.branchId || !admin.tenantId) {
+            if (!admin.tenantId) admin.tenantId = 1;
+            if (!admin.branchId) admin.branchId = 1;
+            await admin.save();
+            console.log(chalk.blue('  - Assigned Tenant 1 / Branch 1 to Admin'));
         }
 
         // 2. Create a Folio for "Today" so day-summary-pdf works
@@ -99,10 +104,10 @@ async function seedContractData() {
         if (!existing) {
             await Folio.create({
                 tenantId,
+                branchId: 1,
                 cliente_nombre: 'Seed For PDF',
                 cliente_telefono: '0000000000',
-                status: 'CONFIRMED', // Needs to be confirmed? summary might list all or confirmed. 
-                // Service usually filters. Let's make it CONFIRMED to be safe.
+                status: 'CONFIRMED',
                 total: 500.00,
                 folio_numero: `SEED-${Date.now()}`
             });

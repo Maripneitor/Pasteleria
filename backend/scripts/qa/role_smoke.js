@@ -1,52 +1,79 @@
-const axios = require('axios');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') }); // Explicit path
-const { User } = require('../../models');
+/**
+ * QA Smoke Test: Roles & Multi-tenancy
+ * Uses existing Users created by 'seed:full'
+ */
+const { User, Tenant, Folio } = require('../../models');
+const axios = require('axios'); // Ensure axios is installed or use standard fetch if node 18+
+const jwt = require('jsonwebtoken');
 
-const API_URL = 'http://localhost:3001/api';
+const BASE_URL = 'http://localhost:3000/api';
 
-async function run() {
-    console.log("🔍 Starting Role Smoke Test...\n");
-    const uniqueId = Date.now();
-
+async function testLogin(email, password, label) {
     try {
-        // 1. Register ADMIN
-        console.log("1. Registering Admin...");
-        const adminEmail = `admin_${uniqueId}@test.com`;
-        const r1 = await axios.post(`${API_URL}/auth/register`, {
-            username: `admin_${uniqueId}`,
-            email: adminEmail,
-            password: 'password123',
-            globalRole: 'admin'
+        const response = await fetch(`${BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
         });
-        const adminId = r1.data.user.id;
-
-        // Force Active
-        await User.update({ status: 'ACTIVE' }, { where: { id: adminId } });
-
-        // Login
-        const l1 = await axios.post(`${API_URL}/auth/login`, { email: adminEmail, password: 'password123' });
-        const token = l1.data.token;
-        console.log("   ✅ Admin Logged In");
-
-        // CALL /me
-        const meRes = await axios.get(`${API_URL}/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
-        console.log("   --> /me Response:", meRes.data);
-
-        if (meRes.data.role !== 'admin') throw new Error("Role mismatch for Admin");
-        if (meRes.data.email !== adminEmail) throw new Error("Email mismatch");
-
-        console.log("   ✅ Admin Role Verified correctly via /me");
-
+        if (!response.ok) throw new Error(`Login failed: ${response.status}`);
+        const data = await response.json();
+        console.log(`✅ [${label}] Login OK. Token received. Tenant: ${data.user.tenantId}`);
+        return data.token;
     } catch (e) {
-        console.error("🔥 Smoke Test Failed:", e.message);
-        if (e.response) console.error("Response Data:", e.response.data);
-        console.error(e);
-        process.exit(1);
+        console.error(`❌ [${label}] Login Failed:`, e.message);
+        return null;
     }
 }
 
-run();
+async function runQA() {
+    console.log("\n🧪 STARTING QA SMOKE TEST (Multi-tenancy)...\n");
+
+    // 1. Login as SuperAdmin
+    const tokenSA = await testLogin(process.env.ADMIN_EMAIL || 'admin@macair.com', process.env.ADMIN_PASSWORD || 'admin123', 'SuperAdmin');
+
+    // 2. Login as Owner
+    const tokenOwner = await testLogin('owner@demo.com', 'admin123', 'Owner');
+
+    // 3. Login as Employee
+    const tokenEmp = await testLogin('cajero@demo.com', 'admin123', 'Employee');
+
+    if (!tokenSA || !tokenOwner) {
+        console.error("⚠️ Skipping further tests due to login failure.");
+        process.exit(1);
+    }
+
+    // 4. Test SuperAdmin Global Stats (Hidden Endpoint)
+    try {
+        const res = await fetch(`${BASE_URL}/super/global-stats`, {
+            headers: { 'Authorization': `Bearer ${tokenSA}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            console.log(`✅ [SuperAdmin] Access Global Stats: OK (Tenants: ${data.tenants}, Sales: ${data.globalSales})`);
+        } else {
+            console.error(`❌ [SuperAdmin] Failed to access Global Stats: ${res.status}`);
+        }
+    } catch (e) { console.error(e); }
+
+    // 5. Test Isolation: Employee trying to see Global Stats (Should Fail)
+    try {
+        const res = await fetch(`${BASE_URL}/super/global-stats`, {
+            headers: { 'Authorization': `Bearer ${tokenEmp}` }
+        });
+        if (res.status === 403) {
+            console.log(`✅ [Security] Employee denied specific Admin route: OK (403)`);
+        } else {
+            console.error(`❌ [Security] Employee accessed Admin route! Status: ${res.status}`);
+        }
+    } catch (e) { console.error(e); }
+
+    console.log("\n🏁 QA SMOKE TEST COMPLETE.");
+}
+
+// Simple fetch polyfill check for older node
+if (!globalThis.fetch) {
+    console.log("No fetch available, please use Node 18+");
+    process.exit(1);
+}
+
+runQA();

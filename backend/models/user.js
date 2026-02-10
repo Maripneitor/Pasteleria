@@ -8,7 +8,7 @@ const User = sequelize.define('User', {
     primaryKey: true
   },
   // Sequelize crea el 'id' automáticamente
-  username: {
+  name: {
     type: DataTypes.STRING,
     allowNull: false
   },
@@ -34,16 +34,16 @@ const User = sequelize.define('User', {
     allowNull: true,
     comment: 'ID de la sucursal física asignada'
   },
-  globalRole: {
-    type: DataTypes.ENUM('SUPER_ADMIN', 'ADMIN', 'USER'),
+  role: {
+    type: DataTypes.ENUM('SUPER_ADMIN', 'ADMIN', 'OWNER', 'EMPLOYEE', 'USER'),
     allowNull: false,
-    defaultValue: 'USER'
+    defaultValue: 'EMPLOYEE'
   },
   // --- Sprint 4: Control & Limits ---
   status: {
     type: DataTypes.ENUM('PENDING', 'ACTIVE', 'BLOCKED'),
     allowNull: false,
-    defaultValue: 'PENDING'
+    defaultValue: 'ACTIVE'
   },
   ownerId: {
     type: DataTypes.BIGINT, // Referencia al Dueño (si es empleado)

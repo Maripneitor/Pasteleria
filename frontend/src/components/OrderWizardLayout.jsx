@@ -4,10 +4,10 @@ import { Check, ChevronRight } from 'lucide-react';
 
 const OrderWizardLayout = ({ children, title }) => {
     const { step } = useOrder();
-    const steps = ["Cliente", "Productos", "Detalles", "Pago"];
+    const steps = ["Cliente", "Pedido", "Extras", "Diseño", "Entrega", "Pago"];
 
     return (
-        <div className="max-w-4xl mx-auto p-6">
+        <div className="max-w-5xl mx-auto p-6">
             <h1 className="text-2xl font-bold text-gray-800 mb-6">{title}</h1>
 
             {/* Progress Bar */}
@@ -15,7 +15,7 @@ const OrderWizardLayout = ({ children, title }) => {
                 <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -z-10 rounded-full"></div>
                 <div
                     className="absolute top-1/2 left-0 h-1 bg-pink-500 -z-10 rounded-full transition-all duration-500"
-                    style={{ width: `${((step - 1) / 3) * 100}%` }}
+                    style={{ width: `${((step - 1) / 5) * 100}%` }}
                 ></div>
 
                 {steps.map((label, index) => {

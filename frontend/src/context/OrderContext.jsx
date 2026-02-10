@@ -40,7 +40,7 @@ export const OrderProvider = ({ children }) => {
         });
     };
 
-    const nextStep = () => setStep((p) => Math.min(p + 1, 4));
+    const nextStep = () => setStep((p) => Math.min(p + 1, 6));
     const prevStep = () => setStep((p) => Math.max(p - 1, 1));
 
     return (

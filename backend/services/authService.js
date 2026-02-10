@@ -47,15 +47,15 @@ async function deactivateExpiredSessions(userId) {
 }
 
 class AuthService {
-    async register({ username, email, password, globalRole, tenantId }) {
+    async register({ name, email, password, role, tenantId }) { // Changed username to name, globalRole to role
         // Encrypt password
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = await User.create({
-            username,
+            name, // Changed username to name
             email,
             password: hashedPassword,
-            globalRole: globalRole || 'USER',
+            role: role || 'USER', // Changed globalRole to role
             tenantId: tenantId || null,
             status: 'PENDING'
         });
@@ -66,17 +66,17 @@ class AuthService {
         return userResponse;
     }
 
-    async login({ email, username, password, ip, userAgent }) {
+    async login({ email, name, password, ip, userAgent }) { // Changed username to name
         // Sanitize inputs
         const cleanEmail = email ? email.trim().toLowerCase() : '';
-        const cleanUsername = username ? username.trim() : '';
+        const cleanName = name ? name.trim() : ''; // Changed cleanUsername to cleanName
 
         // 1. Find User with Organization and Branch info
         // We use string alias as defined in models/index.js
         const user = await User.findOne({
             where: sequelize.or(
                 { email: cleanEmail || '' },
-                { username: cleanUsername || (cleanEmail || '') }
+                { name: cleanName || (cleanEmail || '') } // Changed username to name
             ),
             include: [
                 { association: 'organization' },
@@ -137,8 +137,8 @@ class AuthService {
         // 5. Create Token
         const payload = {
             id: user.id,
-            username: user.username,
-            globalRole: user.globalRole,
+            name: user.name, // Changed username -> name
+            role: user.role, // Changed globalRole -> role
             tenantId: user.tenantId,
             branchId: user.branchId, // Added
             ownerId: user.ownerId
@@ -164,7 +164,7 @@ class AuthService {
             token,
             user: {
                 id: user.id,
-                username: user.username,
+                name: user.name, // Changed username -> name
                 role: effectiveRole,
                 tenantId: user.tenantId,
                 branchId: user.branchId,
@@ -188,7 +188,7 @@ class AuthService {
 
     async getMe(userId) {
         const user = await User.findByPk(userId, {
-            attributes: ['id', 'username', 'email', 'globalRole', 'tenantId', 'ownerId', 'status']
+            attributes: ['id', 'name', 'email', 'role', 'tenantId', 'ownerId', 'status']
         });
 
         if (!user) throw { status: 404, message: 'Usuario no encontrado' };
@@ -197,7 +197,7 @@ class AuthService {
 
         return {
             id: user.id,
-            name: user.username,
+            name: user.name,
             email: user.email,
             role: effectiveRole,
             tenantId: user.tenantId,

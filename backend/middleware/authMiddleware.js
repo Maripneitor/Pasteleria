@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { User } = require('../models');
 const UserSession = require('../models/UserSession');
 
 // Helper to determine Effective Role based on DB Role + Context
@@ -49,13 +50,22 @@ module.exports = async function (req, res, next) {
     // 4. Verificamos token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // Fetch user from DB to get the most up-to-date information, including role and name
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'name', 'email', 'role', 'tenantId', 'branchId', 'ownerId', 'status']
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
     // 5. Guardamos usuario en req CON ROL NORMALIZADO
     req.user = {
-      ...decoded,
-      id: decoded.id, // Explicit
-      role: normalizeRole(decoded.globalRole || decoded.role, decoded.ownerId), // Normalize with context
-      tenantId: decoded.tenantId || null,
-      branchId: decoded.branchId || null
+      ...user.toJSON(), // Use user data from DB
+      id: user.id, // Explicit
+      role: normalizeRole(user.role, user.ownerId), // Normalize with context from DB user
+      tenantId: user.tenantId || null,
+      branchId: user.branchId || null
     };
 
     // --- REFUERZO DE SEGURIDAD ---
