@@ -7,15 +7,15 @@ async function run() {
     // For smoke testing, we call the API endpoint for today's cut.
 
     // Login
-    const loginRes = await fetch('http://localhost:3000/api/auth/login', {
+    const loginRes = await fetch('http://backend:3000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'cajero@demo.com', password: 'admin123' })
+        body: JSON.stringify({ email: 'empleado@demo.com', password: 'admin123' })
     });
     const { token } = await loginRes.json();
 
     // Get Cut
-    const res = await fetch('http://localhost:3000/api/cash/cut-preview', { // Assuming endpoint
+    const res = await fetch('http://backend:3000/api/cash/cut-preview', { // Assuming endpoint
         headers: { 'Authorization': `Bearer ${token}` }
     });
 

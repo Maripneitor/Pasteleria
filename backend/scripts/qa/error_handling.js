@@ -1,7 +1,7 @@
 const { Folio } = require('../../models');
 const jwt = require('jsonwebtoken');
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://backend:3000/api';
 const SECRET = process.env.JWT_SECRET || 'secret_dev_key';
 
 async function testFetch(url, method, token, body = null) {

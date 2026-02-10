@@ -8,7 +8,7 @@ const SESSION_TTL_MIN = Number(process.env.SESSION_TTL_MIN || 20);
 
 // Helper: Determine Effective Role
 function getEffectiveRole(user) {
-    const globalRole = (user.globalRole || '').toUpperCase();
+    const globalRole = (user.role || '').toUpperCase();
 
     if (globalRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
     if (globalRole === 'ADMIN') return 'ADMIN';
