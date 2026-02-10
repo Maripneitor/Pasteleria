@@ -44,6 +44,8 @@ jobs:
       run: |
         docker compose exec -T backend npm run qa:full
 
-    - name: Docker Logs (on failure)
+    - name: Debug Logs on Failure
       if: failure()
-      run: docker compose logs backend
+      run: |
+        docker compose logs db
+        docker compose logs backend

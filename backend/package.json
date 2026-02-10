@@ -1,6 +1,6 @@
 {
   "name": "pasteleria-app",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Sistema de gestión de pedidos para la pastelería La Fiesta",
   "main": "server.js",
   "scripts": {
