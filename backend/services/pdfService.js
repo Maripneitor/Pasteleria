@@ -264,3 +264,25 @@ exports.generateNotaVentaPdf = async (orderId, ctx) => {
         }
     });
 };
+
+exports.renderOrdersPdf = async ({ folios, date, branches }) => {
+    try {
+        return await require('./pdfRenderer').renderPdf({
+            templateName: 'daily-cut',
+            data: {
+                folios,
+                date,
+                branches
+            },
+            options: {
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
+            },
+            branding: require('./pdfService').getDefaultBranding // Or empty/default
+        });
+    } catch (error) {
+        console.error('Error rendering orders PDF:', error);
+        throw error;
+    }
+};

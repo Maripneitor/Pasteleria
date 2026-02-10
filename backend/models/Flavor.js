@@ -21,6 +21,10 @@ const Flavor = sequelize.define('Flavor', {
         type: DataTypes.BOOLEAN,
         defaultValue: true
     },
+    price: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.00
+    },
     isNormal: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

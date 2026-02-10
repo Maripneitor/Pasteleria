@@ -44,8 +44,43 @@ async function run() {
     if (authRes.status === 401) console.log("✅ 401 Unauthorized (Bad Token) - Pass");
     else console.error(`❌ 401 Failed. Got ${authRes.status}`);
 
-    // 5. Test 500 (Simulated via bad PDF generation or similar usually difficult via API)
-    // We skip intentional 500 for safety, unless we have a specific 'crash' endpoint.
+    // 5. Test 403: Cross-Tenant Data Access (Isolation)
+    const { Tenant, User, Flavor } = require('../../models');
+
+    // Create Tenant B
+    const tenantB = await Tenant.create({ businessName: 'Competencia S.A.', maxBranches: 1 });
+    const flavorB = await Flavor.create({ name: 'Sabor Exclusivo B', tenantId: tenantB.id, price: 999 });
+
+    console.log(`\n🧪 Testing Isolation with Tenant B (ID: ${tenantB.id})...`);
+
+    // Attempt to access Flavor B using Token A
+    // Note: If the endpoint filters by user's tenantId automatically (where: { tenantId }), it might return 404 (Not Found) or empty list, which is also valid isolation.
+    // Use a direct update or get by ID endpoint if available.
+
+    // Try GET /catalog/flavors (Should only see Tenant A's flavors)
+    const listRes = await testFetch('/catalog/flavors', 'GET', token);
+    const visibleFlavors = listRes.data || [];
+    const canSeeSecret = visibleFlavors.find(f => f.name === 'Sabor Exclusivo B');
+
+    if (!canSeeSecret) console.log("✅ Isolation Passed: Cannot see Tenant B's data in list.");
+    else {
+        console.error("❌ Isolation FAILED: Can see Tenant B's data!");
+        process.exit(1);
+    }
+
+    // Try Direct Access (Verify 404 or 403)
+    // We don't have a direct GET /catalog/flavors/:id documented in list, but usually update uses ID.
+    // Let's try to update it.
+    const updateRes = await testFetch(`/catalog/flavors/${flavorB.id}`, 'PUT', token, { name: "HACKED" });
+    if (updateRes.status === 404 || updateRes.status === 403) {
+        console.log(`✅ Write Isolation Passed: Update attempt returned ${updateRes.status}`);
+    } else {
+        console.error(`❌ Write Isolation FAILED. Status: ${updateRes.status}`);
+    }
+
+    // Cleanup
+    await flavorB.destroy();
+    await tenantB.destroy();
 
     console.log("🏁 ERROR SUITE COMPLETE");
 }

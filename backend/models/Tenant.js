@@ -28,6 +28,11 @@ const Tenant = sequelize.define('Tenant', {
     },
     website: {
         type: DataTypes.STRING
+    },
+    maxBranches: {
+        type: DataTypes.INTEGER,
+        defaultValue: 2,
+        comment: 'Limit the number of branches this tenant can create'
     }
 }, {
     tableName: 'tenants',

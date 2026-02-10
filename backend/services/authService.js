@@ -85,7 +85,7 @@ class AuthService {
         });
 
         if (!user) {
-            console.log('❌ Login failed: User not found for email/username', { email, username });
+            console.log('❌ Login failed: User not found for email/name', { email, name }); // Fixed: username → name
             throw { status: 401, code: 'INVALID_CREDENTIALS', message: 'Correo o contraseña incorrectos.' };
         }
 

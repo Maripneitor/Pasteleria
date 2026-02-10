@@ -17,5 +17,6 @@ router.get('/saas/alerts', superAdminController.getAlerts);
 router.get('/global-stats', superAdminController.getGlobalStats);
 router.get('/audit-log', superAdminController.getGlobalAuditLog);
 router.get('/tenants', superAdminController.getTenantList);
+router.put('/tenants/:id/limit', superAdminController.updateTenantLimit);
 
 module.exports = router;

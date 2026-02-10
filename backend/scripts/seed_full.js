@@ -1,127 +1,145 @@
-const { sequelize, User, Tenant, Branch, Client, Product, Flavor, Filling, Folio, CashCut } = require('../models');
+const { sequelize, User, Tenant, Branch, Product, Flavor, CakeFlavor, Filling, Folio } = require('../models');
 const bcrypt = require('bcryptjs');
 
 async function seedFull() {
     try {
         console.log("🌱 Starting Zero-Config Seed...");
-        await sequelize.sync({ alter: true }); // Ensure schema is ready
+        // Ensure schema is ready (Safety sync)
+        if (process.env.DB_SYNC_MODE === 'alter') {
+            await sequelize.sync({ alter: true });
+        }
 
-        // 1. Create Super Admin (Global)
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@macair.com';
-        const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
-        const hashedPassword = await bcrypt.hash(adminPass, 10);
+        // Generic hash for defaults
+        const defaultHash = await bcrypt.hash('admin123', 10);
+        const superAdminHash = await bcrypt.hash('Admin1234', 10);
+        const marioHash = await bcrypt.hash('mario123', 10);
 
-        const [superAdmin, createdSA] = await User.findOrCreate({
-            where: { email: adminEmail },
+        // 1. Super Admins (Global)
+        // SuperAdmin 1
+        await User.findOrCreate({
+            where: { email: 'admin@gmail.com' },
             defaults: {
-                name: 'Super Admin',
-                password: hashedPassword,
+                name: 'Super Admin 1',
+                password: superAdminHash,
                 role: 'SUPER_ADMIN',
-                tenantId: null // Global
+                tenantId: null
             }
         });
-        console.log(`✅ SuperAdmin: ${adminEmail} (${createdSA ? 'Created' : 'Exists'})`);
-
-        // 2. Create Default Tenant
-        const [tenant, createdT] = await Tenant.findOrCreate({
-            where: { businessName: 'Pastelería Demo' },
+        // SuperAdmin 2
+        await User.findOrCreate({
+            where: { email: 'mario@dev.com' },
             defaults: {
-                businessName: 'Pastelería Demo',
-                primaryColor: '#ec4899'
-                // Removed non-existent 'name' and 'settings'
+                name: 'Mario Dev',
+                password: marioHash,
+                role: 'SUPER_ADMIN',
+                tenantId: null
+            }
+        });
+        console.log(`✅ SuperAdmins Created`);
+
+        // 2. Tenant (Pastelería HQ)
+        const [tenant] = await Tenant.findOrCreate({
+            where: { businessName: 'Pastelería HQ' },
+            defaults: {
+                businessName: 'Pastelería HQ',
+                primaryColor: '#ec4899',
+                maxBranches: 3, // Limit requested: 3
+                settings: {}
             }
         });
         console.log(`✅ Tenant: ${tenant.businessName}`);
 
-        // 3. Create Branches (Main & Secondary)
-        const [mainBranch] = await Branch.findOrCreate({
-            where: { name: 'Matriz Centro', tenantId: tenant.id },
-            defaults: { address: 'Av. Principal #123', phone: '555-0001', isMain: true }
+        // 3. Branches (Centro & Norte)
+        const [sucursalCentro] = await Branch.findOrCreate({
+            where: { name: 'Centro', tenantId: tenant.id },
+            defaults: { address: 'Av. Centro 100', phone: '555-0001', isMain: true, tenantId: tenant.id }
         });
         const [sucursalNorte] = await Branch.findOrCreate({
-            where: { name: 'Sucursal Norte', tenantId: tenant.id },
-            defaults: { address: 'Plaza Norte L-4', phone: '555-0002', isMain: false }
+            where: { name: 'Norte', tenantId: tenant.id },
+            defaults: { address: 'Plaza Norte 500', phone: '555-0002', isMain: false, tenantId: tenant.id }
         });
+        console.log(`✅ Branches Created`);
 
-        // 4. Create Roles (Owner & Employee)
-        const [owner] = await User.findOrCreate({
+        // 4. Users (Owner & Employee)
+        await User.findOrCreate({
             where: { email: 'owner@demo.com' },
             defaults: {
                 name: 'Dueño Demo',
-                password: hashedPassword,
+                password: defaultHash,
                 role: 'OWNER',
                 tenantId: tenant.id
             }
         });
 
-        const [employee] = await User.findOrCreate({
-            where: { email: 'cajero@demo.com' },
+        await User.findOrCreate({
+            where: { email: 'empleado@demo.com' },
             defaults: {
-                name: 'Cajero Matriz',
-                password: hashedPassword,
+                name: 'Empleado Centro',
+                password: defaultHash,
                 role: 'EMPLOYEE',
                 tenantId: tenant.id,
-                branchId: mainBranch.id
+                branchId: sucursalCentro.id
             }
         });
+        console.log(`✅ Tenant Users Created`);
 
-        // 5. Seed Catalog (Products, Flavors, Fillings)
+        // 5. Catalog (Products, Flavors, Fillings)
+        // Products (Prices are here)
         const products = [
-            { name: 'Pastel Individual', basePrice: 45, category: 'Línea', tenantId: tenant.id },
-            { name: 'Pastel 10 Personas', basePrice: 250, category: 'Línea', tenantId: tenant.id },
-            { name: 'Pastel 20 Personas', basePrice: 450, category: 'Línea', tenantId: tenant.id },
+            { name: 'Pastel Individual', basePrice: 45, category: 'Línea' },
+            { name: 'Pastel 10 Personas', basePrice: 280, category: 'Línea' },
+            { name: 'Pastel 20 Personas', basePrice: 480, category: 'Línea' },
+            { name: 'Pastel 30 Personas', basePrice: 650, category: 'Línea' },
+            { name: 'Cupcake Especial', basePrice: 25, category: 'Especial' }
         ];
+
         for (const p of products) {
             await Product.findOrCreate({
                 where: { name: p.name, tenantId: tenant.id },
-                defaults: p
+                defaults: { ...p, tenantId: tenant.id }
             });
         }
 
-        const flavors = ['Vainilla', 'Chocolate', 'Fresa', 'Moka', 'Tres Leches'];
+        // Flavors (5 items, price $0-$50)
+        const flavors = [
+            { name: 'Vainilla Clásica', price: 0 },
+            { name: 'Chocolate Abuelita', price: 15 },
+            { name: 'Red Velvet', price: 25 },
+            { name: 'Tres Leches', price: 30 },
+            { name: 'Zanahoria Especial', price: 50 }
+        ];
         for (const f of flavors) {
+            // Seed legacy Flavor model
             await Flavor.findOrCreate({
-                where: { name: f, tenantId: tenant.id },
-                defaults: { isActive: true }
+                where: { name: f.name, tenantId: tenant.id },
+                defaults: { isActive: true, price: f.price, tenantId: tenant.id }
+            });
+            // Seed new CakeFlavor model
+            await CakeFlavor.findOrCreate({
+                where: { name: f.name, tenantId: tenant.id },
+                defaults: { isActive: true, price: f.price, tenantId: tenant.id }
             });
         }
 
-        const fillings = ['Fresas con Crema', 'Durazno', 'Nuez', 'Cajeta'];
+        // Fillings (5 items, price $0-$50)
+        const fillings = [
+            { name: 'Mermelada Fresa', price: 0 },
+            { name: 'Crema Pastelera', price: 10 },
+            { name: 'Durazno', price: 25 },
+            { name: 'Nuez', price: 40 },
+            { name: 'Nutella', price: 50 }
+        ];
         for (const f of fillings) {
             await Filling.findOrCreate({
-                where: { name: f, tenantId: tenant.id },
-                defaults: { isActive: true }
+                where: { name: f.name, tenantId: tenant.id },
+                defaults: { isActive: true, price: f.price, tenantId: tenant.id }
             });
         }
-        console.log("✅ Catalog Seeded");
+        console.log("✅ Catalog Populated");
 
-        // 6. Seed Clients (Registered)
-        const [client1] = await Client.findOrCreate({
-            where: { phone: '5551112222', tenantId: tenant.id },
-            defaults: { name: 'Cliente Frecuente', email: 'cliente@test.com' }
-        });
-
-        // 7. Seed Orders (History)
-        // Some past orders for stats
-        const lastMonth = new Date();
-        lastMonth.setMonth(lastMonth.getMonth() - 1);
-
-        await Folio.findOrCreate({
-            where: { cliente_nombre: 'Pedido Histórico', tenantId: tenant.id },
-            defaults: {
-                cliente_telefono: '000',
-                status: 'DELIVERED',
-                total: 500,
-                anticipo: 500,
-                estatus_pago: 'Pagado',
-                createdAt: lastMonth,
-                branchId: mainBranch.id
-            }
-        });
-
-        console.log("✅ History Seeded");
-        console.log("🚀 ZERO-CONFIG SEED COMPLETE!");
+        console.log("🚀 PLUG & PLAY SETUP COMPLETE!");
         process.exit(0);
+
     } catch (e) {
         console.error("❌ Seed Failed:", e);
         process.exit(1);

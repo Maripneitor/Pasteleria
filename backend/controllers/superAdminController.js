@@ -86,12 +86,41 @@ exports.getTenantList = async (req, res) => {
     try {
         const tenants = await Tenant.findAll({
             include: [
-                { model: User, as: 'users', limit: 1 } // Just to see if they have users
-            ]
+                { model: User, as: 'users', limit: 1 },
+                { model: require('../models').Branch, as: 'branches' }
+            ],
+            order: [['createdAt', 'DESC']]
         });
-        res.json(tenants);
+
+        // Formatear respuesta con contador de sucursales
+        const formatted = tenants.map(t => ({
+            id: t.id,
+            businessName: t.businessName,
+            maxBranches: t.maxBranches || 2,
+            branchCount: t.branches ? t.branches.length : 0,
+            users: t.users,
+            lastActive: t.updatedAt
+        }));
+
+        res.json(formatted);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error fetching tenants' });
+    }
+};
+
+exports.updateTenantLimit = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { maxBranches } = req.body;
+
+        const tenant = await Tenant.findByPk(id);
+        if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
+        await tenant.update({ maxBranches: parseInt(maxBranches) });
+        res.json({ message: "Limit updated", tenant });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error updating tenant" });
     }
 };

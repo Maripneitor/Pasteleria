@@ -47,6 +47,17 @@ exports.createBranch = async (req, res, next) => {
             return res.status(409).json({ message: 'Ya existe una sucursal con ese nombre' });
         }
 
+        // Limit Check
+        const { Tenant } = require('../models');
+        const tenant = await Tenant.findByPk(tenantId);
+        const currentCount = await Branch.count({ where: { tenantId } });
+
+        if (tenant && tenant.maxBranches && currentCount >= tenant.maxBranches) {
+            return res.status(403).json({
+                message: `Has alcanzado el límite de ${tenant.maxBranches} sucursales permitidas.`
+            });
+        }
+
         const branch = await Branch.create({
             tenantId,
             name: name.trim(),
