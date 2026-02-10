@@ -190,17 +190,60 @@ exports.generarEtiqueta = async (req, res) => {
     }
 };
 
-exports.generarResumenDia = async (req, res) => {
+// ✅ DAY SUMMARY (Comandas & Labels)
+exports.getDaySummary = async (req, res) => {
     try {
         const tenantFilter = buildTenantWhere(req);
-        const { buffer, filename } = await folioService.generateDaySummaryPdf(req.query.date, tenantFilter);
+        const date = req.query.date || req.query.fecha;
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-        return res.send(buffer);
+        // Helper to generate file URL (assuming static serve or generic file endpoint)
+        // Ideally returns download links
+        // We will return data structure with links to the new PDF endpoints
+
+        // Verify if date has data?
+        // Service's generateDaySummaryPdfs returns buffers. We might want to stream one of them or return JSON with availability.
+        // But prompt implies one endpoint for JSON summary? 
+        // "GET /api/folios/resumen-dia" -> JSON { comandasUrl: '...', etiquetasUrl: '...' }
+        const baseUrl = process.env.API_URL || 'http://localhost:3000/api';
+
+        res.json({
+            date,
+            comandasUrl: `${baseUrl}/folios/pdf/comandas/${date}`,
+            etiquetasUrl: `${baseUrl}/folios/pdf/etiquetas/${date}`
+        });
 
     } catch (e) {
-        const status = e.status || 500;
-        return res.status(status).json({ message: 'Error Reporte', error: e.message });
+        console.error('getDaySummary:', e);
+        res.status(500).json({ message: 'Error getting summary' });
     }
 };
+
+exports.downloadComandasPdf = async (req, res) => {
+    try {
+        const tenantFilter = buildTenantWhere(req);
+        const { comandasBuffer } = await folioService.generateDaySummaryPdfs(req.params.date, tenantFilter);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="comandas-${req.params.date}.pdf"`);
+        res.send(comandasBuffer);
+    } catch (e) {
+        console.error('downloadComandasPdf:', e);
+        res.status(500).json({ message: 'Error generating PDF' });
+    }
+};
+
+exports.downloadEtiquetasPdf = async (req, res) => {
+    try {
+        const tenantFilter = buildTenantWhere(req);
+        const { etiquetasBuffer } = await folioService.generateDaySummaryPdfs(req.params.date, tenantFilter);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="etiquetas-${req.params.date}.pdf"`);
+        res.send(etiquetasBuffer);
+    } catch (e) {
+        console.error('downloadEtiquetasPdf:', e);
+        res.status(500).json({ message: 'Error generating PDF' });
+    }
+};
+
+exports.generarResumenDia = exports.getDaySummary; // Alias for legacy route if any

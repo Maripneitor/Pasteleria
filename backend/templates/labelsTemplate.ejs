@@ -1,135 +1,56 @@
 <!DOCTYPE html>
 <html>
-
 <head>
+    <meta charset="UTF-8">
     <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            padding: 0;
+        body { font-family: sans-serif; margin: 5px; font-size: 8pt; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 5px; width: 100%; }
+        .card { 
+            border: 1px dashed #777; padding: 4px 6px; page-break-inside: avoid; 
+            display: flex; flex-direction: column; justify-content: space-between; 
+            aspect-ratio: 2 / 1.1; box-sizing: border-box; position: relative;
         }
-
-        /* --- THERMAL FORMAT (80mm) --- */
-        .container.thermal {
-            width: 76mm;
-            /* Margen seguridad */
-            overflow: hidden;
-            padding: 2mm;
-        }
-
-        .container.thermal .header {
-            text-align: center;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 5px;
-            margin-bottom: 5px;
-        }
-
-        .container.thermal .folio-big {
-            font-size: 24pt;
-            font-weight: 900;
-            display: block;
-        }
-
-        .container.thermal .client-info {
-            font-size: 12pt;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .container.thermal .details {
-            font-size: 10pt;
-            margin-bottom: 5px;
-        }
-
-        .container.thermal .big-date {
-            font-size: 14pt;
-            font-weight: bold;
-            text-align: center;
-            border-top: 2px solid #000;
-            border-bottom: 2px solid #000;
-            margin: 5px 0;
-            padding: 2px;
-        }
-
-        .container.thermal .qr-section {
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        .container.thermal .qr-img {
-            width: 40mm;
-            height: 40mm;
-        }
-
-        /* --- A4 / STANDARD FORMAT --- */
-        .container.a4 {
-            width: 100%;
-            border: 1px solid #ddd;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        .container.a4 .folio-big {
-            font-size: 40pt;
-            color: #ec4899;
-            font-weight: bold;
-        }
-
-        .container.a4 .client-info {
-            font-size: 18pt;
-            margin-top: 10px;
-        }
-
-        .container.a4 .big-date {
-            font-size: 20pt;
-            background: #fdf2f8;
-            padding: 10px;
-            margin: 20px 0;
-            border-left: 5px solid #ec4899;
-        }
-
-        .container.a4 .qr-img {
-            width: 150px;
-            height: 150px;
+        .folio-number { font-size: 14pt; font-weight: bold; text-align: center; line-height: 1.1; margin-bottom: 2px; color: #000; white-space: nowrap; }
+        .details { display: flex; justify-content: space-between; align-items: center; font-size: 8.5pt; line-height: 1.2; gap: 4px; }
+        .time { font-weight: bold; white-space: nowrap; }
+        .shape-persons { display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
+        .shape { display: block; text-transform: capitalize; }
+        .persons { display: block; font-weight: bold; }
+        
+        /* Estilo para el marcador 'C' de complemento */
+        .complement-marker {
+            font-size: 8.5pt; font-weight: bold; color: #333; background-color: #eee;
+            border: 1px solid #bbb; border-radius: 50%; width: 16px; height: 16px;
+            display: flex; align-items: center; justify-content: center; line-height: 1; margin-bottom: 2px;
         }
     </style>
 </head>
-
 <body>
-    <% folios.forEach(folio=> { %>
-        <div class="container <%= format %>">
-            <div class="header">
-                <span class="folio-big">
-                    <%= folio.folioNumber %>
-                </span>
-                <div class="client-info">
-                    <%= folio.clientName %>
-                </div>
-            </div>
-
-            <div class="big-date">
-                ENTREGA: <%= folio.deliveryDate %> - <%= folio.deliveryTime %>
-            </div>
-
+    <h1>Etiquetas del Día: <%= new Date(fecha).toLocaleDateString('es-ES', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    }) %></h1>
+    
+    <div class="grid">
+        <% etiquetas.forEach(etiqueta => { %>
+        <div class="card">
+            <div class="folio-number"><%= etiqueta.folio %></div>
             <div class="details">
-                <strong>Especificaciones:</strong><br>
-                <%= folio.persons %> px | <%= folio.shape %>
-                        <% if(folio.hasExtraHeight) { %> | ⬆️ Altura Extra <% } %>
-                                <br><br>
-                                <strong>Descripción:</strong><br>
-                                <%= folio.description %>
-            </div>
-
-            <div class="qr-section" style="position: relative; display: inline-block;">
-                <img src="<%= folio.qrCode %>" class="qr-img" />
-                <!-- Branded Center Logo -->
-                <img src="<%= folio.logoUrl %>"
-                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20%; height: 20%; pointer-events: none;" />
+                <span class="time"><%= etiqueta.horaEntrega %></span>
+                <span class="shape-persons">
+                    <% if (etiqueta.esComplemento) { %>
+                        <span class="complement-marker">C</span>
+                        <span class="shape">Comp.</span>
+                    <% } else { %>
+                        <span class="shape"><%= etiqueta.forma %></span>
+                    <% } %>
+                    <span class="persons"><%= etiqueta.personas %></span>
+                </span>
             </div>
         </div>
-        <!-- Page Break if multiple -->
-        <div style="page-break-after: always; height: 1px;"></div>
-        <% }) %>
+        <% }); %>
+    </div>
 </body>
-
 </html>

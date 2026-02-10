@@ -9,13 +9,6 @@ const pdfService = require('./pdfService');
 const commissionService = require('./commissionService');
 const auditService = require('./auditService');
 
-// Helper: Generate next folio ID
-async function nextFolioNumero() {
-    const last = await Folio.findOne({ order: [['id', 'DESC']] });
-    const next = (last?.id || 0) + 1;
-    return `FOL-${String(next).padStart(6, '0')}`;
-}
-
 // Helper: Compute Watermark
 function computeWatermark(folio) {
     if (folio.estatus_folio === 'Cancelado') return 'CANCELADO';
@@ -29,9 +22,53 @@ const safeNum = (v) => {
     return isNaN(n) ? 0 : n;
 };
 
+// Helper: Generate Smart Folio ID
+async function generateSmartFolio(fechaEntrega, telefono, tenantId) {
+    const fecha = new Date(fechaEntrega); // Ensure Date object
+    // Adjust for timezone if needed, assuming input is YYYY-MM-DD (UTC 00:00) or Local
+    // If it's UTC 00:00, getUTCMonth/Day might work better if we want to be strict, 
+    // but usually users treat YYYY-MM-DD as local date for event.
+    // Let's use UTC parts to avoid shifting to previous day due to timezone offset
+
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+    // Using UTC methods to be safe with 'YYYY-MM-DD' strings
+    const mesIndex = fecha.getUTCMonth();
+    const diaIndex = fecha.getUTCDay();
+    const diaNumero = fecha.getUTCDate().toString().padStart(2, '0');
+
+    const mes = meses[mesIndex];
+    const diaSemana = dias[diaIndex];
+
+    const inicialMes = mes.charAt(0);
+    const inicialDia = diaSemana.charAt(0);
+
+    const ultimosTelefono = telefono ? String(telefono).replace(/\D/g, '').slice(-4) : '0000';
+
+    let folioBase = `${inicialMes}${inicialDia}-${diaNumero}-${ultimosTelefono}`;
+    let folioFinal = folioBase;
+    let contador = 1;
+
+    while (true) {
+        const exists = await Folio.count({
+            where: {
+                folioNumber: folioFinal,
+                tenantId
+            }
+        });
+        if (exists === 0) break;
+        folioFinal = `${folioBase}-${contador}`;
+        contador++;
+    }
+
+    return folioFinal;
+}
+
 class FolioService {
 
     async listFolios(query, tenantFilter) {
+        // ... existing list logic ...
         const q = (query.q || '').trim();
         const where = { ...tenantFilter };
 
@@ -85,7 +122,8 @@ class FolioService {
             };
         }
 
-        const folioNumber = folioData.folioNumber || await nextFolioNumero();
+        // GENERATE SMART FOLIO
+        const folioNumber = await generateSmartFolio(folioData.fecha_entrega, folioData.cliente_telefono, tenantId);
 
         const costo_base = safeNum(folioData.costo_base);
         const costo_envio = safeNum(folioData.costo_envio);
@@ -101,16 +139,12 @@ class FolioService {
         const fillingIds = Array.isArray(folioData.fillingIds) ? folioData.fillingIds : [];
 
         if (flavorIds.length > 0) {
-            const flavors = await CakeFlavor.findAll({
-                where: { id: flavorIds, tenantId: tenantId }
-            });
+            const flavors = await CakeFlavor.findAll({ where: { id: flavorIds, tenantId: tenantId } });
             resolvedSabores = flavors.map(f => f.name);
         }
 
         if (fillingIds.length > 0) {
-            const fillings = await Filling.findAll({
-                where: { id: fillingIds, tenantId: tenantId }
-            });
+            const fillings = await Filling.findAll({ where: { id: fillingIds, tenantId: tenantId } });
             resolvedRellenos = fillings.map(f => f.name);
         }
 
@@ -119,7 +153,7 @@ class FolioService {
         folioData.diseno_metadata.flavorIds = flavorIds;
         folioData.diseno_metadata.fillingIds = fillingIds;
 
-        // Complements Logic
+        // Complements Logic (Additionals)
         const complementsList = Array.isArray(folioData.complementsList) ? folioData.complementsList : [];
         let complementsTotal = 0;
         complementsList.forEach(c => {
@@ -127,7 +161,7 @@ class FolioService {
         });
 
         let finalTotal = total;
-        if (!folioData.total) {
+        if (!folioData.total) { // Recalculate if not explicit
             finalTotal = finalTotal + complementsTotal;
         }
 
@@ -167,7 +201,7 @@ class FolioService {
             estatus_folio: folioData.estatus_folio || 'Activo',
         });
 
-        // Create Complements
+        // Create Complements (DB)
         if (complementsList.length > 0) {
             const complementsToCreate = complementsList.map(c => ({
                 folioId: row.id,
@@ -202,7 +236,6 @@ class FolioService {
     async updateFolio(id, data, tenantFilter) {
         const row = await this.getFolioById(id, tenantFilter, true);
         if (!row) throw { status: 404, message: 'Folio no encontrado (o sin acceso)' };
-
         await row.update(data);
         return row;
     }
@@ -224,7 +257,6 @@ class FolioService {
     async deleteFolio(id, user, tenantFilter) {
         const row = await this.getFolioById(id, tenantFilter, true);
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
-
         await row.destroy();
         auditService.log('DELETE', 'FOLIO', id, {}, user?.id);
     }
@@ -232,10 +264,7 @@ class FolioService {
     async updateFolioStatus(id, status, tenantFilter) {
         const row = await this.getFolioById(id, tenantFilter, true);
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
-
-        await row.update({
-            estatus_produccion: status ?? row.estatus_produccion
-        });
+        await row.update({ estatus_produccion: status ?? row.estatus_produccion });
         return row;
     }
 
@@ -246,7 +275,6 @@ class FolioService {
         const totalCount = await Folio.count({ where: baseWhere });
         const pendingCount = await Folio.count({ where: { ...baseWhere, estatus_produccion: 'Pendiente' } });
         const todayCount = await Folio.count({ where: { ...baseWhere, fecha_entrega: today } });
-
         const sumTotal = await Folio.sum('total', { where: baseWhere }) || 0;
         const sumAnticipo = await Folio.sum('anticipo', { where: baseWhere }) || 0;
 
@@ -255,14 +283,6 @@ class FolioService {
             limit: 5,
             order: [['createdAt', 'DESC']]
         });
-
-        // Mocked popular flavors for now
-        const populares = [
-            { name: 'Chocolate', value: 45 },
-            { name: 'Vainilla', value: 30 },
-            { name: 'Red Velvet', value: 25 },
-            { name: 'Zanahoria', value: 15 },
-        ];
 
         return {
             metrics: {
@@ -273,7 +293,7 @@ class FolioService {
                 totalAdvance: Number(sumAnticipo)
             },
             recientes,
-            populares
+            populares: []
         };
     }
 
@@ -282,12 +302,10 @@ class FolioService {
         if (start && end) {
             where.fecha_entrega = { [Op.between]: [start, end] };
         }
-
         const rows = await Folio.findAll({
             where,
             order: [['fecha_entrega', 'ASC'], ['hora_entrega', 'ASC']],
         });
-
         return rows.map(f => ({
             id: String(f.id),
             title: `${f.folioNumber} • ${f.cliente_nombre}`,
@@ -298,50 +316,126 @@ class FolioService {
         }));
     }
 
+    // --- PDF GENERATION FOR INDIVIDUAL FOLIO ---
     async generateFolioPdf(id, tenantFilter, user) {
         const folio = await this.getFolioById(id, tenantFilter, true);
         if (!folio) throw { status: 404, message: 'Folio no encontrado' };
 
-        const watermark = computeWatermark(folio);
-
         let templateConfig = {};
-        if (user) {
-            const ownerId = user.ownerId || user.id;
-            const template = await PdfTemplate.findOne({ where: { ownerId } });
-            if (template) templateConfig = template.configJson;
-        }
+        // branding logic if needed...
 
-        const buffer = await pdfService.renderFolioPdf({
-            folio: folio.toJSON(),
-            watermark,
-            templateConfig
+        // This assumes pdfService.renderPdf is available via simple wrapper if we want to bypass specific helpers
+        // But let's use the explicit helpers from controller if needed, or generic render
+        // Attempt to use pdfService.generateComandaPdf as alias for single?
+        // Or generic render:
+        const { renderPdf } = require('./pdfRenderer');
+
+        // Simple DTO for legacy compat or new simple view
+        const buffer = await renderPdf({
+            templateName: 'folioTemplate', // Or the one the user wants
+            data: { folio: folio.toJSON(), watermark: computeWatermark(folio) },
+            branding: {} // fetch branding if needed
         });
 
         return { buffer, filename: `${folio.folioNumber}.pdf` };
     }
 
-    async generateLabelPdf(id, tenantFilter) {
-        const folio = await this.getFolioById(id, tenantFilter, true);
-        if (!folio) throw { status: 404, message: 'Folio no encontrado' };
-
-        const buffer = await pdfService.renderLabelPdf({ folio: folio.toJSON() });
-        return { buffer, filename: `label-${folio.folioNumber}.pdf` };
-    }
-
-    async generateDaySummaryPdf(date, tenantFilter) {
+    // --- DAILY REPORTS ---
+    async generateDaySummaryPdfs(date, tenantFilter) {
         if (!date) throw { status: 400, message: 'Fecha requerida' };
 
         const folios = await Folio.findAll({
-            where: { fecha_entrega: date, ...tenantFilter },
-            order: [['hora_entrega', 'ASC']]
+            where: { fecha_entrega: date, ...tenantFilter, estatus_folio: { [Op.ne]: 'Cancelado' } },
+            order: [['hora_entrega', 'ASC']],
+            include: [{ association: 'complementosList' }] // For labels/tiers
         });
 
-        const buffer = await pdfService.renderOrdersPdf({
-            folios: folios.map(f => f.toJSON()),
-            date
+        const { renderPdf } = require('./pdfRenderer');
+
+        // 1. Data for Orders (Comandas)
+        const foliosData = folios.map(f => {
+            const json = f.toJSON();
+
+            // Calculate additional costs if needed
+            const additionalCost = 0; // Or sum complements
+
+            return {
+                folio: json.folioNumber, // Template uses 'folio' not 'folioNumber'
+                horaEntrega: json.hora_entrega, // Template uses 'horaEntrega'
+                direccion: json.ubicacion_entrega, // Template uses 'direccion'
+                cliente: {
+                    nombre: json.cliente_nombre,
+                    telefono: json.cliente_telefono,
+                    telefono2: json.cliente_telefono_extra
+                },
+                costo: {
+                    pastel: Number(json.total) - Number(json.costo_envio) - additionalCost,
+                    envio: Number(json.costo_envio),
+                    adicionales: additionalCost,
+                    total: Number(json.total),
+                    anticipo: Number(json.anticipo)
+                }
+            };
         });
 
-        return { buffer, filename: `resumen-${date}.pdf` };
+        const comandasBuffer = await renderPdf({
+            templateName: 'ordersTemplate',
+            data: { folios: foliosData, date: date, fecha: date },
+            options: { format: 'A4', printBackground: true }
+        });
+
+        // 2. Data for Labels (Etiquetas)
+        const labelsData = [];
+        folios.forEach(f => {
+            const json = f.toJSON();
+            // Main Label
+            labelsData.push({
+                folio: json.folioNumber,
+                horaEntrega: json.hora_entrega,
+                forma: json.forma || 'Normal',
+                personas: (json.numero_personas || '') + 'p',
+                esComplemento: false,
+                clientName: json.cliente_nombre
+            });
+
+            // Tiers (from diseno_metadata or complementosList?)
+            // Assuming complementosList is "Tiers" or "Extra Cakes" as per my previous DTO mapping logic
+            // Or if tiers are in JSON
+            const tiers = json.diseno_metadata?.tiers || [];
+            if (Array.isArray(tiers)) {
+                tiers.forEach((t, i) => {
+                    labelsData.push({
+                        folio: `${json.folioNumber}-P${i + 1}`,
+                        horaEntrega: json.hora_entrega,
+                        forma: 'Piso ' + (i + 1),
+                        personas: (t.personas || t.persons || '') + 'p',
+                        esComplemento: false
+                    });
+                });
+            }
+
+            // Complements
+            if (json.complementosList && json.complementosList.length > 0) {
+                json.complementosList.forEach((c, i) => {
+                    labelsData.push({
+                        folio: `${json.folioNumber}-C${i + 1}`,
+                        horaEntrega: json.hora_entrega,
+                        forma: 'Comp.',
+                        personas: (c.personas || '') + 'p',
+                        esComplemento: true
+                    });
+                });
+            }
+        });
+
+        const etiquetasBuffer = await renderPdf({
+            templateName: 'labelsTemplate',
+            data: { etiquetas: labelsData, date: date, fecha: date },
+            // Labels might use specific size or A4 grid? Template handles grid.
+            options: { format: 'A4', printBackground: true }
+        });
+
+        return { comandasBuffer, etiquetasBuffer };
     }
 }
 

@@ -202,6 +202,9 @@ async function bootstrap() {
     if (mode === 'alter') {
       console.log('⚠️ Ejecutando sequelize.sync({ alter: true })');
       await sequelize.sync({ alter: true });
+    } else if (mode === 'force') {
+      console.log('🔥 CRITICAL: Ejecutando sequelize.sync({ force: true })');
+      await sequelize.sync({ force: true });
     } else if (mode === 'smart') {
       console.log('ℹ️ Ejecutando sequelize.sync() (Create only)');
       await sequelize.sync();

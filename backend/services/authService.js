@@ -67,12 +67,16 @@ class AuthService {
     }
 
     async login({ email, username, password, ip, userAgent }) {
+        // Sanitize inputs
+        const cleanEmail = email ? email.trim().toLowerCase() : '';
+        const cleanUsername = username ? username.trim() : '';
+
         // 1. Find User with Organization and Branch info
         // We use string alias as defined in models/index.js
         const user = await User.findOne({
             where: sequelize.or(
-                { email: email || '' },
-                { username: username || (email || '') }
+                { email: cleanEmail || '' },
+                { username: cleanUsername || (cleanEmail || '') }
             ),
             include: [
                 { association: 'organization' },
@@ -81,12 +85,18 @@ class AuthService {
         });
 
         if (!user) {
+            console.log('❌ Login failed: User not found for email/username', { email, username });
             throw { status: 401, code: 'INVALID_CREDENTIALS', message: 'Correo o contraseña incorrectos.' };
         }
 
+        console.log('✅ User found:', { id: user.id, email: user.email, storedHash: user.password });
+
         // 2. Compare Password
         const isMatch = await bcrypt.compare(password, user.password);
+        console.log('🔐 Password Comparison:', { inputPasswordLength: password ? password.length : 0, isMatch });
+
         if (!isMatch) {
+            console.log('❌ Login failed: Password mismatch');
             throw { status: 401, code: 'INVALID_CREDENTIALS', message: 'Correo o contraseña incorrectos.' };
         }
 

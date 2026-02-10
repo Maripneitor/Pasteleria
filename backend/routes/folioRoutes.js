@@ -18,7 +18,12 @@ router.get('/:id/calendar-detail', folioController.getFolioById);
 
 // ✅ CRUD
 router.get('/', folioController.listFolios);
-router.get('/day-summary-pdf', folioController.generarResumenDia); // Nueva ruta (antes de /:id)
+
+// Day Summary Routes
+router.get('/resumen-dia', folioController.getDaySummary);
+router.get('/pdf/comandas/:date', folioController.downloadComandasPdf);
+router.get('/pdf/etiquetas/:date', folioController.downloadEtiquetasPdf);
+
 router.post('/', uploadReference.array('referenceImages', 5), folioController.createFolio);
 
 router.get('/:id/pdf', folioController.generarPDF);
