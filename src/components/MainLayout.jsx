@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart, Building, MessageCircle } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart, Building, MessageCircle, ContactRound, BookOpen } from 'lucide-react';
 import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiAssistantTray from './AiAssistantTray';
@@ -112,6 +112,11 @@ const MainLayout = () => {
                             <NavItem path="/usuarios" icon={Users} label="Admin Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
                         )}
 
+                        {/* Clientes */}
+                        {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                            <NavItem path="/clients" icon={ContactRound} label="Clientes" isActive={checkActive('/clients')} onClick={handleNavClick} />
+                        )}
+
                         {/* Gestion de Dueños (SuperAdmin) */}
                         {['SUPER_ADMIN'].includes(user?.role) && (
                             <NavItem path="/admin/tenants" icon={Building} label="Gestión de Dueños" isActive={checkActive('/admin/tenants')} onClick={handleNavClick} />
@@ -127,13 +132,18 @@ const MainLayout = () => {
                             <NavItem path="/admin/sabores" icon={Tags} label="Gestión de Sabores" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
                         )}
 
+                        {/* Catálogos Generales */}
+                        {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                            <NavItem path="/catalogs" icon={BookOpen} label="Catálogos" isActive={checkActive('/catalogs')} onClick={handleNavClick} />
+                        )}
+
                         {/* 7. Estadísticas */}
                         {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
                             <NavItem path="/admin/stats" icon={BarChart} label="Estadísticas" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
                         )}
 
                         {/* 8. Reporte de Comisiones */}
-                        {['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
+                        {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
                             <NavItem path="/admin/comisiones" icon={PieChart} label="Reporte de Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
                         )}
                     </nav>

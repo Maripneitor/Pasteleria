@@ -107,7 +107,10 @@ function App() {
             <Route path="clients" element={<ClientsPage />} />
 
             {/* SuperAdmin Management */}
-            <Route path="admin/tenants" element={<TenantsPage />} />
+            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
+              <Route path="admin/tenants" element={<TenantsPage />} />
+            </Route>
+
             <Route path="admin/whatsapp" element={<WhatsAppPage />} />
           </Route>
         </Route>
