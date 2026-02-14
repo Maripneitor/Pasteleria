@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import commissionsApi from '../services/commissionsApi';
 import { toast } from 'react-hot-toast';
-import { Mail, RefreshCw } from 'lucide-react';
+import { Mail, RefreshCw, Download, DollarSign, Clock, CheckCircle } from 'lucide-react';
 
 
 
@@ -60,9 +60,9 @@ const CommissionsPage = () => {
     };
 
     // Calculate totals from report data safely
-    const totalCommissions = report?.totalCommission || 0;
-    const appliedCommissions = report?.totalApplied || 0;
-    const pendingCommissions = totalCommissions - appliedCommissions;
+    const totalCommissions = report?.totalCommissions || 0;
+    const appliedCommissions = report?.totalAppliedToCustomer || 0;
+    const pendingCommissions = report?.totalNotApplied || 0;
 
     // Helper for currency
     const formatMoney = (amount) => {
@@ -196,20 +196,20 @@ const CommissionsPage = () => {
                                 report.details.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 text-sm text-gray-600">
-                                            {new Date(item.date).toLocaleDateString()}
-                                            <div className="text-xs text-gray-400">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                            {new Date(item.createdAt).toLocaleDateString()}
+                                            <div className="text-xs text-gray-400">{new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">#{item.folio}</td>
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">#{item.folioNumber}</td>
                                         <td className="px-6 py-4 text-sm text-gray-600">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 text-xs font-bold">
                                                     {(item.user || "U").charAt(0).toUpperCase()}
                                                 </div>
-                                                {item.user || "Desconocido"}
+                                                {item.user || "Sistema"}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 text-right">{formatMoney(item.saleAmount)}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-green-600 text-right">{formatMoney(item.commissionAmount)}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600 text-right">{formatMoney(item.amount)}</td>
+                                        <td className="px-6 py-4 text-sm font-bold text-green-600 text-right">{formatMoney(item.roundedAmount || item.amount)}</td>
                                     </tr>
                                 ))
                             ) : (

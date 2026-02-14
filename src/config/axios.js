@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getToken, clearToken } from '../utils/auth';
 
 const client = axios.create({
-    baseURL: 'http://localhost:3000/api', // Hardcoded as per troubleshooting guide
+    baseURL: '/api', // Relative to use the Vite proxy
     headers: {
         'Content-Type': 'application/json'
     }

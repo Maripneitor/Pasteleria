@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Edit2, Shield, ShieldOff, CheckCircle, XCircle } from 'lucide-react';
 import usersApi from '../services/usersApi';
+import branchesApi from '../services/branchesApi';
 import toast from 'react-hot-toast';
 
 const TeamPage = () => {
@@ -10,10 +11,13 @@ const TeamPage = () => {
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
+        name: '',
         email: '',
         password: '',
-        role: 'USER'
+        role: 'EMPLOYEE',
+        branchId: ''
     });
+    const [branches, setBranches] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState(null);
 
@@ -26,10 +30,22 @@ const TeamPage = () => {
         }
     };
 
+    const fetchBranches = async () => {
+        try {
+            const data = await branchesApi.getAll();
+            setBranches(data);
+        } catch (error) {
+            console.error("Error fetching branches:", error);
+        }
+    };
+
     useEffect(() => {
         let mounted = true;
         const load = async () => {
-            if (mounted) await fetchUsers();
+            if (mounted) {
+                await fetchUsers();
+                await fetchBranches();
+            }
         };
         load();
         return () => { mounted = false; };
@@ -60,10 +76,12 @@ const TeamPage = () => {
 
     const handleEdit = (user) => {
         setFormData({
-            username: user.username,
+            username: user.username || user.name,
+            name: user.name || user.username,
             email: user.email,
-            password: '', // Leave empty to keep existing
-            role: user.globalRole || 'USER'
+            password: '',
+            role: user.role || 'EMPLOYEE',
+            branchId: user.branchId || ''
         });
         setEditId(user.id);
         setIsEditing(true);
@@ -71,7 +89,14 @@ const TeamPage = () => {
     };
 
     const handleOpenCreate = () => {
-        setFormData({ username: '', email: '', password: '', role: 'USER' });
+        setFormData({
+            username: '',
+            name: '',
+            email: '',
+            password: '',
+            role: 'EMPLOYEE',
+            branchId: ''
+        });
         setIsEditing(false);
         setEditId(null);
         setShowModal(true);
@@ -100,15 +125,16 @@ const TeamPage = () => {
 
     const RoleBadge = ({ role }) => {
         const styles = {
-            ADMIN: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-            Administrador: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-            USER: 'bg-gray-100 text-gray-600 border-gray-200',
-            Usuario: 'bg-gray-100 text-gray-600 border-gray-200'
+            SUPER_ADMIN: 'bg-red-100 text-red-700 border-red-200',
+            ADMIN: 'bg-purple-100 text-purple-700 border-purple-200',
+            OWNER: 'bg-pink-100 text-pink-700 border-pink-200',
+            EMPLOYEE: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+            USER: 'bg-gray-100 text-gray-600 border-gray-200'
         };
         const r = role || 'USER';
         return (
             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${styles[r] || styles.USER}`}>
-                {r}
+                {r.replace('_', ' ')}
             </span>
         );
     };
@@ -164,7 +190,7 @@ const TeamPage = () => {
                                         </span>
                                     )}
                                 </td>
-                                <td className="p-5"><RoleBadge role={user.globalRole} /></td>
+                                <td className="p-5"><RoleBadge role={user.role} /></td>
                                 <td className="p-5 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <button
@@ -227,9 +253,23 @@ const TeamPage = () => {
                                 value={formData.role}
                                 onChange={e => setFormData({ ...formData, role: e.target.value })}
                             >
-                                <option value="USER">Usuario Estándar</option>
-                                <option value="ADMIN">Administrador</option>
+                                <option value="EMPLOYEE">Empleado</option>
+                                <option value="OWNER">Dueño (Acceso Total)</option>
+                                <option value="ADMIN">Admin General</option>
                             </select>
+
+                            {formData.role === 'EMPLOYEE' && (
+                                <select
+                                    className="input-modern w-full p-3 border rounded-xl"
+                                    value={formData.branchId}
+                                    onChange={e => setFormData({ ...formData, branchId: e.target.value })}
+                                >
+                                    <option value="">Asignar a Sucursal...</option>
+                                    {branches.map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </select>
+                            )}
                             <div className="flex gap-3 mt-6">
                                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition">Cancelar</button>
                                 <button type="submit" className="flex-1 py-3 bg-pink-600 text-white font-bold rounded-xl hover:bg-pink-700 shadow-lg transition">Guardar</button>
