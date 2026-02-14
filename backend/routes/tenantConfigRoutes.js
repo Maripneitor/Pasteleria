@@ -50,4 +50,10 @@ router.get('/config', tenantConfigController.getTenantConfig);
 // PUT Config - Restricted to Owner/Admin
 router.put('/config', checkRole(['OWNER', 'ADMIN', 'SUPER_ADMIN']), tenantConfigController.updateTenantConfig);
 
+// OWNER ONLY - Update Business Name
+router.put('/config/nombre', checkRole(['OWNER']), tenantConfigController.updateBusinessName);
+
+// OWNER ONLY - Update Branch Commissions
+router.put('/config/comisiones/:branchId', checkRole(['OWNER']), tenantConfigController.updateBranchCommissions);
+
 module.exports = router;

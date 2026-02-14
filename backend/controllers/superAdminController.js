@@ -86,26 +86,30 @@ exports.getTenantList = async (req, res) => {
     try {
         const tenants = await Tenant.findAll({
             include: [
-                { model: User, as: 'users', limit: 1 },
-                { model: require('../models').Branch, as: 'branches' }
+                { model: User, as: 'users', limit: 1 }
             ],
             order: [['createdAt', 'DESC']]
         });
 
-        // Formatear respuesta con contador de sucursales
-        const formatted = tenants.map(t => ({
-            id: t.id,
-            businessName: t.businessName,
-            maxBranches: t.maxBranches || 2,
-            branchCount: t.branches ? t.branches.length : 0,
-            users: t.users,
-            lastActive: t.updatedAt
+        // Fetch counts manually or in a separate pass if needed
+        const { Branch } = require('../models');
+
+        const formatted = await Promise.all(tenants.map(async t => {
+            const branchCount = await Branch.count({ where: { tenantId: t.id } });
+            return {
+                id: t.id,
+                businessName: t.businessName,
+                maxBranches: t.maxBranches || 2,
+                branchCount: branchCount,
+                users: t.users,
+                lastActive: t.updatedAt
+            };
         }));
 
         res.json(formatted);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error fetching tenants' });
+        console.error("Error in getTenantList:", error);
+        res.status(500).json({ message: 'Error fetching tenants', error: error.message });
     }
 };
 

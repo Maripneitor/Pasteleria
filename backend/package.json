@@ -1,6 +1,6 @@
 {
   "name": "pasteleria-app",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Sistema de gestión de pedidos para la pastelería La Fiesta",
   "main": "server.js",
   "scripts": {
@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "seed:admins": "node scripts/seed_full.js",
     "seed:full": "node scripts/seed_full.js",
+    "seed:users": "node scripts/seed_users.js",
     "fix:db": "node scripts/fix_db.js",
     "qa:smoke": "node scripts/smoke_test.js",
     "qa:contract": "node scripts/qa/verify_contract.js",

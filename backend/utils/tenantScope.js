@@ -23,8 +23,8 @@ function buildTenantWhere(req, { tenantField = 'tenantId', allowQueryTenant = tr
 
     const role = user.role;
 
-    // SUPER_ADMIN ve todo
-    if (role === 'SUPER_ADMIN') {
+    // SUPER_ADMIN y ADMIN (General) ven todo
+    if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
         // Si queremos permitir que filtre explícitamente en la URL ?tenantId=2
         if (allowQueryTenant && req.query?.tenantId) {
             return { [tenantField]: Number(req.query.tenantId) };

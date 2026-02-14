@@ -333,29 +333,32 @@ class FolioService {
         // Helper to get color by day
         const getDayColor = (dateStr) => {
             const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const colors = {
-                'Lunes': '#0d6efd',
-                'Martes': '#6f42c1',
-                'Miércoles': '#fd7e14',
-                'Jueves': '#198754',
-                'Viernes': '#d63384',
-                'Sábado': '#ffc107',
-                'Domingo': '#adb5bd'
+            const colorMap = {
+                'Lunes': { bg: '#0d6efd', text: '#ffffff' },
+                'Martes': { bg: '#6f42c1', text: '#ffffff' },
+                'Miércoles': { bg: '#fd7e14', text: '#ffffff' },
+                'Jueves': { bg: '#198754', text: '#ffffff' },
+                'Viernes': { bg: '#d63384', text: '#ffffff' },
+                'Sábado': { bg: '#ffc107', text: '#000000' },
+                'Domingo': { bg: '#adb5bd', text: '#000000' }
             };
             // Ensure date is treated as local day or UTC day correctly.
             // Since fecha_entrega is YYYY-MM-DD, let's parse it as UTC to avoid timezone shifts
             const d = new Date(dateStr);
             const dayName = days[d.getUTCDay()];
-            return colors[dayName] || '#f8f9fa';
+            return colorMap[dayName] || { bg: '#f8f9fa', text: '#000000' };
         };
 
         const f = folio.toJSON();
 
+        // Get color object with bg and text
+        const colors = getDayColor(f.fecha_entrega);
+
         // Map DB fields to Template DTO
         const folioData = {
             folioNumber: f.folioNumber,
-            dayColor: getDayColor(f.fecha_entrega), // Dynamic Color
-            textColor: '#000000',
+            dayColor: colors.bg, // Background color
+            textColor: colors.text, // Dynamic text color (white or black)
             formattedDeliveryDate: f.fecha_entrega,
             formattedDeliveryTime: f.hora_entrega,
             client: {

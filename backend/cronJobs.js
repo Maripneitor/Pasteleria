@@ -25,24 +25,37 @@ const initCronJobs = () => {
             const startOfPeriod = subDays(endOfPeriod, 1);
             startOfPeriod.setSeconds(startOfPeriod.getSeconds() + 1); // Empezamos un segundo después de las 8:30 de ayer
 
-            const commissions = await Commission.findAll({
-                include: [{ model: Folio, as: 'folio', attributes: ['folioNumber'] }],
-                where: {
-                    createdAt: {
-                        [Op.between]: [startOfPeriod, endOfPeriod]
-                    }
-                },
-                order: [['createdAt', 'ASC']]
-            });
+            const { Tenant } = require('./models');
+            const tenants = await Tenant.findAll();
 
-            const pdfBuffer = await pdfService.createCommissionReportPdf(commissions, reportDate);
+            for (const tenant of tenants) {
+                const commissions = await Commission.findAll({
+                    include: [{ model: Folio, as: 'folio', attributes: ['folioNumber'] }],
+                    where: {
+                        tenantId: tenant.id,
+                        createdAt: {
+                            [Op.between]: [startOfPeriod, endOfPeriod]
+                        }
+                    },
+                    order: [['createdAt', 'ASC']]
+                });
 
-            const subject = `Reporte de Comisiones - ${format(now, 'dd/MM/yyyy')}`;
-            const text = `Adjunto encontrarás el reporte de comisiones para el día de trabajo que finalizó a las 8:30 PM.`;
-            const filename = `ReporteComisiones_${reportDate}.pdf`;
+                if (commissions.length === 0) {
+                    console.log(`[Cron] No commissions for Tenant ${tenant.id} (${tenant.businessName}). Skipping email.`);
+                    continue;
+                }
 
-            const recipient = process.env.COMMISSIONS_REPORT_EMAIL_TO || 'mariomoguel05@gmail.com';
-            await sendEmailWithAttachment(recipient, subject, text, pdfBuffer, filename);
+                const pdfBuffer = await pdfService.createCommissionReportPdf(commissions, reportDate);
+
+                const subject = `Reporte de Comisiones - ${tenant.businessName} - ${format(now, 'dd/MM/yyyy')}`;
+                const text = `Adjunto encontrarás el reporte de comisiones para ${tenant.businessName} del día de trabajo que finalizó a las 8:30 PM.`;
+                const filename = `ReporteComisiones_${tenant.id}_${reportDate}.pdf`;
+
+                // Optionally find an admin for this tenant to send to, or use global
+                const recipient = process.env.COMMISSIONS_REPORT_EMAIL_TO || 'mariomoguel05@gmail.com';
+                console.log(`📧 Sending commission report for ${tenant.businessName} to: ${recipient}`);
+                await sendEmailWithAttachment(recipient, subject, text, pdfBuffer, filename);
+            }
 
         } catch (error) {
             console.error('❌ Error en la tarea programada de comisiones:', error);
@@ -57,10 +70,15 @@ const initCronJobs = () => {
     cron.schedule('5 21 * * *', async () => {
         console.log('🕒 Ejecutando tarea programada: Corte de caja diario...');
         try {
-            await processDailyCutEmail({
-                // Fecha actual
-                // Nota: processDailyCutEmail ya hace new Date() si no se pasa date.
-            });
+            const { Tenant } = require('./models');
+            const tenants = await Tenant.findAll();
+
+            for (const tenant of tenants) {
+                console.log(`🕒 Procesando corte diario para Tenant ${tenant.id} (${tenant.businessName})...`);
+                await processDailyCutEmail({
+                    tenantId: tenant.id
+                });
+            }
         } catch (e) {
             console.error('❌ Error tarea cron corte caja:', e);
         }
@@ -68,6 +86,27 @@ const initCronJobs = () => {
         scheduled: true,
         timezone: "America/Mexico_City"
     });
+
+    // --- NUEVOS REPORTES AUTOMÁTICOS (FASE 4) ---
+    const reportingService = require('./services/automatedReportingService');
+
+    // 1. Reporte Diario de Actividad (11:55 PM)
+    cron.schedule('55 23 * * *', async () => {
+        console.log('🕒 Cron: Enviando reporte de actividad diario...');
+        await reportingService.generateActivityReport();
+    }, { timezone: "America/Mexico_City" });
+
+    // 2. Reporte de Errores (12:05 AM - Resume el día anterior)
+    cron.schedule('5 0 * * *', async () => {
+        console.log('🕒 Cron: Enviando reporte de errores del sistema...');
+        await reportingService.generateErrorReport();
+    }, { timezone: "America/Mexico_City" });
+
+    // 3. Reporte de Uso por Sucursal (Domingo 11:30 PM)
+    cron.schedule('30 23 * * 0', async () => {
+        console.log('🕒 Cron: Enviando reporte de uso por sucursal semanal...');
+        await reportingService.generateBranchUsageReport();
+    }, { timezone: "America/Mexico_City" });
 
     // Tarea de Limpieza: Elimina PDFs de FOLIOS_GENERADOS antiguos (ej. > 7 días)
     cron.schedule('0 4 * * 0', async () => { // Cada Domingo a las 4 AM

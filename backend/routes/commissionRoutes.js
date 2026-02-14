@@ -15,7 +15,7 @@ router.get('/report', async (req, res) => {
             return res.status(400).json({ error: 'Parameters "from" and "to" are required.' });
         }
 
-        const report = await commissionService.getReport({ from, to });
+        const report = await commissionService.getReport({ from, to, tenantId: req.user.tenantId });
         res.json(report);
     } catch (error) {
         console.error("Error fetching commission report:", error);
@@ -106,7 +106,7 @@ router.post('/report/email', async (req, res) => {
         const { sendReportEmail } = require('../services/dailyCutEmailService');
 
         // 1. Get Data
-        const report = await getReport({ from, to });
+        const report = await getReport({ from, to, tenantId: req.user.tenantId });
 
         // 2. Generate PDF
         const buffer = await pdfService.renderCommissionsPdf({

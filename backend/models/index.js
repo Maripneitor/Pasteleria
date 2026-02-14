@@ -105,6 +105,10 @@ SaaSContract.belongsTo(Tenant, { foreignKey: 'tenantId' });
 Tenant.hasMany(SaaSCommissionLedger, { foreignKey: 'tenantId', as: 'commissions' });
 SaaSCommissionLedger.belongsTo(Tenant, { foreignKey: 'tenantId' });
 
+// Branch - Folio
+Branch.hasMany(Folio, { foreignKey: 'branchId', as: 'folios' });
+Folio.belongsTo(Branch, { foreignKey: 'branchId', as: 'branch' });
+
 // --- Relaciones Stats ---
 Tenant.hasMany(DailySalesStats, { foreignKey: 'tenantId' });
 Branch.hasMany(DailySalesStats, { foreignKey: 'branchId' });

@@ -131,19 +131,27 @@ exports.getQR = async (req, res) => {
     // Support for Direct Image Source: /api/whatsapp/qr?format=image
     if (req.query.format === 'image') {
       if (!data.qr) {
-        // Return placeholder or 404
         return res.status(404).send('QR Not Ready');
       }
-      const qrcode = require('qrcode');
-      // Serve as PNG stream
-      res.setHeader('Content-Type', 'image/png');
-      return qrcode.toFileStream(res, data.qr);
+      try {
+        const qrcode = require('qrcode');
+        res.setHeader('Content-Type', 'image/png');
+        return qrcode.toFileStream(res, data.qr);
+      } catch (qrErr) {
+        console.error("QR Image Gen Error:", qrErr);
+        return res.status(500).send('Error generating QR image');
+      }
     }
 
     // Default JSON behavior
     if (data.qr) {
-      const qrcode = require('qrcode');
-      data.qr = await qrcode.toDataURL(data.qr);
+      try {
+        const qrcode = require('qrcode');
+        data.qr = await qrcode.toDataURL(data.qr);
+      } catch (qrErr) {
+        console.error("QR DataURL Error:", qrErr);
+        data.qr = null;
+      }
     }
 
     res.json(data);
@@ -151,7 +159,8 @@ exports.getQR = async (req, res) => {
     console.error("❌ Error obteniendo QR:", error.message);
     res.status(500).json({
       status: 'error',
-      qr: null
+      qr: null,
+      message: error.message
     });
   }
 };

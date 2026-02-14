@@ -27,8 +27,10 @@ const tenantScope = async (req, res, next) => {
         }
 
         // SCALING: Logic for scope
-        if (user.role === 'SUPER_ADMIN') {
-            // SuperAdmin can optionally filter by specific tenant via query/body
+        const isGlobalAdmin = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
+
+        if (isGlobalAdmin) {
+            // SuperAdmin or General Admin can optionally filter by specific tenant via query/body
             // If no tenant specified, they see everything (empty filter)
             const targetTenantId = req.query.tenantId || req.body.tenantId;
             if (targetTenantId) {

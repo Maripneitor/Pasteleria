@@ -10,15 +10,12 @@ const { Op } = require('sequelize');
  * @param {string} [params.terminalId] - Optional terminal ID
  * @returns {Promise<Commission>}
  */
-const createCommission = async ({ folioNumber, total, appliedToCustomer, terminalId, userId }) => {
+const createCommission = async ({ folioNumber, total, appliedToCustomer, terminalId, userId, tenantId, branchId }) => {
     // 1. Idempotency Check
-    const existing = await Commission.findOne({ where: { folioNumber } });
+    const existing = await Commission.findOne({ where: { folioNumber, tenantId } });
 
     if (existing) {
         console.warn(`[Commission] SKIPPING creation for Folio ${folioNumber}. Commission already exists (ID: ${existing.id}).`);
-        // Optional: Update if appliedToCustomer changed? 
-        // For strict idempotency and safety, we return the existing one.
-        // If specific update logic is needed, it goes here.
         return existing;
     }
 
@@ -35,10 +32,12 @@ const createCommission = async ({ folioNumber, total, appliedToCustomer, termina
         folioNumber,
         amount: commissionAmount,
         appliedToCustomer,
-        roundedAmount
+        roundedAmount,
+        tenantId: tenantId || 1,
+        branchId: branchId || null
     });
 
-    console.log(`[Commission] CREATED for Folio ${folioNumber} | Total: $${total} | Comm: $${commissionAmount} | User: ${userId || 'System'} | AppliedToClient: ${appliedToCustomer}`);
+    console.log(`[Commission] CREATED for Folio ${folioNumber} | Tenant: ${tenantId} | Total: $${total} | Comm: $${commissionAmount} | Applied: ${appliedToCustomer}`);
     return commission;
 };
 
@@ -47,8 +46,10 @@ const createCommission = async ({ folioNumber, total, appliedToCustomer, termina
  * @param {Object} params
  * @param {string} params.from - Iso Date string or Date object
  * @param {string} params.to - Iso Date string or Date object
+ * @param {number} params.tenantId - Required for scoping
  */
-const getReport = async ({ from, to }) => {
+const getReport = async ({ from, to, tenantId = null }) => {
+
     // Ensure dates include full range if just YYYY-MM-DD
     const [fromY, fromM, fromD] = from.split('-').map(Number);
     const startDate = new Date(fromY, fromM - 1, fromD, 0, 0, 0, 0);
@@ -56,16 +57,22 @@ const getReport = async ({ from, to }) => {
     const [toY, toM, toD] = to.split('-').map(Number);
     const endDate = new Date(toY, toM - 1, toD, 23, 59, 59, 999);
 
+    const where = {
+        createdAt: {
+            [Op.between]: [startDate, endDate]
+        }
+    };
+
+    if (tenantId) {
+        where.tenantId = tenantId;
+    }
+
     const commissions = await Commission.findAll({
-        where: {
-            createdAt: {
-                [Op.between]: [startDate, endDate]
-            }
-        },
+        where,
         order: [['createdAt', 'DESC']]
     });
 
-    console.log(`[DEBUG] Querying report from ${startDate.toISOString()} to ${endDate.toISOString()}. Found: ${commissions.length}`);
+    console.log(`[DEBUG] Querying report for Tenant ${tenantId} from ${startDate.toISOString()} to ${endDate.toISOString()}. Found: ${commissions.length}`);
 
     // Aggregations
     let totalCommissions = 0;
@@ -89,7 +96,8 @@ const getReport = async ({ from, to }) => {
             amount: amt,
             appliedToCustomer: c.appliedToCustomer,
             roundedAmount: rnd,
-            createdAt: c.createdAt
+            createdAt: c.createdAt,
+            branchId: c.branchId
         };
     });
 

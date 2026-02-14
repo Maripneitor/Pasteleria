@@ -39,6 +39,67 @@ const aiService = {
         }
     },
 
+    /**
+     * CREATE: Crear pedido completo usando IA
+     * @param {string} userMessage - The user's natural language message to create an order
+     * @returns {Promise<object>} - The AI's response with the created order details
+     */
+    createOrderWithAI: async (userMessage) => {
+        try {
+            const response = await client.post('/ai/orders/create', { userMessage });
+            return response.data;
+        } catch (error) {
+            console.error('AI Create Order Error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * EDIT: Editar pedido con instrucciones en lenguaje natural
+     * @param {string} orderId - The ID of the order to edit
+     * @param {string} editInstruction - Natural language instruction for editing the order
+     * @returns {Promise<object>} - The AI's response with the updated order details
+     */
+    editOrderWithAI: async (orderId, editInstruction) => {
+        try {
+            const response = await client.post('/ai/orders/edit', { orderId, editInstruction });
+            return response.data;
+        } catch (error) {
+            console.error('AI Edit Order Error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * SEARCH: Buscar pedidos con consultas en lenguaje natural
+     * @param {string} query - Natural language query to search for orders
+     * @returns {Promise<object>} - The AI's response with search results
+     */
+    searchOrdersWithAI: async (query) => {
+        try {
+            const response = await client.post('/ai/orders/search', { query });
+            return response.data;
+        } catch (error) {
+            console.error('AI Search Orders Error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * INSIGHTS: Obtener insights del dashboard
+     * @param {string} question - Natural language question for dashboard insights
+     * @returns {Promise<object>} - The AI's response with dashboard insights
+     */
+    getDashboardInsights: async (question) => {
+        try {
+            const response = await client.post('/ai/orders/insights', { question });
+            return response.data;
+        } catch (error) {
+            console.error('AI Get Dashboard Insights Error:', error);
+            throw error;
+        }
+    },
+
     getSessions: async () => {
         try {
             const response = await client.get('/ai-sessions');

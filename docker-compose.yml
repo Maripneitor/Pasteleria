@@ -73,6 +73,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=/api
+      - VITE_PROXY_TARGET=http://backend:3000
       - TZ=America/Mexico_City
       # Proxy handling is done in vite.config.js, but env var helps if dynamic
     volumes:

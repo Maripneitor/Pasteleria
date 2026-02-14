@@ -29,6 +29,17 @@ const Commission = sequelize.define('Commission', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
     comment: 'Almacena el valor redondeado que se le cobró al cliente, si aplica.'
+  },
+  tenantId: {
+    type: DataTypes.BIGINT,
+    allowNull: false,
+    defaultValue: 1,
+    comment: 'Referencia a la organización (Pastelería)'
+  },
+  branchId: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+    comment: 'Referencia a la sucursal'
   }
 }, {
   tableName: 'commissions',

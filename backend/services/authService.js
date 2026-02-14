@@ -1,5 +1,4 @@
-const { User, sequelize } = require('../models');
-const UserSession = require('../models/UserSession');
+const { User, sequelize, UserSession } = require('../models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');

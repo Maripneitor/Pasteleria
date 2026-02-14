@@ -4,11 +4,12 @@ const { Branch } = require('../models');
 exports.listBranches = async (req, res, next) => {
     try {
         const tenantId = req.user.tenantId;
-        const where = { tenantId };
+        const role = req.user.role;
+        const { buildTenantWhere } = require('../utils/tenantScope');
+        const where = buildTenantWhere(req);
 
-        // Employee Restriction: Can only see their own branch
-        if (req.user.role === 'EMPLOYEE') {
-            // If employee has no branch, they see nothing (or error, but empty list is safer)
+        // Employee Restriction: Can only see their own branch (even within tenant)
+        if (role === 'EMPLOYEE') {
             if (req.user.branchId) {
                 where.id = req.user.branchId;
             } else {
