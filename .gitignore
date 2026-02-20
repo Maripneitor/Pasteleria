@@ -49,3 +49,6 @@ thumbs.db
 
 # Docker local overrides
 docker-compose.override.yml
+
+# Archivo memoria (No subir)
+archivollae.md
