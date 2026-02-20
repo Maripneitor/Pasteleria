@@ -20,12 +20,13 @@ async function getBrowser() {
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-gpu', // Added as per prompt requirement
-                    '--single-process'
+                    '--disable-gpu',
+                    `--user-data-dir=/tmp/puppeteer_pdf_${Date.now()}`
                 ],
                 executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
                 headless: 'new',
             }).then(browser => {
+                console.log('✅ [PDF] Navegador Puppeteer iniciado con éxito');
                 browser.on('disconnected', () => {
                     console.log('[PDF] Browser disconnected. Resetting singleton.');
                     browserPromise = null;
@@ -64,7 +65,7 @@ async function renderPdf({ templateName, data, branding, options = {} }) {
     // However, to strictly follow instructions: "1) Renderizar template específico EJS -> bodyHtml".
     // Since I updated comanda.ejs to be a full HTML document (with <head>, <body>), it IS the base.
     // So I can just render that template.
-
+    console.log(`⏳ [PDF] Iniciando generación de PDF para template: ${templateName || 'HTML Directo'}`);
     const browser = await getBrowser();
     let page = null;
     try {
@@ -98,7 +99,7 @@ async function renderPdf({ templateName, data, branding, options = {} }) {
             return req.continue();
         });
 
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        await page.setContent(htmlContent, { waitUntil: 'load', timeout: 10000 });
 
         // Handle Options
         const pdfConfig = {
@@ -118,6 +119,7 @@ async function renderPdf({ templateName, data, branding, options = {} }) {
         }
 
         const buffer = await page.pdf(pdfConfig);
+        console.log(`✅ [PDF] Generado con éxito. Tamaño: ${buffer.length} bytes`);
         return buffer;
 
     } catch (e) {

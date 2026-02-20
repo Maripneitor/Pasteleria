@@ -267,7 +267,7 @@ exports.generateNotaVentaPdf = async (orderId, ctx) => {
 
 exports.renderOrdersPdf = async ({ folios, date, branches }) => {
     try {
-        return await require('./pdfRenderer').renderPdf({
+        return await renderPdf({
             templateName: 'daily-cut',
             data: {
                 folios,
@@ -279,7 +279,7 @@ exports.renderOrdersPdf = async ({ folios, date, branches }) => {
                 printBackground: true,
                 margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
             },
-            branding: require('./pdfService').getDefaultBranding // Or empty/default
+            branding: getDefaultBranding()
         });
     } catch (error) {
         console.error('Error rendering orders PDF:', error);

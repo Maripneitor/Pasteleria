@@ -1,5 +1,5 @@
 # backend/Dockerfile
-FROM node:20
+FROM node:24
 
 # Instalar dependencias necesarias para Puppeteer/Chrome
 RUN apt-get update && apt-get install -y \
@@ -16,9 +16,9 @@ RUN apt-get update && apt-get install -y \
     libxshmfence1 \
     libatk1.0-0 \
     libdrm2 \
-    libxext6 \
     libxfixes3 \
     libpangocairo-1.0-0 \
+    chromium \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

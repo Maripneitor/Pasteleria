@@ -89,13 +89,11 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
 
         // 5. Send Email
         const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT || 587),
-            secure: false, // true for 465, false for other ports
+            service: 'gmail',
             auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            },
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
         });
 
         // 5.1 Verify Connection
@@ -103,7 +101,7 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
         // await transporter.verify(); 
 
         await transporter.sendMail({
-            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            from: `"Pastelería La Fiesta" <${process.env.EMAIL_USER}>`,
             to: recipientsStr, // Nodemailer accepts "a@a.com, b@b.com"
             subject: `Corte del día - ${targetDate} ${force ? '(Reenvío)' : ''}`,
             text:
@@ -163,17 +161,15 @@ async function sendReportEmail({ subject, text, filename, content, recipients })
     }
 
     const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: false,
+        service: 'gmail',
         auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        },
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+        }
     });
 
     await transporter.sendMail({
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        from: `"Pastelería La Fiesta" <${process.env.EMAIL_USER}>`,
         to: recipientsStr,
         subject: subject,
         text: text,

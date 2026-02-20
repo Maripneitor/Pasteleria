@@ -76,11 +76,10 @@ exports.previewDailyCut = async (req, res) => {
             branches: branchList,
         });
 
-        // 2. Asegurar que lo que mandas es Buffer real
-        if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length < 100) {
+        if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer) || pdfBuffer.length < 100) {
             return res.status(500).json({
                 message: 'PDF inválido',
-                details: 'El servicio de PDF retornó un buffer vacío o corrupto.'
+                details: 'El motor de PDF no pudo generar el contenido correctamente.'
             });
         }
 

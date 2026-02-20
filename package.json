@@ -1,0 +1,18 @@
+{
+    "name": "pasteleria-root",
+    "version": "1.0.0",
+    "private": true,
+    "engines": {
+        "node": ">=24.0.0"
+    },
+    "scripts": {
+        "dev": "docker compose up --build",
+        "stop": "docker compose down",
+        "clean": "docker compose down -v",
+        "seed": "docker compose exec backend npm run seed:full",
+        "test": "docker compose exec backend npm run qa:smoke",
+        "backend:shell": "docker compose exec backend sh",
+        "frontend:shell": "docker compose exec frontend sh"
+    },
+    "description": "Repositorio raíz para el sistema de la Pastelería La Fiesta"
+}

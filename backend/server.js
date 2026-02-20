@@ -94,6 +94,7 @@ app.use('/api/audit', authMiddleware, tenantScope, require('./routes/auditRoutes
 app.use('/api/orders', authMiddleware, tenantScope, require('./routes/orderRoutes'));
 app.use('/api/ai/orders', authMiddleware, tenantScope, require('./routes/aiOrderRoutes'));
 app.use('/api/whatsapp', authMiddleware, tenantScope, require('./routes/whatsappRoutes'));
+app.use('/api/accounting', authMiddleware, tenantScope, require('./routes/accountingRoutes'));
 
 // SuperAdmin Routes
 app.use('/api/super', authMiddleware, require('./routes/superAdminRoutes'));

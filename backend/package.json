@@ -1,6 +1,9 @@
 {
   "name": "pasteleria-app",
-  "version": "1.0.7",
+  "version": "1.0.8",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "description": "Sistema de gestión de pedidos para la pastelería La Fiesta",
   "main": "server.js",
   "scripts": {
@@ -33,6 +36,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.14",
     "openai": "^6.7.0",
+    "pdfkit": "^0.16.0",
     "puppeteer": "^24.22.3",
     "qrcode": "^1.5.3",
     "qrcode-terminal": "^0.12.0",

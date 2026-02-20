@@ -52,13 +52,86 @@ export const handlePdfResponse = async (apiCall) => {
 
     } catch (error) {
         toast.dismiss(loadingToast);
-        console.error("PDF Error:", error);
 
-        // Check for 401/403 specifically if axios error
-        if (error.response?.status === 401) {
-            toast.error("Sesión expirada o no autorizado.");
-        } else {
-            toast.error(error.message || "Error al descargar PDF");
+        let errorMsg = error.message || "Error al descargar PDF";
+
+        // Si el error contiene una respuesta en formato Blob (común con responseType: 'blob')
+        if (error.response?.data instanceof Blob) {
+            try {
+                const text = await error.response.data.text();
+                const json = JSON.parse(text);
+                errorMsg = json.details || json.message || errorMsg;
+            } catch (e) {
+                console.error("No se pudo parsear el error del Blob", e);
+            }
+        } else if (error.response?.data?.message) {
+            errorMsg = error.response.data.message;
         }
+
+        console.error("PDF Error Detailed:", error);
+        toast.error(errorMsg);
     }
+};
+
+/**
+ * Generates a PDF directly in the browser from a DOM element.
+ * Useful for "what you see is what you get" downloads.
+ * @param {HTMLElement} element - The DOM element to capture.
+ * @param {string} fileName - The name of the resulting file.
+ */
+export const generatePdfFromDom = async (element, fileName = 'documento.pdf') => {
+    if (!element) {
+        toast.error('No se encontró el elemento para generar el PDF');
+        return;
+    }
+
+    // Dynamic import to avoid bundling if not used or to handle library loading
+    // In this project it's already in package.json, but using import() is cleaner for heavy libs
+    const loadHtml2Pdf = async () => {
+        const { default: html2pdf } = await import('html2pdf.js');
+        return html2pdf;
+    };
+
+    const loadingToast = toast.loading('Preparando descarga...');
+    try {
+        const html2pdf = await loadHtml2Pdf();
+
+        const opt = {
+            margin: [10, 10],
+            filename: fileName,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // Execution
+        await html2pdf().set(opt).from(element).save();
+
+        toast.dismiss(loadingToast);
+        toast.success('Descarga completada');
+    } catch (error) {
+        toast.dismiss(loadingToast);
+        console.error("html2pdf Error:", error);
+        toast.error('Error al generar PDF en el cliente');
+    }
+};
+
+/**
+ * Generates a PDF blob from a DOM element without downloading it.
+ * @param {HTMLElement} element - The DOM element.
+ * @returns {Promise<Blob>} - The PDF blob.
+ */
+export const getPdfBlobFromDom = async (element) => {
+    if (!element) throw new Error('Elemento no encontrado');
+
+    const { default: html2pdf } = await import('html2pdf.js');
+
+    const opt = {
+        margin: [10, 10],
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    return await html2pdf().set(opt).from(element).output('blob');
 };

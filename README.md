@@ -1,112 +1,130 @@
-# Sistema de Gestión para Pastelería
+# 🎂 Pastelería La Fiesta - Sistema de Gestión
 
-## 🚀 Quickstart Docker (Recomendado)
+Sistema integral para la gestión de pedidos, clientes y reportes de la pastelería. Construido con un enfoque de alto rendimiento, multi-tenencia y confiabilidad.
 
-### 1. Iniciar Entorno Completo (Backend + DB + Frontend)
+## 🛠️ Stack Tecnológico
+- **Frontend:** React + Vite + Tailwind CSS
+- **Backend:** Node.js + Express
+- **Base de Datos:** MySQL + Sequelize (ORM)
+- **Infraestructura:** Docker & Docker Compose
+- **Calidad:** Puppeteer (PDFs), Jest/Node Test Runner (QA Smoke)
+
+---
+
+## 🚀 Guía de Inicio Rápido (Docker)
+
+Esta es la forma recomendada para levantar todo el entorno (Backend + DB + Frontend) en segundos.
+
+### 1. Iniciar Entorno
 ```bash
 docker compose up -d --build
 ```
 
-### 2. Verificar Salud del Sistema (QA Smoke)
+### 2. Inicializar Datos (Seeding)
+Para cargar datos de prueba (HQ, Sucursales, Roles y Catálogo):
+```bash
+docker compose exec backend npm run seed:full
+```
+- **SuperAdmin:** `admin@macair.com` / `admin123`
+- **Owner:** `owner@demo.com` / `admin123`
+
+### 3. Verificar Salud del Sistema
 ```bash
 docker compose exec backend npm run qa:smoke
 ```
 
-### 3. Verificar Contratos de API (QA Contract)
+---
+
+## 🛠️ Comandos Globales (Root)
+Si tienes Node instalado localmente, puedes usar estos atajos desde la raíz:
+- `npm run dev`: Levanta todo con Docker Compose.
+- `npm run stop`: Detiene los contenedores.
+- `npm run clean`: Detiene y borra volúmenes (reset DB).
+- `npm run seed`: Ejecuta el seeding de datos.
+- `npm run test`: Corre los smoke tests.
+
+---
+
+## 💻 Desarrollo Local (Sin Docker)
+
+Si prefieres trabajar fuera de contenedores:
+
+### Backend
+1. `cd backend`
+2. `npm install`
+3. Configura el `.env` (basado en `.env.example`).
+4. `npm run dev`
+
+### Frontend
+1. `cd frontend`
+2. `npm install`
+3. `npm run dev`
+
+---
+
+## 📄 Estrategia de Generación de PDFs
+
+Para la generación de documentos (facturas, reportes, tickets), seguimos estas tres estrategias dependiendo de la necesidad:
+
+### 1. Generación en el Cliente (Frontend)
+Ideal para descargas rápidas de lo que el usuario ve en pantalla.
+- **Lib:** `html2pdf.js`
+- **Uso:** "Foto" del DOM -> Canvas -> PDF.
+- **Ventaja:** No satura el servidor.
+
+### 2. Generación en el Servidor (Backend con Node.js)
+Para reportes pesados, facturas oficiales o procesos desatendidos.
+- **Puppeteer:** Navegador "Headless". Alta fidelidad (CSS moderno).
+- **PDFKit:** Dibujo manual por código. Ultra ligero, ideal para miles de páginas de texto simple.
+
+### 3. El Secreto: Headers Correctos
+Independientemente del método, el servidor debe enviar:
+- `Content-Type: application/pdf`
+- `Content-Disposition: attachment; filename="archivo.pdf"`
+
+---
+
+## 🧪 Calidad y Diagnóstico (QA)
+
+### Smoke Tests & Contratos
 ```bash
+# Verificar respuesta de endpoints críticos
 docker compose exec backend npm run qa:contract
+
+# Probar flujo completo de pedidos
+docker compose exec backend npm run qa:full
 ```
-
-### 🔄 Modos de Sincronización DB (Importante)
-El proyecto usa `DB_SYNC_MODE` en `docker-compose.yml` para controlar cambios en el esquema:
-- **`none`**: (Default SAFE) No toca el esquema. Recomendado para Producción y CI.
-- `smart`: Agrega columnas faltantes automáticamente. Ideal para desarrollo local.
-- `alter`: Usa `sequelize.sync({ alter: true })`. Uso legacy.
-
-**Para desarrollo local (habilitar smart sync):**
-1. Copia el ejemplo: `cp docker-compose.override.example.yml docker-compose.override.yml`
-2. Reinicia: `docker compose up -d`
-
-
----
-
-### Desarrollo Local (Sin Docker)
-Si prefieres correr localmente:
-1. **DB**: Asegúrate de tener MySQL corriendo y configura `.env`.
-2. **Backend**:
-   ```bash
-   cd backend
-   npm install
-   npm run dev
-   ```
-3. **Frontend**:
-   ```bash
-   cd client
-   npm install
-   npm run dev
-   ```
-
----
-
-## 🛡️ Confiabilidad y Diagnóstico
-
-### Correr Pruebas Automatizadas
-Para verificar que el flujo de creación de pedidos funciona correctamente:
-
-```bash
-# Desde la carpeta raíz
-node --test server/tests/order_flow.test.js
-```
-*Tip: Asegúrate de que el servidor backend esté corriendo en el puerto 3000.*
 
 ### Modo Diagnóstico
-Para ver detalles técnicos en la interfaz (requestId, errores de API en tiempo real):
-
-1. Habilita el modo diagnóstico en `.env` del cliente o servidor:
-   ```env
-   # Frontend (client/.env)
-   VITE_DEBUG_MODE=true
-   
-   # Backend (server/.env)
-   DEBUG_ORDER_FLOW=true
-   ```
-2. En la UI, aparecerá un panel flotante con la actividad de red.
+Habilita `VITE_DEBUG_MODE=true` en el cliente para ver el panel de Request IDs y errores técnicos en tiempo real.
 
 ---
 
-## 🧪 Smoke Test Manual (Guía Rápida)
+## 🔧 Gestión y Mantenimiento
 
-Para validar manualmente que el sistema está operativo después de un despliegue:
+### Reparación de DB (Sincronización)
+Si cambias el esquema y necesitas forzar la sincronización:
+```bash
+# En docker-compose.yml o .env usa:
+DB_SYNC_MODE=smart # (Recomendado para desarrollo)
+```
 
-1. **Login**: Entra con usuario `admin@gmail.com`.
-2. **Crear Pedido**: Ir a "Nuevo Pedido".
-   - Cliente: "Prueba Smoke"
-   - Teléfono: "5551234567"
-   - Fecha: Mañana
-   - Selecciona 1 sabor (Chocolate)
-   - Da clic en "Crear Pedido".
-   - **Esperado**: Redirección a dashboard/lista o mensaje de éxito.
-3. **Verificación**:
-   - Ve a "Recientes" en el Dashboard.
-   - Confirma que aparece "Prueba Smoke".
-4. **Validación de Errores**:
-   - Intenta crear un pedido sin nombre de cliente.
-   - **Esperado**: Toast rojo "Falta: cliente_nombre" y (si Debug Mode ON) detalle del Request ID.
+### Troubleshooting Típico
+- **DB no inicia:** `docker compose down -v` para limpiar volúmenes y reiniciar.
+- **Puerto ocupado:** Asegúrate de no tener otro local MySQL en el 3307 o App en el 3000.
 
-### ✅ Lista de Errores Típicos Cubiertos
-- **401 Unauthorized**: Intento de creación sin token válido.
-- **400 Validación**: Payload incompleto (falta nombre, fecha, etc.).
-- **500 Internal Error**: Fallos de BD capturados con Stack Trace (visible solo en server logs).
-- **Tenant Scope Mismatch**: Prevención de acceso cruzado entre sucursales (Admin vs Owner).
+### 🌐 Desarrollo con HTTPS / Proxy (ngrok)
+Si usas ngrok, configura las variables en `docker-compose.yml` para el servicio `client`:
+- **VITE_HMR_PORT**: `443`
+- **VITE_HMR_HOST**: `tu-url.ngrok-free.app`
+- **VITE_HMR_PROTOCOL**: `wss`
 
-### 📋 Checklist de Regresión Final (10 Puntos)
-1.  [ ] Login exitoso con Admin y Owner.
-2.  [ ] Creación de pedido (flujo normal).
-3.  [ ] Persistencia: El pedido aparece en "Recientes".
-4.  [ ] Calendario: El pedido aparece en la fecha correcta.
-5.  [ ] Validación: El sistema bloquea pedidos sin nombre de cliente.
-6.  [ ] Diagnóstico: `DEBUG_ORDER_FLOW=true` muestra logs detallados.
-7.  [ ] Frontend: Panel de Diagnóstico muestra Request ID ante errores.
-8.  [ ] Auth: Token expirado redirige a Login.
-9.  [ ] PDF: Generación de reporte de pedido funciona (si aplica).
-10. [ ] Docker: Los contenedores se levantan sin `EADDRINUSE`.
+---
+
+## 📦 Control de Versiones (Git)
+Para un despliegue rápido y commit:
+```bash
+git add .
+git commit -m "v.x.x.x-Descripción"
+git push origin main
+```
