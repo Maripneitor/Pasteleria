@@ -46,10 +46,14 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 
+# Instalar PM2 globalmente para Node.js Cluster Mode
+RUN npm install -g pm2
+
 # Variable de entorno vital para Puppeteer
 ENV PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium"
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 
 EXPOSE 3000
-# Usamos un script de inicio para asegurar que la DB y el Admin estén listos
-CMD ["node", "server.js"]
+
+# Iniciar la aplicación usando PM2 con el Ecosystem para abarcar API y Worker separados
+CMD ["pm2-runtime", "ecosystem.config.js", "--env", "production"]

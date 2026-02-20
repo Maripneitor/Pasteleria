@@ -4,11 +4,12 @@ import { Calculator, CheckCircle, DollarSign, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import foliosApi from '../../../services/folios';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const StepF_Payment = ({ prev }) => {
     const { orderData, updateOrder } = useOrder();
     const navigate = useNavigate();
-    const [submitting, setSubmitting] = useState(false);
+    const queryClient = useQueryClient();
     const [addCommission, setAddCommission] = useState(false);
 
     // Calculate Totals automatically
@@ -49,73 +50,84 @@ const StepF_Payment = ({ prev }) => {
         }
     };
 
-    const handleFinish = async () => {
-        setSubmitting(true);
-        try {
-            // CONSTRUCT PAYLOAD
-            const payload = {
-                // Client
-                cliente_nombre: orderData.clientName,
-                cliente_telefono: orderData.clientPhone,
-                cliente_telefono_extra: orderData.clientPhoneExtra,
-                clientId: orderData.selectedClient?.id || null, // Allow Null
-
-                // Order Details
-                fecha_entrega: orderData.deliveryDate,
-                hora_entrega: orderData.deliveryTime,
-                tipo_folio: orderData.tipo_folio,
-                forma: orderData.shape,
-                numero_personas: orderData.peopleCount,
-
-                // Products / Flavors
-                sabores_pan: [orderData.flavorText, ...(orderData.otherFlavors || [])].filter(Boolean),
-                rellenos: [orderData.fillingText, ...(orderData.otherFillings || [])].filter(Boolean),
-                flavorIds: orderData.flavorId ? [orderData.flavorId] : [], // Legacy support
-                fillingIds: orderData.fillingId ? [orderData.fillingId] : [],
-
-                // Arrays
-                complements: orderData.complements,
-                // Accessories needs mapping to DB JSON or separate model? 
-                // DB has `accesorios` JSON.
-                accesorios: orderData.extras,
-
-                // Design
-                descripcion_diseno: orderData.designDescription,
-                dedicatoria: orderData.dedication,
-                altura_extra: orderData.extraHeight ? 'Si' : 'No',
-                imagen_referencia_url: orderData.referenceImages?.[0] || null, // First one as main
-                diseno_metadata: {
-                    allImages: orderData.referenceImages,
-                    aiAnalysis: orderData.aiAnalysisResult
-                },
-
-                // Logistics
-                is_delivery: orderData.is_delivery,
-                calle: orderData.calle,
-                num_ext: orderData.num_ext,
-                colonia: orderData.colonia,
-                referencias: orderData.referencias,
-                ubicacion_maps: orderData.ubicacion_maps,
-                costo_envio: shipping,
-
-                // Finances
-                costo_base: baseCost,
-                total: total,
-                anticipo: advance,
-                estatus_pago: (remaining <= 0) ? 'Pagado' : 'Pendiente',
-                status: 'CONFIRMED'
-            };
-
-            const newFolio = await foliosApi.createFolio(payload);
+    const saveFolioMutation = useMutation({
+        mutationFn: async (payload) => {
+            return await foliosApi.createFolio(payload);
+        },
+        onSuccess: (newFolio) => {
             toast.success('¡Pedido creado exitosamente!');
-            navigate(`/folios/${newFolio.id}`);
 
-        } catch (error) {
+            // LA MAGIA: Invalidamos la caché. 
+            // Esto obliga a la tabla principal a hacer un "fetch" automático y mostrar el nuevo dato.
+            queryClient.invalidateQueries({ queryKey: ['folios'] });
+
+            navigate(`/folios/${newFolio.id}`);
+        },
+        onError: (error) => {
+            // Fail-Fast (Zod): Atrapamos el error exacto que envía el backend
             console.error(error);
-            toast.error('Error al guardar pedido. Verifica los datos.');
-        } finally {
-            setSubmitting(false);
+            const errorMessage = error.response?.data?.details?.[0]
+                || error.response?.data?.message
+                || 'Error de conexión al servidor al guardar el pedido.';
+
+            toast.error(`Error: ${errorMessage}`);
         }
+    });
+
+    const handleFinish = () => {
+        // CONSTRUCT PAYLOAD
+        const payload = {
+            // Client
+            cliente_nombre: orderData.clientName,
+            cliente_telefono: orderData.clientPhone,
+            cliente_telefono_extra: orderData.clientPhoneExtra,
+            clientId: orderData.selectedClient?.id || null, // Allow Null
+
+            // Order Details
+            fecha_entrega: orderData.deliveryDate,
+            hora_entrega: orderData.deliveryTime,
+            tipo_folio: orderData.tipo_folio,
+            forma: orderData.shape,
+            numero_personas: orderData.peopleCount,
+
+            // Products / Flavors
+            sabores_pan: [orderData.flavorText, ...(orderData.otherFlavors || [])].filter(Boolean),
+            rellenos: [orderData.fillingText, ...(orderData.otherFillings || [])].filter(Boolean),
+            flavorIds: orderData.flavorId ? [orderData.flavorId] : [], // Legacy support
+            fillingIds: orderData.fillingId ? [orderData.fillingId] : [],
+
+            // Arrays
+            complements: orderData.complements,
+            accesorios: orderData.extras,
+
+            // Design
+            descripcion_diseno: orderData.designDescription,
+            dedicatoria: orderData.dedication,
+            altura_extra: orderData.extraHeight ? 'Si' : 'No',
+            imagen_referencia_url: orderData.referenceImages?.[0] || null, // First one as main
+            diseno_metadata: {
+                allImages: orderData.referenceImages,
+                aiAnalysis: orderData.aiAnalysisResult
+            },
+
+            // Logistics
+            is_delivery: orderData.is_delivery,
+            calle: orderData.calle,
+            num_ext: orderData.num_ext,
+            colonia: orderData.colonia,
+            referencias: orderData.referencias,
+            ubicacion_maps: orderData.ubicacion_maps,
+            costo_envio: shipping,
+
+            // Finances
+            costo_base: baseCost,
+            total: total,
+            anticipo: advance,
+            estatus_pago: (remaining <= 0) ? 'Pagado' : 'Pendiente',
+            status: 'CONFIRMED'
+        };
+
+        saveFolioMutation.mutate(payload);
     };
 
     return (
@@ -210,11 +222,11 @@ const StepF_Payment = ({ prev }) => {
                 <button onClick={prev} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition">Atrás</button>
                 <button
                     onClick={handleFinish}
-                    disabled={submitting}
+                    disabled={saveFolioMutation.isPending}
                     className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-10 py-4 rounded-xl font-bold hover:shadow-xl hover:scale-105 transition flex items-center gap-3 shadow-lg shadow-green-200"
                 >
-                    {submitting ? <Loader2 className="animate-spin" /> : <CheckCircle size={24} />}
-                    {submitting ? 'Guardando...' : 'Finalizar Pedido'}
+                    {saveFolioMutation.isPending ? <Loader2 className="animate-spin" /> : <CheckCircle size={24} />}
+                    {saveFolioMutation.isPending ? 'Guardando...' : 'Finalizar Pedido'}
                 </button>
             </div>
         </div>

@@ -60,16 +60,6 @@ exports.createFolio = async (req, res) => {
             });
         }
 
-        if (e.name === 'SequelizeValidationError') {
-            const errors = e.errors.map(er => `${er.path}: ${er.message}`);
-            return res.status(400).json({
-                ok: false,
-                code: 'VALIDATION_ERROR',
-                message: 'Error de validación',
-                details: errors,
-                requestId
-            });
-        }
 
         res.status(500).json({
             ok: false,
@@ -83,11 +73,15 @@ exports.createFolio = async (req, res) => {
 
 // ✅ UPDATE
 exports.updateFolio = async (req, res) => {
+    const { sequelize } = require('../models');
+    const t = await sequelize.transaction();
     try {
         const tenantFilter = buildTenantWhere(req);
-        const row = await folioService.updateFolio(req.params.id, req.body, tenantFilter);
+        const row = await folioService.updateFolio(req.params.id, req.body, tenantFilter, t);
+        await t.commit();
         res.json(row);
     } catch (e) {
+        await t.rollback();
         console.error('updateFolio:', e);
         const status = e.status || 500;
         res.status(status).json({ message: e.message || 'Error actualizando folio' });
@@ -96,11 +90,15 @@ exports.updateFolio = async (req, res) => {
 
 // ✅ CANCEL
 exports.cancelFolio = async (req, res) => {
+    const { sequelize } = require('../models');
+    const t = await sequelize.transaction();
     try {
         const tenantFilter = buildTenantWhere(req);
-        const result = await folioService.cancelFolio(req.params.id, req.body?.motivo, req.user, tenantFilter);
+        const result = await folioService.cancelFolio(req.params.id, req.body?.motivo, req.user, tenantFilter, t);
+        await t.commit();
         res.json({ message: 'Folio cancelado', folio: result });
     } catch (e) {
+        await t.rollback();
         console.error('cancelFolio:', e);
         const status = e.status || 500;
         res.status(status).json({ message: e.message || 'Error cancelando folio' });

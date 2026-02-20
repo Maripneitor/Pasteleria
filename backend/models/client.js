@@ -27,7 +27,6 @@ const Client = sequelize.define('Client', {
   },
   tenantId: {
     type: DataTypes.BIGINT,
-    defaultValue: 1,
     allowNull: false
   }
 }, {

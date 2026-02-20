@@ -93,7 +93,10 @@ const Folio = sequelize.define('Folio', {
   motivo_cancelacion: { type: DataTypes.STRING, allowNull: true },
 
   // Tenant
-  tenantId: { type: DataTypes.BIGINT, defaultValue: 1 },
+  tenantId: {
+    type: DataTypes.BIGINT,
+    allowNull: false, // 🛡️ BLOQUEO: Ya no permitimos nulos ni default 1
+  },
   branchId: { type: DataTypes.BIGINT, allowNull: true, comment: 'FK to Branch' },
 
   // Machine State (Strict)

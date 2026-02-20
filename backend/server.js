@@ -19,6 +19,18 @@ app.use(express.urlencoded({ extended: true }));
 const requestLogger = require('./middleware/requestLogger');
 app.use(requestLogger);
 
+// Security Headers (Helmet)
+const helmet = require('helmet');
+app.use(helmet());
+
+// Rate Limiting para Login
+const rateLimit = require('express-rate-limit');
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // Maximo 10 intentos
+  message: { ok: false, message: 'Demasiados intentos de inicio de sesión, por favor intenta en unos minutos.' }
+});
+
 // Servir archivos estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/FOLIOS_GENERADOS', express.static(path.join(__dirname, 'FOLIOS_GENERADOS')));
@@ -35,10 +47,11 @@ app.get('/api', (req, res) => res.json({ status: 'online', message: 'API Pastele
 const { sequelize } = require('./models');
 app.get('/api/health', async (req, res) => {
   try {
-    await sequelize.authenticate();
+    // Verificamos conexión y respuesta de I/O de la DB
+    const [results] = await sequelize.query('SELECT 1+1 AS result');
     res.json({
       ok: true,
-      db: "up",
+      db: results[0].result === 2 ? "up and responsive" : "unknown",
       uptime: process.uptime(),
       timestamp: new Date().toISOString()
     });
@@ -52,7 +65,9 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Auth (Login, Register) - PÚBLICO
-app.use('/api/auth', require('./routes/authRoutes'));
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth', authRoutes);
 
 // Webhooks - PÚBLICO
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
@@ -135,12 +150,16 @@ app.get('*', (req, res) => {
 // ========================================
 // 7. MANEJADOR DE ERRORES GLOBAL
 // ========================================
+const logger = require('./utils/logger');
+
 app.use((err, req, res, next) => {
   const requestId = req.requestId || 'unknown';
 
-  console.error(`❌ [Global Error Handler] RequestID: ${requestId}`);
-  console.error('Error:', err.message);
-  console.error('Stack:', err.stack);
+  logger.error('Unhandled Exception at RequestID: %s | URL: %s', requestId, req.originalUrl, {
+    message: err.message,
+    stack: err.stack,
+    code: err.code || 'UNKNOWN'
+  });
 
   const statusCode = err.statusCode || err.status || 500;
 

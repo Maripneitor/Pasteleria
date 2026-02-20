@@ -7,11 +7,23 @@ const fs = require('fs');
 
 const { buildTenantWhere } = require('../utils/tenantScope');
 
+const NodeCache = require('node-cache');
+// Cache de 30 minutos
+const catalogCache = new NodeCache({ stdTTL: 1800, checkperiod: 120 });
+
 // --- FLAVORS ---
 exports.getFlavors = async (req, res) => {
     try {
         const tenantFilter = buildTenantWhere(req);
         const includeInactive = req.query.includeInactive === '1' || req.query.includeInactive === 'true';
+
+        // Generar clave de caché única
+        const cacheKey = `flavors_${JSON.stringify(tenantFilter)}_${includeInactive}`;
+        const cachedData = catalogCache.get(cacheKey);
+
+        if (cachedData) {
+            return res.json(cachedData);
+        }
 
         const where = { ...tenantFilter };
         if (!includeInactive) {
@@ -22,10 +34,12 @@ exports.getFlavors = async (req, res) => {
             where,
             order: [['name', 'ASC']],
         });
+
+        catalogCache.set(cacheKey, rows);
         res.json(rows);
     } catch (error) {
         console.error("Error fetching flavors", error);
-        fs.appendFileSync('error.log', `[Flavor] Error: ${error.stack}\n`);
+        fs.promises.appendFile('error.log', `[Flavor] Error: ${error.stack}\n`).catch(() => { });
         res.status(500).json({ message: "Error al obtener sabores" });
     }
 };
@@ -40,6 +54,7 @@ exports.toggleFlavorActive = async (req, res) => {
         if (!row) return res.status(404).json({ message: "No encontrado" });
 
         await row.update({ isActive: Boolean(isActive) });
+        catalogCache.flushAll(); // Invalidar caché al modificar
         res.json(row);
     } catch (error) {
         console.error("Error toggling flavor", error);

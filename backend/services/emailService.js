@@ -11,6 +11,19 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.sendEmail = async ({ to, subject, html, attachments = [] }) => {
+    // 🛡️ BLOQUEO DE DESARROLLO (Degradación Elegante)
+    if (process.env.NODE_ENV === 'development') {
+        console.log('\n=======================================');
+        console.log('✉️ [MOCK EMAIL INTERCEPTADO - Entorno DEV]');
+        console.log(`Destinatario: ${to}`);
+        console.log(`Asunto:       ${subject}`);
+        console.log(`Adjuntos:     ${attachments ? attachments.length : 0}`);
+        console.log('=======================================\n');
+
+        // Retornamos éxito para que no crashee, pero no mandamos a SMTP
+        return { success: true, message: 'Mock email printed to console', messageId: 'mock-id-dev' };
+    }
+
     try {
         const info = await transporter.sendMail({
             from: process.env.SMTP_FROM || '"Pastelería La Fiesta" <no-reply@pasteleria.com>',

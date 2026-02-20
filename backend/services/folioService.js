@@ -233,14 +233,14 @@ class FolioService {
         return row;
     }
 
-    async updateFolio(id, data, tenantFilter) {
+    async updateFolio(id, data, tenantFilter, t = null) {
         const row = await this.getFolioById(id, tenantFilter, true);
         if (!row) throw { status: 404, message: 'Folio no encontrado (o sin acceso)' };
-        await row.update(data);
+        await row.update(data, { transaction: t });
         return row;
     }
 
-    async cancelFolio(id, motivo, user, tenantFilter) {
+    async cancelFolio(id, motivo, user, tenantFilter, t = null) {
         const row = await this.getFolioById(id, tenantFilter, true);
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
 
@@ -248,9 +248,9 @@ class FolioService {
             estatus_folio: 'Cancelado',
             cancelado_en: new Date(),
             motivo_cancelacion: motivo || null,
-        });
+        }, { transaction: t });
 
-        auditService.log('CANCEL', 'FOLIO', row.id, { motivo }, user?.id);
+        auditService.log('CANCEL', 'FOLIO', row.id, { motivo }, user?.id, t);
         return row;
     }
 

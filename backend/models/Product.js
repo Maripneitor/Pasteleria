@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const Product = sequelize.define('Product', {
-    tenantId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 1 },
+    tenantId: { type: DataTypes.BIGINT, allowNull: false },
     name: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.TEXT },
     basePrice: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },

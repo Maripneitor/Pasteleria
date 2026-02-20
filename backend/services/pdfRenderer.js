@@ -8,8 +8,8 @@ async function logPdfError(error) {
     const logPath = path.join(__dirname, '../logs/pdf_errors.log');
     const message = `[${new Date().toISOString()}] ERROR: ${error.message}\nSTACK: ${error.stack}\n\n`;
     const logDir = path.join(__dirname, '../logs');
-    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-    fs.appendFileSync(logPath, message);
+    if (!fs.existsSync(logDir)) await fs.promises.mkdir(logDir, { recursive: true });
+    await fs.promises.appendFile(logPath, message);
 }
 
 async function getBrowser() {

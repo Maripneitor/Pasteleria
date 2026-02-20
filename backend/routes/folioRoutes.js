@@ -24,7 +24,10 @@ router.get('/resumen-dia', folioController.getDaySummary);
 router.get('/pdf/comandas/:date', folioController.downloadComandasPdf);
 router.get('/pdf/etiquetas/:date', folioController.downloadEtiquetasPdf);
 
-router.post('/', uploadReference.array('referenceImages', 5), folioController.createFolio);
+const validateRequest = require('../middleware/validate');
+const { createFolioSchema } = require('../schemas/folioSchema');
+
+router.post('/', uploadReference.array('referenceImages', 5), validateRequest(createFolioSchema), folioController.createFolio);
 
 router.get('/:id/pdf', folioController.generarPDF);
 router.get('/:id/label-pdf', folioController.generarEtiqueta); // Nueva ruta

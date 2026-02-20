@@ -1,14 +1,40 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 // --- CONFIGURACIÓN ---
-const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://pasteleria-la-fiesta.up.railway.app/api/webhooks/whatsapp';
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
+if (!WEBHOOK_URL) {
+    console.error("🔥 CRITICAL ERROR: La variable de entorno WEBHOOK_URL no está definida.");
+    console.error("👉 Configura WEBHOOK_URL en tu archivo .env o panel de hosting para que WhatsApp sepa a dónde mandar los mensajes.");
+    // No lanzamos excepcion para no crashear la API principal si corre en modo monolítico sin intentarlo, 
+    // pero marcamos bandera
+}
 const TRIGGER_COMMAND = 'generar folio'; // Comando simplificado
 
 let client;
-let qrCodeData = null; // 🟢 AQUÍ GUARDAMOS EL QR
-let status = 'disconnected'; // disconnected | ready
+const cacheFile = path.join(__dirname, 'whatsapp_status.json');
+
+// Helpers for QR state
+const setGlobalState = async (statusArg, qrArg = null) => {
+    try {
+        await fs.promises.writeFile(cacheFile, JSON.stringify({ status: statusArg, qr: qrArg, timestamp: Date.now() }));
+    } catch (e) {
+        console.error("Error saving whatsapp state", e.message);
+    }
+};
+
+const getGlobalState = () => {
+    try {
+        if (fs.existsSync(cacheFile)) {
+            const data = fs.readFileSync(cacheFile, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (e) { }
+    return { status: 'disconnected', qr: null };
+};
 
 const initializeWhatsApp = () => {
     // 🛡️ MODO CUARENTENA: Solo iniciar si se ejecuta como microservicio aislado o si hay flag explícito.
@@ -40,29 +66,26 @@ const initializeWhatsApp = () => {
         }
     });
 
-    // 🟢 EVENTO QR: Guardar en variable
+    // 🟢 EVENTO QR: Guardar en variable persistencia
     client.on('qr', (qr) => {
         console.log('📸 Nuevo QR Generado (Listo para Frontend)');
-        qrCodeData = qr; // Guardar
-        status = 'disconnected';
-        // qrcode.generate(qr, { small: true }); // Opcional: mostrar en terminal también
+        setGlobalState('disconnected', qr);
     });
 
     client.on('ready', () => {
         console.log('✅ WhatsApp Conectado y Listo!');
-        status = 'ready';
-        qrCodeData = null; // Limpiar QR porque ya no se necesita
+        setGlobalState('ready', null);
         console.log(`📡 Escuchando mensajes (Tuyos y del Cliente) para enviar a: ${WEBHOOK_URL}`);
     });
 
     client.on('auth_failure', msg => {
         console.error('❌ Error de autenticación:', msg);
-        status = 'error';
+        setGlobalState('error', null);
     });
 
     client.on('disconnected', (reason) => {
         console.log('❌ WhatsApp desconectado:', reason);
-        status = 'disconnected';
+        setGlobalState('disconnected', null);
         // Evitar bucle de reinicio inmediato
         setTimeout(() => {
             console.log('🔄 Reintentando conexión WhatsApp...');
@@ -136,7 +159,11 @@ const initializeWhatsApp = () => {
                 }
             };
 
-            console.log('📤 Enviando datos completos a Fly.io...');
+            if (!WEBHOOK_URL) {
+                console.error('❌ No se envio al webhook porque WEBHOOK_URL no esta definda');
+                return;
+            }
+            console.log('📤 Enviando datos completos a:', WEBHOOK_URL);
             await axios.post(WEBHOOK_URL, payload);
             console.log('✅ Enviado con éxito. La IA debería responder pronto.');
 
@@ -150,7 +177,7 @@ const initializeWhatsApp = () => {
 
     client.initialize().catch(err => {
         console.error('❌ Error fatal al iniciar WhatsApp:', err.message);
-        status = 'error';
+        setGlobalState('error', null);
     });
 };
 
@@ -158,7 +185,7 @@ const initializeWhatsApp = () => {
 module.exports = {
     initializeWhatsApp,
     getClient: () => client,
-    getStatus: () => ({ status, qr: qrCodeData }),
+    getStatus: () => getGlobalState(),
     restart: async () => {
         console.log('🔄 Restarting WhatsApp Client via API...');
         if (client) {
@@ -166,8 +193,7 @@ module.exports = {
                 await client.destroy();
             } catch (e) { console.error('Error destroying client:', e.message); }
         }
-        status = 'disconnected';
-        qrCodeData = null;
+        await setGlobalState('disconnected', null);
         initializeWhatsApp();
         return { success: true };
     }
