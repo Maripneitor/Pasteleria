@@ -11,7 +11,15 @@ let qrCodeData = null; // 🟢 AQUÍ GUARDAMOS EL QR
 let status = 'disconnected'; // disconnected | ready
 
 const initializeWhatsApp = () => {
-    console.log('🚀 Iniciando Mini-Gateway de WhatsApp (Modo Pro)...');
+    // 🛡️ MODO CUARENTENA: Solo iniciar si se ejecuta como microservicio aislado o si hay flag explícito.
+    // Esto evita que whatsapp-web.js (que lanza otro Puppeteer inestable) tire el servidor de la API Principal.
+    if (!process.env.WHATSAPP_MICROSERVICE_MODE && require.main !== module) {
+        console.warn('🚧 WhatsApp Web Gateway está en CUARENTENA (Desactivado). No se iniciará en la API principal.');
+        console.warn('👉 Para usarlo, ejecútalo como microservicio: node whatsapp-gateway.js');
+        return;
+    }
+
+    console.log('🚀 Iniciando Mini-Gateway de WhatsApp (Modo Pro AISLADO)...');
 
     client = new Client({
         authStrategy: new LocalAuth({

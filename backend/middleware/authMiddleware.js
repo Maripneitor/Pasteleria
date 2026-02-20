@@ -2,29 +2,6 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const UserSession = require('../models/UserSession');
 
-// Helper to determine Effective Role based on DB Role + Context
-function normalizeRole(globalRole, ownerId) {
-  const r = String(globalRole || '').trim();
-  const upper = r.toUpperCase();
-
-  // 1. High Priv roles are direct
-  if (['ADMIN', 'ADMINISTRADOR', 'ADMINISTRATOR'].includes(upper)) return 'ADMIN';
-  if (upper === 'SUPER_ADMIN') return 'SUPER_ADMIN';
-
-  // 2. USER Separation using ownerId
-  if (['USER', 'USUARIO'].includes(upper)) {
-    // If has ownerId, they are an EMPLOYEE
-    if (ownerId) return 'EMPLOYEE';
-    // If no ownerId, they are likely the Business OWNER
-    return 'OWNER';
-  }
-
-  // 3. Fallbacks (Legacy or Explicit String)
-  if (['OWNER'].includes(upper) || r === 'owner') return 'OWNER';
-  if (['EMPLOYEE'].includes(upper) || r === 'employee') return 'EMPLOYEE';
-
-  return 'USER'; // Default fallback
-}
 
 const fs = require('fs');
 
@@ -59,11 +36,11 @@ module.exports = async function (req, res, next) {
       return res.status(404).json({ message: 'Usuario no encontrado.' });
     }
 
-    // 5. Guardamos usuario en req CON ROL NORMALIZADO
+    // 5. Guardamos usuario en req 
     req.user = {
       ...user.toJSON(), // Use user data from DB
       id: user.id, // Explicit
-      role: normalizeRole(user.role, user.ownerId), // Normalize with context from DB user
+      role: user.role, // Rol validado directamente desde la base de datos
       tenantId: user.tenantId || null,
       branchId: user.branchId || null
     };

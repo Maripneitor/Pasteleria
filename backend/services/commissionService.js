@@ -10,9 +10,9 @@ const { Op } = require('sequelize');
  * @param {string} [params.terminalId] - Optional terminal ID
  * @returns {Promise<Commission>}
  */
-const createCommission = async ({ folioNumber, total, appliedToCustomer, terminalId, userId }) => {
+const createCommission = async ({ folioNumber, total, appliedToCustomer, terminalId, userId }, t = null) => {
     // 1. Idempotency Check
-    const existing = await Commission.findOne({ where: { folioNumber } });
+    const existing = await Commission.findOne({ where: { folioNumber }, transaction: t });
 
     if (existing) {
         console.warn(`[Commission] SKIPPING creation for Folio ${folioNumber}. Commission already exists (ID: ${existing.id}).`);
@@ -36,7 +36,7 @@ const createCommission = async ({ folioNumber, total, appliedToCustomer, termina
         amount: commissionAmount,
         appliedToCustomer,
         roundedAmount
-    });
+    }, { transaction: t });
 
     console.log(`[Commission] CREATED for Folio ${folioNumber} | Total: $${total} | Comm: $${commissionAmount} | User: ${userId || 'System'} | AppliedToClient: ${appliedToCustomer}`);
     return commission;

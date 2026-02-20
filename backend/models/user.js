@@ -59,4 +59,21 @@ const User = sequelize.define('User', {
   tableName: 'users' // Asegura que el nombre de la tabla sea 'users'
 });
 
+// Métodos de instancia para verificación de roles
+User.prototype.isSuperAdmin = function () {
+  return this.role === 'SUPER_ADMIN';
+};
+
+User.prototype.isAdmin = function () {
+  return ['SUPER_ADMIN', 'ADMIN'].includes(this.role);
+};
+
+User.prototype.isOwner = function () {
+  return ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(this.role);
+};
+
+User.prototype.isEmployee = function () {
+  return this.role === 'EMPLOYEE';
+};
+
 module.exports = User;

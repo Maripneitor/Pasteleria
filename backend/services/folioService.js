@@ -101,7 +101,7 @@ class FolioService {
         return Folio.findOne(options);
     }
 
-    async createFolio(folioData, user, tenantId) {
+    async createFolio(folioData, user, tenantId, t = null) {
         // Validations
         if (!folioData.cliente_nombre || !folioData.cliente_telefono) {
             throw {
@@ -199,7 +199,7 @@ class FolioService {
             costo_base, costo_envio, anticipo, total: finalTotal, estatus_pago,
             estatus_produccion: folioData.estatus_produccion || 'Pendiente',
             estatus_folio: folioData.estatus_folio || 'Activo',
-        });
+        }, { transaction: t });
 
         // Create Complements (DB)
         if (complementsList.length > 0) {
@@ -212,7 +212,7 @@ class FolioService {
                 precio: safeNum(c.precio),
                 descripcion: c.descripcion
             }));
-            await FolioComplemento.bulkCreate(complementsToCreate);
+            await FolioComplemento.bulkCreate(complementsToCreate, { transaction: t });
         }
 
         // Commission Logic
@@ -223,7 +223,7 @@ class FolioService {
                 total: row.total,
                 appliedToCustomer: applyComm,
                 userId: user?.id
-            });
+            }, t);
         } catch (commError) {
             console.error(`[Commission] FAILED:`, commError);
         }

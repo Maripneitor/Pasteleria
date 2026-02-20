@@ -167,23 +167,9 @@ async function bootstrap() {
     console.log('✅ DB Conectada.');
 
     // 2. Sync / Migrations
-    const mode = (process.env.DB_SYNC_MODE || 'none').toLowerCase();
-    console.log(`🔧 DB_SYNC_MODE=${mode}`);
-
-    if (mode === 'alter') {
-      console.log('⚠️ Ejecutando sequelize.sync({ alter: true })');
-      await sequelize.sync({ alter: true });
-    } else if (mode === 'force') {
-      console.log('🔥 CRITICAL: Ejecutando sequelize.sync({ force: true })');
-      await sequelize.sync({ force: true });
-    } else if (mode === 'smart') {
-      console.log('ℹ️ Ejecutando sequelize.sync() (Create only)');
-      await sequelize.sync();
-    } else if (mode === 'none') {
-      console.log('🛡️ Skipping sync (Mode: none)');
-    } else {
-      console.warn(`⚠️ Modo desconocido '${mode}'. Se asume 'none'.`);
-    }
+    // Se ha desactivado la sincronización automática (sync) por seguridad.
+    // Utilizar exclusivamente Sequelize Migrations (CLI).
+    console.log('🛡️ Sincronización automática de BD desactivada. Usando migraciones.');
 
     // 3. Iniciar CronJobs
     const initCronJobs = require('./cronJobs');
@@ -193,6 +179,16 @@ async function bootstrap() {
     // 4. Iniciar Worker de Emails
     const { startEmailWorker } = require('./workers/emailWorker');
     startEmailWorker();
+
+    // 5. Pre-warm Puppeteer (Motor de PDF)
+    console.log('📄 Inicializando motor de PDFs en memoria (Singleton)...');
+    try {
+      const { initBrowser } = require('./services/pdfRenderer');
+      await initBrowser();
+      console.log('✅ Motor de PDFs listo y reciclado.');
+    } catch (pdfErr) {
+      console.error('⚠️ Advertencia: No se pudo arrancar Puppeteer en background:', pdfErr.message);
+    }
 
     // 5. Levantar servidor
     app.listen(PORT, '0.0.0.0', () => {

@@ -69,12 +69,15 @@ const initCronJobs = () => {
         timezone: "America/Mexico_City"
     });
 
-    // Tarea de Limpieza: Elimina PDFs de FOLIOS_GENERADOS antiguos (ej. > 7 días)
-    cron.schedule('0 4 * * 0', async () => { // Cada Domingo a las 4 AM
-        console.log('🧹 Eliminando PDFs antiguos...');
+    // Tarea de Limpieza: Elimina PDFs de FOLIOS_GENERADOS antiguos (> 30 días)
+    // Se ejecuta cada Domingo a las 3:00 AM
+    cron.schedule('0 3 * * 0', async () => {
+        console.log('🧹 Eliminando PDFs antiguos (30 días)...');
         const fs = require('fs');
         const path = require('path');
         const directory = path.join(__dirname, 'FOLIOS_GENERADOS');
+
+        if (!fs.existsSync(directory)) return;
 
         fs.readdir(directory, (err, files) => {
             if (err) return console.error("Error leyendo directorio de folios:", err);
@@ -85,12 +88,13 @@ const initCronJobs = () => {
                     if (err) return;
 
                     const now = new Date().getTime();
-                    const endTime = new Date(stats.mtime).getTime() + (7 * 24 * 60 * 60 * 1000); // 7 días
+                    // 30 días de retención garantizada
+                    const endTime = new Date(stats.mtime).getTime() + (30 * 24 * 60 * 60 * 1000);
 
                     if (now > endTime) {
                         fs.unlink(filePath, (err) => {
                             if (err) return console.error(`Error borrando ${file}`, err);
-                            console.log(`🗑️ Archivo borrado: ${file}`);
+                            console.log(`🗑️ Archivo borrado por política de retención (30 días): ${file}`);
                         });
                     }
                 });

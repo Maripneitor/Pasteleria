@@ -41,6 +41,11 @@ async function getBrowser() {
     }
 }
 
+async function initBrowser() {
+    console.log("[PDF] Pre-calentando instancia del navegador (On-The-Fly Generation)...");
+    await getBrowser();
+}
+
 async function renderPdf({ templateName, data, branding, options = {} }) {
     // 1. Template Rendering (ejs is handled by caller or we can do it here if passed html, but prompt says: 
     // "Flujo: 1) Renderizar template específico EJS -> bodyHtml".
@@ -133,4 +138,4 @@ async function renderHtmlToPdfBuffer(html, pdfOptions = {}) {
     return renderPdf({ data: { html }, options: pdfOptions });
 }
 
-module.exports = { renderPdf, renderHtmlToPdfBuffer };
+module.exports = { renderPdf, renderHtmlToPdfBuffer, initBrowser };

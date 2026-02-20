@@ -35,8 +35,17 @@ exports.createFolio = async (req, res) => {
         // Tenant Assignment
         const tenantId = req.user?.tenantId || 1;
 
-        const row = await folioService.createFolio(body, req.user, tenantId);
-        res.status(201).json(row);
+        const { sequelize } = require('../models');
+        const t = await sequelize.transaction();
+
+        try {
+            const row = await folioService.createFolio(body, req.user, tenantId, t);
+            await t.commit();
+            res.status(201).json(row);
+        } catch (errorTran) {
+            await t.rollback();
+            throw errorTran; // Re-lanza para que lo maneje el catch principal que ya formatea el error
+        }
     } catch (e) {
         console.error(`[CreateFolio] CRITICAL ERROR (Req: ${req.requestId}):`, e);
         const requestId = req.requestId;
