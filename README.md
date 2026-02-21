@@ -1,112 +1,89 @@
-# Sistema de Gestión para Pastelería
+# 🎂 Sistema de Gestión - Pastelería La Fiesta
 
-## 🚀 Quickstart Docker (Recomendado)
+Bienvenido al sistema integral de gestión para pastelerías. Este proyecto es una solución SaaS multi-inquilino con soporte para múltiples sucursales, facturación, reportes en PDF e integración con IA.
 
-### 1. Iniciar Entorno Completo (Backend + DB + Frontend)
+---
+
+## 🚀 Inicio Rápido (Docker)
+
+La forma más rápida y recomendada de correr el proyecto es usando Docker.
+
+### 1. Preparar el Entorno
+Copia el archivo de ejemplo y ajusta tus credenciales (especialmente las llaves de API si las tienes):
+```bash
+cp .env.example .env
+```
+*(Nota: El sistema tiene valores por defecto seguros para desarrollo local si prefieres no crear el .env inmediatamente).*
+
+### 2. Encender Motores
+Levanta todo el ecosistema (Base de Datos, Backend y Frontend):
 ```bash
 docker compose up -d --build
 ```
 
-### 2. Verificar Salud del Sistema (QA Smoke)
+### 3. Inicializar Datos (Seed)
+Si es la primera vez, inyecta los usuarios administrador y el catálogo base:
 ```bash
-docker compose exec backend npm run qa:smoke
+docker compose exec backend npm run seed:full
 ```
 
-### 3. Verificar Contratos de API (QA Contract)
-```bash
-docker compose exec backend npm run qa:contract
-```
-
-### 🔄 Modos de Sincronización DB (Importante)
-El proyecto usa `DB_SYNC_MODE` en `docker-compose.yml` para controlar cambios en el esquema:
-- **`none`**: (Default SAFE) No toca el esquema. Recomendado para Producción y CI.
-- `smart`: Agrega columnas faltantes automáticamente. Ideal para desarrollo local.
-- `alter`: Usa `sequelize.sync({ alter: true })`. Uso legacy.
-
-**Para desarrollo local (habilitar smart sync):**
-1. Copia el ejemplo: `cp docker-compose.override.example.yml docker-compose.override.yml`
-2. Reinicia: `docker compose up -d`
-
+**Credenciales por defecto:**
+- **SuperAdmin:** `superadmin@lafiesta.com` / `admin123`
+- **Owner Demo:** `owner@demo.com` / `admin123`
 
 ---
+
+## 🛠️ Desarrollo y Comandos Útiles
+
+### URLs del Sistema
+- **Frontend:** [http://localhost:5173](http://localhost:5173)
+- **Backend API:** [http://localhost:3000/api](http://localhost:3000/api)
+- **Documentación Swagger:** [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+
+### Comandos de Control (Docker)
+| Acción | Comando |
+| :--- | :--- |
+| Detener sistema | `docker compose down` |
+| Ver Logs Backend | `docker compose logs -f backend` |
+| Reiniciar Base de Datos | `docker compose exec backend npm run db:reset` |
+| Ejecutar Pruebas (Smoke) | `docker compose exec backend npm run qa:smoke` |
 
 ### Desarrollo Local (Sin Docker)
-Si prefieres correr localmente:
-1. **DB**: Asegúrate de tener MySQL corriendo y configura `.env`.
-2. **Backend**:
+1. **Backend**: 
    ```bash
-   cd backend
-   npm install
-   npm run dev
+   cd backend && npm install && npm run dev
    ```
-3. **Frontend**:
+2. **Frontend**: 
    ```bash
-   cd client
-   npm install
-   npm run dev
+   cd frontend && npm install && npm run dev
    ```
 
 ---
 
-## 🛡️ Confiabilidad y Diagnóstico
+## 🛡️ Calidad y Seguridad (QA)
 
-### Correr Pruebas Automatizadas
-Para verificar que el flujo de creación de pedidos funciona correctamente:
+El sistema incluye una suite de pruebas de "Humo" (Smoke Tests) para validar la integridad:
 
-```bash
-# Desde la carpeta raíz
-node --test server/tests/order_flow.test.js
-```
-*Tip: Asegúrate de que el servidor backend esté corriendo en el puerto 3000.*
-
-### Modo Diagnóstico
-Para ver detalles técnicos en la interfaz (requestId, errores de API en tiempo real):
-
-1. Habilita el modo diagnóstico en `.env` del cliente o servidor:
-   ```env
-   # Frontend (client/.env)
-   VITE_DEBUG_MODE=true
-   
-   # Backend (server/.env)
-   DEBUG_ORDER_FLOW=true
+1. **Seguridad (RBAC)**: Valida que los roles (Admin/Empleado) estén aislados.
+   ```bash
+   docker compose exec backend node scripts/qa/error_handling.js
    ```
-2. En la UI, aparecerá un panel flotante con la actividad de red.
+2. **Generación de PDFs**: Verifica que el motor de Puppeteer esté listo.
+   ```bash
+   docker compose exec backend node scripts/qa/test_api_pdf.js
+   ```
 
 ---
 
-## 🧪 Smoke Test Manual (Guía Rápida)
+## 🗝️ Archivos Importantes
+*   `.env`: Configuración maestra de secretos.
+*   `ARCHIVOS_LLAVE.md`: Registro de configuraciones críticas y recuperación de sesiones de WhatsApp.
+*   `docker-compose.yml`: Orquestación de contenedores.
 
-Para validar manualmente que el sistema está operativo después de un despliegue:
+---
 
-1. **Login**: Entra con usuario `admin@gmail.com`.
-2. **Crear Pedido**: Ir a "Nuevo Pedido".
-   - Cliente: "Prueba Smoke"
-   - Teléfono: "5551234567"
-   - Fecha: Mañana
-   - Selecciona 1 sabor (Chocolate)
-   - Da clic en "Crear Pedido".
-   - **Esperado**: Redirección a dashboard/lista o mensaje de éxito.
-3. **Verificación**:
-   - Ve a "Recientes" en el Dashboard.
-   - Confirma que aparece "Prueba Smoke".
-4. **Validación de Errores**:
-   - Intenta crear un pedido sin nombre de cliente.
-   - **Esperado**: Toast rojo "Falta: cliente_nombre" y (si Debug Mode ON) detalle del Request ID.
-
-### ✅ Lista de Errores Típicos Cubiertos
-- **401 Unauthorized**: Intento de creación sin token válido.
-- **400 Validación**: Payload incompleto (falta nombre, fecha, etc.).
-- **500 Internal Error**: Fallos de BD capturados con Stack Trace (visible solo en server logs).
-- **Tenant Scope Mismatch**: Prevención de acceso cruzado entre sucursales (Admin vs Owner).
-
-### 📋 Checklist de Regresión Final (10 Puntos)
-1.  [ ] Login exitoso con Admin y Owner.
-2.  [ ] Creación de pedido (flujo normal).
-3.  [ ] Persistencia: El pedido aparece en "Recientes".
-4.  [ ] Calendario: El pedido aparece en la fecha correcta.
-5.  [ ] Validación: El sistema bloquea pedidos sin nombre de cliente.
-6.  [ ] Diagnóstico: `DEBUG_ORDER_FLOW=true` muestra logs detallados.
-7.  [ ] Frontend: Panel de Diagnóstico muestra Request ID ante errores.
-8.  [ ] Auth: Token expirado redirige a Login.
-9.  [ ] PDF: Generación de reporte de pedido funciona (si aplica).
-10. [ ] Docker: Los contenedores se levantan sin `EADDRINUSE`.
+## 👨‍💻 Mejores Prácticas Aplicadas
+- **Multi-tenancy**: Aislamiento estricto de datos por `tenantId`.
+- **Zero-Config**: Listo para levantar en cualquier máquina con Docker.
+- **Auditoría**: Registro de todas las acciones críticas en `AuditLogs`.
+- **Escalabilidad**: Arquitectura preparada para múltiples sucursales y gran volumen de pedidos.
