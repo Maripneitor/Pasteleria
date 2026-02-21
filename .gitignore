@@ -12,6 +12,8 @@ package-lock.json
 dist/
 build/
 coverage/
+*.out
+*.exe
 
 # Logs
 npm-debug.log*
@@ -19,6 +21,7 @@ yarn-debug.log*
 yarn-error.log*
 logs/
 *.log
+backend/logs/
 
 # WhatsApp Sessions (Puppeteer/WWebJS)
 .wwebjs_auth/
@@ -45,10 +48,15 @@ backend/RESPALDOS_BD/
 .idea/
 .vscode/
 *.swp
+*.swo
 thumbs.db
+desktop.ini
 
 # Docker local overrides
 docker-compose.override.yml
 
-# Archivo memoria (No subir)
-archivollae.md
+# Archivos Secretos (No subir)
+ARCHIVOS_LLAVE.md
+.env
+.env.*
+!.env.example

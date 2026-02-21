@@ -6,8 +6,7 @@ module.exports = {
     // 1. Crear el Inquilino Maestro (Tenant)
     await queryInterface.bulkInsert('tenants', [{
       id: 1,
-      name: 'Pastelería La Fiesta (Matriz)',
-      status: 'ACTIVE',
+      businessName: 'Pastelería La Fiesta (Matriz)',
       createdAt: new Date(),
       updatedAt: new Date()
     }], { ignoreDuplicates: true });
@@ -19,7 +18,7 @@ module.exports = {
       name: 'Sucursal Centro',
       address: 'Av. Principal #123',
       phone: '9999999999',
-      isActive: true,
+      isMain: true,
       createdAt: new Date(),
       updatedAt: new Date()
     }], { ignoreDuplicates: true });
