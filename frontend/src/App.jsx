@@ -3,47 +3,41 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 // Páginas Existentes
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ActivationLockPage from './pages/ActivationLockPage'; // Sprint 4
-import DashboardPage from './pages/DashboardPage';
-import NewOrderPage from './pages/NewOrderPage';
+// Core Components & Features
+import LoginPage from '@/features/auth/views/LoginPage';
+import RegisterPage from '@/features/auth/views/RegisterPage';
+import DashboardPage from '@/features/dashboard/views/DashboardPage';
+import WhatsAppPage from '@/features/whatsapp/views/WhatsAppPage';
+import FoliosPage from '@/features/folios/views/FoliosPage';
+import NewFolioWizard from '@/features/folios/views/NewFolioWizard';
+import FolioDetailPage from '@/features/folios/views/FolioDetailPage';
+import CatalogsPage from '@/features/catalogs/views/CatalogsPage';
+import ReportsPage from '@/features/reports/views/ReportsPage';
+
+// Other Pages (Pending Migration)
+import CashPage from '@/features/cash/views/CashPage';
+import CashCountForm from '@/features/cash/components/CashCountForm';
+import ExpenseForm from '@/features/cash/components/ExpenseForm';
+import ActivationLockPage from './pages/ActivationLockPage';
 import CalendarPage from './pages/CalendarPage';
 import TeamPage from './pages/TeamPage';
-import WhatsAppPage from './pages/WhatsAppPage';
-import BranchesPage from './pages/branches/BranchesPage'; // NEW MODULE
-import FoliosPage from './pages/folios/FoliosPage'; // NEW MODULE
-import NewFolioWizard from './pages/folios/NewFolioWizard'; // NEW MODULE
-import FolioDetailPage from './pages/folios/FolioDetailPage'; // NEW MODULE
-import CatalogsPage from './pages/catalogs/CatalogsPage'; // SPRINT F3
-import ClientsPage from './pages/clients/ClientsPage'; // SPRINT F3
-
-// 🆕 Páginas Nuevas (Routing Repair)
-import OrdersPage from './pages/OrdersPage';
+import BranchesPage from './pages/branches/BranchesPage';
+import ClientsPage from '@/features/clients/views/ClientsPage';
 import EditOrderPage from './pages/EditOrderPage';
-import CashRegister from './pages/CashRegister';
-import ProductionPage from './pages/ProductionPage'; // Nuevo Kanban
+import ProductionPage from './pages/ProductionPage';
 import OrderDetailsProduction from './pages/OrderDetailsProduction';
 import AuditPage from './pages/AuditPage';
 import NotFound from './pages/NotFound';
-
-// 🆕 Módulos Operativos (UI Forms)
 import LocalSettings from './pages/LocalSettings';
-import CashCountForm from './pages/ops/CashCountForm';
-import ExpenseForm from './pages/ops/ExpenseForm';
-
-// Admin Pages (Placeholders)
-import AdminStatsPage from './pages/admin/AdminStatsPage';
 import AdminSaboresPage from './pages/admin/AdminSaboresPage';
 import PendingUsersPage from './pages/PendingUsersPage';
 import CommissionsPage from './pages/CommissionsPage';
-import ReportsPage from './pages/ReportsPage';
 import BrandingPage from './pages/admin/BrandingPage';
 import TenantsPage from './pages/admin/TenantsPage';
 
-import MainLayout from './components/MainLayout';
-import ProtectedRoute from './components/ProtectedRoute';
-import { OrderProvider } from './context/OrderContext';
+import MainLayout from '@/components/MainLayout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { OrderProvider } from '@/context/OrderContext';
 
 // DebugPanel removed (diagnostic mode off)
 
@@ -82,7 +76,7 @@ function App() {
 
             <Route path="sucursales" element={<BranchesPage />} />
             <Route path="branches" element={<Navigate to="/sucursales" replace />} />
-            <Route path="caja" element={<CashRegister />} />
+            <Route path="caja" element={<CashPage />} />
             <Route path="produccion" element={<ProductionPage />} />
             <Route path="produccion/detalle/:id" element={<OrderDetailsProduction />} />
             <Route path="calendario" element={<CalendarPage />} />
@@ -100,7 +94,6 @@ function App() {
             <Route path="admin/stats" element={<Navigate to="/admin/reports" replace />} />
             <Route path="admin/sabores" element={<AdminSaboresPage />} />
             <Route path="admin/comisiones" element={<CommissionsPage />} />
-            <Route path="auditoria" element={<AuditPage />} />
             <Route path="auditoria" element={<AuditPage />} />
             <Route path="configuracion" element={<LocalSettings />} />
             <Route path="usuarios/pendientes" element={<PendingUsersPage />} />

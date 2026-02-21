@@ -36,6 +36,13 @@ module.exports = async function (req, res, next) {
       return res.status(404).json({ message: 'Usuario no encontrado.' });
     }
 
+    // 🛡️ EL KILL SWITCH (Bloqueo por Suspensión/Falta de Pago)
+    if (user.status !== 'ACTIVE') {
+      return res.status(403).json({
+        message: 'ACCESO DENEGADO: Tu cuenta ha sido suspendada. Contacta a soporte o verifica tus pagos.'
+      });
+    }
+
     // 5. Guardamos usuario en req 
     req.user = {
       ...user.toJSON(), // Use user data from DB

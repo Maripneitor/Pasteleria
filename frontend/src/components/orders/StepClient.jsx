@@ -1,5 +1,5 @@
 import React from 'react';
-import { useOrder } from '../../context/OrderContext';
+import { useOrder } from '@/context/OrderContext';
 import { User, Phone } from 'lucide-react';
 
 const StepClient = () => {

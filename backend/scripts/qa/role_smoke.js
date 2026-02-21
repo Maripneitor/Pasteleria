@@ -6,7 +6,7 @@ const { User, Tenant, Folio } = require('../../models');
 const axios = require('axios'); // Ensure axios is installed or use standard fetch if node 18+
 const jwt = require('jsonwebtoken');
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://localhost:3000/api/v1';
 
 async function testLogin(email, password, label) {
     try {

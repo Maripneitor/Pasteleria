@@ -38,9 +38,8 @@ const options = {
     },
     // Paths to files containing OpenAPI definitions
     apis: [
-        path.join(__dirname, '../routes/*.js'),
-        path.join(__dirname, '../components/*.js'), // If any components are documented here
-        // path.join(__dirname, '../controllers/*.js'), // Optional: if controllers have docs
+        path.join(__dirname, '../src/modules/**/*.routes.js'),
+        path.join(__dirname, '../src/modules/**/*.controller.js'),
     ],
 };
 

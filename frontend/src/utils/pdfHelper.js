@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 /**
  * Handles PDF download response.
  * Checks if the response is actually a JSON error (e.g. 401, 500) before trying to open as Blob.
- * @param {Promise} apiCall - The async function calling the API (e.g. ordersApi.downloadPdf(id))
+ * @param {Promise} apiCall - The async function calling the API (e.g. foliosApi.downloadPdf(id))
  * @param {string} [fileName] - Optional filename for download (if we implemented forceful download)
  */
 export const handlePdfResponse = async (apiCall) => {

@@ -39,15 +39,21 @@ app.use('/FOLIOS_GENERADOS', express.static(path.join(__dirname, 'FOLIOS_GENERAD
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // ========================================
-// 2. RUTAS PÚBLICAS
+// 2. RUTAS PÚBLICAS (v1)
 // ========================================
-app.get('/api', (req, res) => res.json({ status: 'online', message: 'API Pastelería v2.0' }));
+const v1Router = express.Router();
+app.use('/api/v1', v1Router);
 
-// Health Check
+// Fallback legacy (opcional)
+app.use('/api', (req, res, next) => {
+  if (req.path === '/') return res.json({ status: 'online', message: 'API Pastelería v2.0', version: 'v1' });
+  next();
+});
+
+// Health Check (v1)
 const { sequelize } = require('./models');
-app.get('/api/health', async (req, res) => {
+v1Router.get('/health', async (req, res) => {
   try {
-    // Verificamos conexión y respuesta de I/O de la DB
     const [results] = await sequelize.query('SELECT 1+1 AS result');
     res.json({
       ok: true,
@@ -56,24 +62,18 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    res.status(503).json({
-      ok: false,
-      db: "down",
-      error: error.message
-    });
+    res.status(503).json({ ok: false, db: "down", error: error.message });
   }
 });
 
 // Auth (Login, Register) - PÚBLICO
-const authRoutes = require('./routes/authRoutes');
-app.use('/api/auth/login', loginLimiter);
-app.use('/api/auth', authRoutes);
+v1Router.use('/auth', require('./src/modules/users/auth.routes'));
 
 // Webhooks - PÚBLICO
-app.use('/api/webhooks', require('./routes/webhookRoutes'));
+v1Router.use('/webhooks', require('./src/modules/webhooks/webhook.routes'));
 
 // Activation - PÚBLICO/SEMI-PROTEGIDO
-app.use('/api/activation', require('./routes/activationRoutes'));
+v1Router.use('/activation', require('./src/modules/activation/activation.routes'));
 
 // ========================================
 // 3. MIDDLEWARES DE SEGURIDAD
@@ -83,41 +83,29 @@ const tenantScope = require('./middleware/tenantScope');
 const requireBranch = require('./middleware/requireBranch');
 
 // ========================================
-// 4. RUTAS PROTEGIDAS
+// 4. RUTAS PROTEGIDAS (v1)
 // ========================================
 
-// Rutas que requieren Branch asignado (+ Auth + Tenant)
-app.use('/api/folios', authMiddleware, tenantScope, requireBranch, require('./routes/folioRoutes'));
-app.use('/api/clients', authMiddleware, tenantScope, requireBranch, require('./routes/clientRoutes'));
-app.use('/api/catalog', authMiddleware, tenantScope, requireBranch, require('./routes/catalogRoutes'));
-app.use('/api/ingredients', authMiddleware, tenantScope, requireBranch, require('./routes/ingredientRoutes'));
-app.use('/api/production', authMiddleware, tenantScope, requireBranch, require('./routes/productionRoutes'));
-app.use('/api/reports', authMiddleware, tenantScope, requireBranch, require('./routes/reportRoutes'));
-app.use('/api/cash', authMiddleware, tenantScope, requireBranch, require('./routes/cashRoutes'));
-
-// Rutas Semi-Protegidas (Solo Auth + Tenant, sin requireBranch)
-app.use('/api/users', authMiddleware, tenantScope, require('./routes/userRoutes'));
-app.use('/api/branches', authMiddleware, tenantScope, require('./routes/branchRoutes'));
-app.use('/api/tenant', authMiddleware, tenantScope, require('./routes/tenantConfigRoutes'));
-app.use('/api/upload', authMiddleware, tenantScope, require('./routes/uploadRoutes'));
-app.use('/api/ai-sessions', authMiddleware, tenantScope, require('./routes/aiSessionRoutes'));
-app.use('/api/pdf-templates', authMiddleware, tenantScope, require('./routes/pdfTemplateRoutes'));
-app.use('/api/dictation', authMiddleware, tenantScope, require('./routes/dictationRoutes'));
-app.use('/api/ai/draft', authMiddleware, tenantScope, require('./routes/aiDraftRoutes'));
-app.use('/api/commissions', authMiddleware, tenantScope, require('./routes/commissionRoutes'));
-app.use('/api/audit', authMiddleware, tenantScope, require('./routes/auditRoutes'));
-app.use('/api/orders', authMiddleware, tenantScope, require('./routes/orderRoutes'));
-app.use('/api/ai/orders', authMiddleware, tenantScope, require('./routes/aiOrderRoutes'));
-app.use('/api/whatsapp', authMiddleware, tenantScope, require('./routes/whatsappRoutes'));
-
-// SuperAdmin Routes
-app.use('/api/super', authMiddleware, require('./routes/superAdminRoutes'));
-
-// Legacy AI Adapter
-app.post('/api/ai/session/message',
-  authMiddleware,
-  require('./controllers/aiSessionController').handleLegacyMessage
-);
+// 📦 MODULOS MODERNIZADOS (NUEVA ARQUITECTURA)
+v1Router.use('/folios', require('./src/modules/folios/folio.routes'));
+v1Router.use('/users', require('./src/modules/users/user.routes'));
+v1Router.use('/catalogs', require('./src/modules/catalogs/catalog.routes'));
+v1Router.use('/clients', require('./src/modules/clients/client.routes'));
+v1Router.use('/cash', require('./src/modules/cash/cash.routes'));
+v1Router.use('/reports', require('./src/modules/reports/report.routes'));
+v1Router.use('/whatsapp', require('./src/modules/whatsapp/whatsapp.routes'));
+v1Router.use('/production', require('./src/modules/production/production.routes'));
+v1Router.use('/branches', require('./src/modules/branches/branch.routes'));
+v1Router.use('/tenant', require('./src/modules/tenant/tenant.routes'));
+v1Router.use('/upload', require('./src/modules/upload/upload.routes'));
+v1Router.use('/pdf-templates', require('./src/modules/pdf-templates/pdf-template.routes'));
+v1Router.use('/dictation', require('./src/modules/dictation/dictation.routes'));
+v1Router.use('/ai-sessions', require('./src/modules/ai-sessions/ai-session.routes'));
+v1Router.use('/ai/draft', require('./src/modules/ai-draft/ai-draft.routes'));
+v1Router.use('/ai/orders', require('./src/modules/ai-orders/ai-order.routes'));
+v1Router.use('/commissions', require('./src/modules/commissions/commission.routes'));
+v1Router.use('/audit', require('./src/modules/audit/audit.routes'));
+v1Router.use('/super', require('./src/modules/superadmin/superadmin.routes'));
 
 // ========================================
 // 5. SWAGGER DOCUMENTATION
@@ -125,7 +113,6 @@ app.post('/api/ai/session/message',
 const { swaggerSpec, swaggerUi } = require('./docs/swagger');
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
-console.log('📄 Swagger Docs available at /api/docs');
 
 // ========================================
 // 6. FALLBACK SPA (React Router)
@@ -139,8 +126,8 @@ app.get('*', (req, res) => {
       ok: true,
       mode: 'dev',
       message: 'API running. Frontend is served by Vite dev server at :5173',
-      api: '/api/*',
-      health: '/api/health'
+      api: '/api/v1/*',
+      health: '/api/v1/health'
     });
   }
 
@@ -150,26 +137,8 @@ app.get('*', (req, res) => {
 // ========================================
 // 7. MANEJADOR DE ERRORES GLOBAL
 // ========================================
-const logger = require('./utils/logger');
-
-app.use((err, req, res, next) => {
-  const requestId = req.requestId || 'unknown';
-
-  logger.error('Unhandled Exception at RequestID: %s | URL: %s', requestId, req.originalUrl, {
-    message: err.message,
-    stack: err.stack,
-    code: err.code || 'UNKNOWN'
-  });
-
-  const statusCode = err.statusCode || err.status || 500;
-
-  res.status(statusCode).json({
-    ok: false,
-    code: err.code || 'INTERNAL_ERROR',
-    message: err.message || 'Algo salió mal en el servidor',
-    requestId
-  });
-});
+const errorHandler = require('./src/middlewares/errorHandler');
+app.use(errorHandler);
 
 // ========================================
 // 8. BOOTSTRAP & SERVER START

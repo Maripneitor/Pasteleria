@@ -11,7 +11,7 @@ async function getToken(email, password, roleLabel) {
 
     console.log(`🔑 Login as ${roleLabel} (${email})...`);
     try {
-        const endpoints = ['/api/auth/login', '/auth/login', '/api/login'];
+        const endpoints = ['/api/v1/auth/login', '/api/auth/login', '/auth/login', '/api/login'];
         for (const ep of endpoints) {
             const res = await fetch(`${BASE_URL}${ep}`, {
                 method: 'POST',

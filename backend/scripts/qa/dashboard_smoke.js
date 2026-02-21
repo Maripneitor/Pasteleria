@@ -5,7 +5,7 @@ async function run() {
     const token = await login();
 
     // 1. Get Dashboard Stats
-    const dashboardUrl = '/api/folios/stats/dashboard';
+    const dashboardUrl = '/api/v1/folios/stats/dashboard';
     const res = await request(dashboardUrl, token);
     assert(res.ok, `GET ${dashboardUrl} failed: ${res.status}`);
     const stats = await res.json();
@@ -30,10 +30,10 @@ async function run() {
 
     // 3. User check if exists
     // /api/users usually for admin
-    const usersRes = await request('/api/users', token);
+    const usersRes = await request('/api/v1/users', token);
     if (usersRes.ok) { // Only if accessible
         const users = await usersRes.json();
-        assert(Array.isArray(users), '/api/users did not return array');
+        assert(Array.isArray(users), '/api/v1/users did not return array');
         console.log('✅ Users list accessible');
     }
 

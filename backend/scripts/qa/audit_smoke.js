@@ -8,7 +8,7 @@ async function run() {
     // Create a folio to skip "log creation complexity".
     // Or just rely on previous tests if running in suite?
     // Let's create a quick folio to ensure fresh log.
-    const createRes = await request('/api/folios', token, {
+    const createRes = await request('/api/v1/folios', token, {
         method: 'POST',
         body: JSON.stringify({
             cliente_nombre: 'QA Audit Trigger',
@@ -21,7 +21,7 @@ async function run() {
     // 2. Fetch Logs
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    const url = `/api/audit?startDate=${today}&endDate=${today}`; // adjust params based on controller?
+    const url = `/api/v1/audit?startDate=${today}&endDate=${today}`; // adjust params based on controller?
     // Usually query params like startDate/endDate.
 
     const res = await request(url, token);

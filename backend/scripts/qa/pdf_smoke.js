@@ -5,7 +5,7 @@ async function run() {
     const token = await login();
 
     // 1. Find or create folio
-    let res = await request('/api/folios?limit=1', token);
+    let res = await request('/api/v1/folios?limit=1', token);
     assert(res.ok, 'Failed to fetch folios list');
     let data = await res.json();
     let folioId;
@@ -16,7 +16,7 @@ async function run() {
     } else {
         // Create minimal folio
         console.log('ℹ️ No folios found. Creating one...');
-        res = await request('/api/folios', token, {
+        res = await request('/api/v1/folios', token, {
             method: 'POST',
             body: JSON.stringify({
                 cliente_nombre: 'QA Auto Test',
@@ -35,7 +35,7 @@ async function run() {
     console.log(`Testing PDF for Folio ${folioId}...`);
 
     // A) Main PDF
-    res = await request(`/api/folios/${folioId}/pdf`, token);
+    res = await request(`/api/v1/folios/${folioId}/pdf`, token);
     assert(res.ok, `GET /api/folios/${folioId}/pdf failed: ${res.status}`);
     assert(res.headers.get('content-type').includes('application/pdf'), 'Response is not PDF');
     const blob = await res.blob();
@@ -43,7 +43,7 @@ async function run() {
     console.log('✅ Main PDF OK');
 
     // B) Label PDF
-    res = await request(`/api/folios/${folioId}/label-pdf`, token);
+    res = await request(`/api/v1/folios/${folioId}/label-pdf`, token);
     assert(res.ok, `GET /api/folios/${folioId}/label-pdf failed: ${res.status}`);
     assert(res.headers.get('content-type').includes('application/pdf'), 'Response is not PDF');
     const labelBlob = await res.blob();
@@ -52,7 +52,7 @@ async function run() {
 
     // C) Day Summary PDF
     const today = new Date().toISOString().split('T')[0];
-    const url = `/api/folios/day-summary-pdf?date=${today}&type=orders`;
+    const url = `/api/v1/folios/day-summary-pdf?date=${today}&type=orders`;
     res = await request(url, token);
     // This might 404 or fail if no orders for today, but we just created one (or found one). 
     // If found one, it might be old date. If created, it is today.
@@ -65,7 +65,7 @@ async function run() {
 
     // 3. Auth Test
     console.log('Testing Auth...');
-    const resNoAuth = await request(`/api/folios/${folioId}/pdf`, null); // null token
+    const resNoAuth = await request(`/api/v1/folios/${folioId}/pdf`, null); // null token
     assert(resNoAuth.status === 401 || resNoAuth.status === 403, `Auth check failed: got ${resNoAuth.status} without token`);
     console.log('✅ Auth Block OK');
 

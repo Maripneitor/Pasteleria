@@ -3,15 +3,15 @@ const axios = require('axios');
 async function testBackend() {
     console.log("🔥 Starting Smoke Test...");
 
-    const API_URL = 'http://localhost:3000/api';
+    const API_URL = 'http://localhost:3000/api/v1';
 
     // Login
     console.log(`\n🔑 Authenticating...`);
     let token;
     try {
         const res = await axios.post(`${API_URL}/auth/login`, {
-            email: "admin@pasteleria.com",
-            password: "admin"
+            email: "owner@demo.com",
+            password: "admin123"
         });
         token = res.data.token;
         console.log("✅ Authenticated. Token acquired.");
@@ -49,28 +49,27 @@ async function testBackend() {
         console.error("❌ Folio Creation Failed:", e.response?.data || e.message);
     }
 
-    // 2. Daily Cut
+    // 2. Daily Cut (expected: may warn if no SMTP configured)
     console.log(`\n📧 Sending Daily Cut...`);
     try {
         const res = await axios.post(`${API_URL}/reports/daily-cut`, {
             date: new Date().toISOString().split('T')[0],
-            email: "test@example.com"
+            email: "test@example.com",
+            force: true
         }, authHeaders);
         console.log(`✅ Daily Cut Response:`, res.data);
     } catch (e) {
-        console.error("❌ Daily Cut Failed:", e.response?.data || e.message);
+        console.warn(`⚠️  Daily Cut (non-critical - needs SMTP config):`, e.response?.data?.message || e.message);
     }
 
-    // 3. PDF Endpoint Check (Head request)
+    // 3. PDF Endpoint Check
     console.log(`\n🖨 Checking PDF Endpoint...`);
     try {
-        // We use GET but just check status, though it writes stream. 
-        // We just want 200 OK.
-        await axios.get(`${API_URL}/folios/${folioId}/pdf`, {
+        const pdfRes = await axios.get(`${API_URL}/folios/${folioId}/pdf`, {
             responseType: 'arraybuffer',
-            headers: { Authorization: `Bearer ${token}` }
+            ...authHeaders
         });
-        console.log(`✅ PDF Download OK (Buffer received).`);
+        console.log(`✅ PDF Download OK (${pdfRes.data.byteLength} bytes received).`);
     } catch (e) {
         console.error("❌ PDF Download Failed:", e.response?.data || e.message);
     }

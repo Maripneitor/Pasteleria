@@ -16,7 +16,7 @@ async function loginAndGetToken() {
     try {
         const res = await requestJson({
             method: 'POST',
-            url: '/api/auth/login',
+            url: '/api/v1/auth/login',
             body: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
         });
 

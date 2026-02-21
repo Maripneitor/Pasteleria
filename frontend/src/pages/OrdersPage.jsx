@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ordersApi } from '../services/ordersApi';
+import { foliosApi } from '../features/folios/api/folios.api';
 import OrderCard from '../components/OrderCard';
 import { PackageOpen, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -12,8 +12,8 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
         try {
             setLoading(true);
-            // ordersApi.list now returns the response object, so we destructure data
-            const { data } = await ordersApi.list();
+            // foliosApi.list now returns the response object, so we destructure data
+            const { data } = await foliosApi.list();
             setOrders(Array.isArray(data) ? data : []);
         } catch (e) {
             console.error('Error fetching orders:', e);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../config/axios';
+import { useAuth } from '@/context/AuthContext';
+import api from '@/config/axios';
 import { Plus, MapPin, Phone, Building, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 

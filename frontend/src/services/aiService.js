@@ -1,28 +1,29 @@
-import client from '../config/axios';
-
 /**
- * Service to handle AI interactions
+ * aiService.js
+ * Servicio para interactuar con los endpoints de IA del backend.
+ * Usado por AiAssistantTray para el chat contextual.
  */
+import client from '@/config/axios';
+
 const aiService = {
     /**
-     * Sends a message to the AI backend
-     * @param {string} message - The user's message
-     * @param {object} contextData - Information about the current user context (e.g. current page)
-     * @returns {Promise<object>} - The AI's response { text, ... }
+     * Envía un mensaje al asistente de IA y devuelve su respuesta.
+     * @param {string} message - Texto del usuario
+     * @param {object} context - Contexto adicional (ruta actual, etc.)
+     * @returns {Promise<{response: string}>}
      */
-    sendMessageToAi: async (message, contextData = {}) => {
-        try {
-            // Note: Adjust the endpoint if necessary based on your server routes
-            const response = await client.post('/ai/session/message', {
-                message,
-                context: contextData
-            });
-            return response.data;
-        } catch (error) {
-            console.error('AI Service Error:', error);
-            throw error;
-        }
-    }
+    sendMessageToAi: async (message, context = {}) => {
+        const res = await client.post('/ai/draft', {
+            prompt: message,
+            context,
+        });
+        // Normalize: the draft endpoint returns { draft } or { response }
+        return {
+            response: res.data?.response
+                ?? res.data?.message
+                ?? JSON.stringify(res.data?.draft ?? res.data)
+        };
+    },
 };
 
 export default aiService;

@@ -6,7 +6,7 @@ const { spawn } = require('child_process');
 
 const { User, ActivationCode } = require('../../models');
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'http://localhost:3000/api/v1';
 let serverProcess;
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));

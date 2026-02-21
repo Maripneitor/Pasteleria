@@ -5,7 +5,7 @@ async function run() {
     console.log("🧪 Testing PDF Generation...");
 
     // Login
-    const loginRes = await fetch('http://localhost:3000/api/auth/login', {
+    const loginRes = await fetch('http://localhost:3000/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: 'cajero@demo.com', password: 'admin123' })
@@ -13,14 +13,14 @@ async function run() {
     const { token } = await loginRes.json();
 
     // We need a Folio ID. Fetch latest.
-    const listRes = await fetch('http://localhost:3000/api/folios', {
+    const listRes = await fetch('http://localhost:3000/api/v1/folios', {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     const folios = await listRes.json();
 
     if (folios.length > 0) {
         const id = folios[0].id; // Use first found
-        const pdfRes = await fetch(`http://localhost:3000/api/folios/${id}/pdf`, {
+        const pdfRes = await fetch(`http://localhost:3000/api/v1/folios/${id}/pdf`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 

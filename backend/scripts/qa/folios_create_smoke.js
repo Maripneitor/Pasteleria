@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config({ path: '../../.env' }); // Adjust path if running from server/scripts/qa
 
 // Config
-const API_URL = process.env.API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.API_URL || 'http://localhost:3000/api/v1';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@gmail.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin1234';
 

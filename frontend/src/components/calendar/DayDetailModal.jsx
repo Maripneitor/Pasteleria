@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileText, X, Package, Edit, DollarSign } from 'lucide-react';
-import { ordersApi } from '../../services/ordersApi';
-import { handlePdfResponse } from '../../utils/pdfHelper'; // Updated
+import { foliosApi } from '@/features/folios/api/folios.api';
+import { handlePdfResponse } from '@/utils/pdfHelper'; // Updated
 import { useNavigate } from 'react-router-dom';
 
 const DayDetailModal = ({ date, events, onClose }) => {
@@ -10,7 +10,7 @@ const DayDetailModal = ({ date, events, onClose }) => {
     const dateStr = date.toISOString().split('T')[0];
 
     const handlePrintDaySummary = () => {
-        handlePdfResponse(() => ordersApi.downloadDaySummary(dateStr));
+        handlePdfResponse(() => foliosApi.downloadDaySummary(dateStr));
     };
 
     return (
@@ -60,7 +60,7 @@ const DayDetailModal = ({ date, events, onClose }) => {
                                         </button>
                                         <button
                                             title="PDF Pedido"
-                                            onClick={() => handlePdfResponse(() => ordersApi.downloadPdf(data.id))}
+                                            onClick={() => handlePdfResponse(() => foliosApi.downloadPdf(data.id))}
                                             className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
                                         >
                                             <FileText size={16} />

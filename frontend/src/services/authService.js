@@ -1,35 +1,51 @@
-import client from '../config/axios';
-import { setToken, clearToken } from '../utils/auth';
-
-// URL base del backend. En desarrollo con Vimte, normalmente se usa un proxy o la URL directa.
-// Si usamos docker-compose, el navegador del cliente no ve "server", ve localhost:3000.
-
-const login = async (email, password) => {
-    try {
-        const response = await client.post('/auth/login', { email, password });
-        if (response.data.token) {
-            localStorage.setItem('user', JSON.stringify(response.data));
-            // Guardar token y limpiar legacy
-            setToken(response.data.token);
-        }
-        return response.data;
-    } catch (error) {
-        throw error.response ? error.response.data : { message: 'Error de red' };
-    }
-};
-
-const logout = () => {
-    clearToken();
-};
-
-const getCurrentUser = () => {
-    return JSON.parse(localStorage.getItem('user'));
-};
+/**
+ * authService.js
+ * Servicio de autenticación para páginas legacy (Login.jsx, Dashboard.jsx).
+ * Las páginas nuevas deben usar useAuth() del AuthContext.
+ */
+import api from '@/config/axios';
 
 const authService = {
-    login,
-    logout,
-    getCurrentUser
+    /**
+     * Inicia sesión. Guarda el token en localStorage.
+     * @param {string} email
+     * @param {string} password
+     * @returns {Promise<{token: string, user: object}>}
+     */
+    login: async (email, password) => {
+        const res = await api.post('/auth/login', { email, password });
+        const { token, user } = res.data;
+        if (token) localStorage.setItem('token', token);
+        return { token, user };
+    },
+
+    /**
+     * Cierra sesión y limpia el token.
+     */
+    logout: () => {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+    },
+
+    /**
+     * Obtiene el usuario actual decodificando el JWT almacenado.
+     * @returns {object|null}
+     */
+    getCurrentUser: () => {
+        const token = localStorage.getItem('token');
+        if (!token) return null;
+        try {
+            const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(window.atob(base64));
+        } catch {
+            return null;
+        }
+    },
+
+    /**
+     * Devuelve true si hay una sesión activa.
+     */
+    isAuthenticated: () => !!localStorage.getItem('token'),
 };
 
 export default authService;

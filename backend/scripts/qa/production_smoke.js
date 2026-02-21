@@ -6,7 +6,7 @@ async function run() {
 
     // 1. Get Daily Production
     const today = new Date().toISOString().split('T')[0];
-    let url = `/api/production?date=${today}`;
+    let url = `/api/v1/production?date=${today}`;
     let res = await request(url, token);
     assert(res.ok, `GET ${url} failed: ${res.status}`);
     let items = await res.json(); // Assuming array or { data: [] }
@@ -14,7 +14,7 @@ async function run() {
 
     if (items.length === 0) {
         console.log('ℹ️ No production items. Creating folio...');
-        const createRes = await request('/api/folios', token, {
+        const createRes = await request('/api/v1/folios', token, {
             method: 'POST',
             body: JSON.stringify({
                 cliente_nombre: 'QA Production Test',
@@ -36,7 +36,7 @@ async function run() {
     console.log(`✅ Production item found: ${folioId}`);
 
     // 2. Change Status
-    const statusUrl = `/api/production/${folioId}/status`;
+    const statusUrl = `/api/v1/production/${folioId}/status`;
     // Statuses usually: Pendiente, En Horno, Decorado, Terminado.
     // Toggle between two valid statuses.
     const newStatus = 'En Horno';

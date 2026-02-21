@@ -1,0 +1,68 @@
+import client from '@/config/axios';
+
+const catalogApi = {
+    // FLAVORS
+    getFlavors: async (includeInactive = false) => {
+        const res = await client.get(`/catalogs/flavors?includeInactive=${includeInactive}`);
+        return res.data;
+    },
+    createFlavor: async (data) => {
+        const res = await client.post('/catalogs/flavors', data);
+        return res.data;
+    },
+    updateFlavor: async (id, data) => {
+        const res = await client.put(`/catalogs/flavors/${id}`, data);
+        return res.data;
+    },
+    toggleFlavor: async (id, isActive) => {
+        const res = await client.patch(`/catalogs/flavors/${id}/active`, { isActive });
+        return res.data;
+    },
+
+    // FILLINGS
+    getFillings: async (includeInactive = false) => {
+        const res = await client.get(`/catalogs/fillings?includeInactive=${includeInactive}`);
+        return res.data;
+    },
+    createFilling: async (data) => {
+        const res = await client.post('/catalogs/fillings', data);
+        return res.data;
+    },
+    updateFilling: async (id, data) => {
+        const res = await client.put(`/catalogs/fillings/${id}`, data);
+        return res.data;
+    },
+    toggleFilling: async (id, isActive) => {
+        const res = await client.patch(`/catalogs/fillings/${id}/active`, { isActive });
+        return res.data;
+    },
+    // PRODUCTS
+    getProducts: async (includeInactive = false) => {
+        const res = await client.get(`/catalogs/products?includeInactive=${includeInactive}`);
+        return res.data;
+    },
+    createProduct: async (data) => {
+        const res = await client.post('/catalogs/products', data);
+        return res.data;
+    },
+    toggleProduct: async (id, isActive) => {
+        const res = await client.patch(`/catalogs/products/${id}/active`, { isActive });
+        return res.data;
+    },
+
+    // DECORATIONS
+    getDecorations: async (includeInactive = false) => {
+        const res = await client.get(`/catalogs/decorations?includeInactive=${includeInactive}`);
+        return res.data;
+    },
+    createDecoration: async (data) => {
+        const res = await client.post('/catalogs/decorations', data);
+        return res.data;
+    },
+    toggleDecoration: async (id, isActive) => {
+        const res = await client.patch(`/catalogs/decorations/${id}/active`, { isActive });
+        return res.data;
+    }
+};
+
+export default catalogApi;

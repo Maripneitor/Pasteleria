@@ -23,7 +23,7 @@ const { User } = require('../../models');
     console.log('1. Testing Seeded Admin (Expected: Branch Assigned)');
     const adminLogin = await requestJson({
         method: 'POST',
-        url: '/api/auth/login',
+        url: '/api/v1/auth/login',
         body: {
             email: 'admin@gmail.com',
             password: 'Admin1234' // Matches initProject.js
@@ -42,7 +42,7 @@ const { User } = require('../../models');
     // Endpoint: /api/cash/status usually requires branch
     const cashStatus = await requestJson({
         method: 'GET',
-        url: '/api/cash/status',
+        url: '/api/v1/cash/status',
         token: token
     });
     if (cashStatus.status === 200) {
@@ -61,7 +61,7 @@ const { User } = require('../../models');
 
         const loginNoBranch = await requestJson({
             method: 'POST',
-            url: '/api/auth/login',
+            url: '/api/v1/auth/login',
             body: {
                 email: 'admin@gmail.com',
                 password: 'Admin1234'
@@ -72,7 +72,7 @@ const { User } = require('../../models');
         // Try Access
         const blockedReq = await requestJson({
             method: 'GET',
-            url: '/api/cash/status',
+            url: '/api/v1/cash/status',
             token: tokenNoBranch
         });
 
@@ -98,7 +98,7 @@ const { User } = require('../../models');
     console.log('3. Testing Super Admin (Bypass)');
     const superLogin = await requestJson({
         method: 'POST',
-        url: '/api/auth/login',
+        url: '/api/v1/auth/login',
         body: {
             email: 'mario@dev.com',
             password: 'commario123'
@@ -109,7 +109,7 @@ const { User } = require('../../models');
         const tokenSuper = superLogin.data.token;
         const superReq = await requestJson({
             method: 'GET',
-            url: '/api/users',
+            url: '/api/v1/users',
             token: tokenSuper
         });
         if (superReq.status === 200) {
@@ -117,7 +117,7 @@ const { User } = require('../../models');
         } else {
             const superCash = await requestJson({
                 method: 'GET',
-                url: '/api/cash/status',
+                url: '/api/v1/cash/status',
                 token: tokenSuper
             });
             if (superCash.status === 200 || superCash.status === 400) {

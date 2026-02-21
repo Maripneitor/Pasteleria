@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
-import { ordersApi } from '../services/ordersApi'; // Updated import
+import { foliosApi } from '../features/folios/api/folios.api'; // Updated import
 import PageShell from '../components/ui/PageShell';
 import Card from '../components/ui/Card';
 import DayDetailModal from '../components/calendar/DayDetailModal';
@@ -31,7 +31,7 @@ export default function CalendarPage() {
         try {
             const { startStr, endStr } = fetchInfo;
             // Use Lite endpoint
-            const res = await ordersApi.getCalendarEventsLite(startStr, endStr);
+            const res = await foliosApi.getCalendarEventsLite(startStr, endStr);
             successCallback(res.data);
         } catch (e) {
             console.error("Calendar fetch error", e);

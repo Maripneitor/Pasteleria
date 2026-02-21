@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Save, Calendar, Clock, MapPin, FileText } from 'lucide-react';
-import client from '../../config/axios';
+import client from '@/config/axios';
 import toast from 'react-hot-toast';
 
 const EditOrderModal = ({ order, isOpen, onClose, onUpdate }) => {

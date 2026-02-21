@@ -12,7 +12,7 @@ async function run() {
     // Simple end date calculation
     const end = `${y}-${m}-28`; // Safe bet or calculate last day. The API probably handles just 28 fine.
 
-    const calendarUrl = `/api/folios/calendar?start=${start}&end=${end}`;
+    const calendarUrl = `/api/v1/folios/calendar?start=${start}&end=${end}`;
     let res = await request(calendarUrl, token);
     assert(res.ok, `GET ${calendarUrl} failed: ${res.status}`);
     let data = await res.json();
@@ -27,7 +27,7 @@ async function run() {
     if (events.length === 0) {
         console.log('ℹ️ No events found. Creating a folio for today to verify calendar...');
         const today = new Date().toISOString().split('T')[0];
-        const createRes = await request('/api/folios', token, {
+        const createRes = await request('/api/v1/folios', token, {
             method: 'POST',
             body: JSON.stringify({
                 cliente_nombre: 'QA Calendar Test',

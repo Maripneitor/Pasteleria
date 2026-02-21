@@ -5,7 +5,7 @@ async function run() {
     const token = await login();
 
     // 1. Send Message
-    const url = '/api/ai/session/message';
+    const url = '/api/v1/ai/session/message';
     const payload = { message: 'hola test QA' };
 
     console.log(`Sending message to ${url}...`);
