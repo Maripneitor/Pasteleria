@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileText, X, Package, Edit, DollarSign } from 'lucide-react';
 import { foliosApi } from '@/features/folios/api/folios.api';
-import { handlePdfResponse } from '@/utils/pdfHelper'; // Updated
+import { handlePdfResponse } from '@/utils/pdfHelper'; 
 import { useNavigate } from 'react-router-dom';
 
 const DayDetailModal = ({ date, events, onClose }) => {
@@ -51,16 +51,19 @@ const DayDetailModal = ({ date, events, onClose }) => {
                                     </div>
 
                                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {/* Botón Editar corregido */}
                                         <button
                                             title="Editar"
-                                            onClick={() => navigate(`/pedidos/${data.id}/editar`)}
+                                            onClick={() => navigate(`/pedidos/${evt.id}/editar`)}
                                             className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
                                         >
                                             <Edit size={16} />
                                         </button>
+
+                                        {/* Botón PDF corregido */}
                                         <button
                                             title="PDF Pedido"
-                                            onClick={() => handlePdfResponse(() => foliosApi.downloadPdf(data.id))}
+                                            onClick={() => handlePdfResponse(() => foliosApi.downloadPdf(evt.id))}
                                             className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
                                         >
                                             <FileText size={16} />

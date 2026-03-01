@@ -13,6 +13,7 @@ const EventDetailModal = ({ eventId, onClose }) => {
         const load = async () => {
             try {
                 setLoading(true);
+                // Usamos el eventId que viene por props
                 const res = await foliosApi.getCalendarDetail(eventId);
                 setData(res.data);
             } catch (e) {
@@ -139,7 +140,8 @@ const EventDetailModal = ({ eventId, onClose }) => {
                                     <button
                                         onClick={() => {
                                             import('@/utils/pdfHelper').then(({ handlePdfResponse }) => {
-                                                handlePdfResponse(() => foliosApi.downloadLabel(data.id, 'thermal'));
+                                                // Corregido: Usamos eventId directamente
+                                                handlePdfResponse(() => foliosApi.downloadLabel(eventId, 'thermal'));
                                             });
                                         }}
                                         className="w-full text-left px-4 py-3 text-sm hover:bg-purple-50 text-gray-700 font-medium border-b border-gray-50"
@@ -149,7 +151,8 @@ const EventDetailModal = ({ eventId, onClose }) => {
                                     <button
                                         onClick={() => {
                                             import('@/utils/pdfHelper').then(({ handlePdfResponse }) => {
-                                                handlePdfResponse(() => foliosApi.downloadLabel(data.id, 'a4'));
+                                                // Corregido: Usamos eventId directamente
+                                                handlePdfResponse(() => foliosApi.downloadLabel(eventId, 'a4'));
                                             });
                                         }}
                                         className="w-full text-left px-4 py-3 text-sm hover:bg-purple-50 text-gray-700 font-medium"
@@ -160,7 +163,8 @@ const EventDetailModal = ({ eventId, onClose }) => {
                             </div>
 
                             <button
-                                onClick={() => navigate(`/pedidos/${data.id}/editar`)}
+                                // Corregido: Cambiamos evt.id por eventId
+                                onClick={() => navigate(`/pedidos/${eventId}/editar`)}
                                 className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl transition shadow-lg shadow-pink-200"
                             >
                                 Editar Pedido

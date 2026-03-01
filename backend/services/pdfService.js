@@ -267,6 +267,9 @@ exports.generateNotaVentaPdf = async (orderId, ctx) => {
 
 exports.renderOrdersPdf = async ({ folios, date, branches }) => {
     try {
+        // Obtenemos el branding de forma segura
+        const branding = getDefaultBranding(); 
+
         return await require('./pdfRenderer').renderPdf({
             templateName: 'daily-cut',
             data: {
@@ -279,10 +282,13 @@ exports.renderOrdersPdf = async ({ folios, date, branches }) => {
                 printBackground: true,
                 margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
             },
-            branding: require('./pdfService').getDefaultBranding // Or empty/default
+            branding: branding // Ahora sí pasamos el objeto correcto
         });
     } catch (error) {
-        console.error('Error rendering orders PDF:', error);
+        console.error('Error detallado en renderOrdersPdf:', error.message);
         throw error;
     }
 };
+
+// Y asegúrate de que al final del archivo esté exportada la función de branding:
+exports.getDefaultBranding = getDefaultBranding;

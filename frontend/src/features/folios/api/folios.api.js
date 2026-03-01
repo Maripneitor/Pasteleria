@@ -8,11 +8,39 @@ const foliosApi = {
         return res.data;
     },
 
+    // Obtener eventos del calendario (Vista rápida)
+    getCalendarEventsLite: async (start, end) => {
+        const res = await client.get('/folios/calendar', {
+            params: { start, end }
+        });
+        return res; 
+    },
+
+    // Obtener detalle completo para el Modal del Calendario
+    getCalendarDetail: async (id) => {
+        return await client.get(`/folios/${id}`);
+    },
+
+    // Descargar resumen de comandas de un día específico (¡NUEVA!)
+    downloadDaySummary: async (date) => {
+        return await client.get(`/folios/pdf/comandas/${date}`, {
+            responseType: 'blob'
+        });
+    },
+
+    // Descargar etiqueta de impresión (Individual)
+    downloadLabel: async (id, type = 'thermal') => {
+        return await client.get(`/folios/${id}/label-pdf`, {
+            params: { type },
+            responseType: 'blob'
+        });
+    },
+
     // Listar todos (legacy compatibility name)
     list: async (query = '') => {
         const url = query ? `/folios?q=${query}` : '/folios';
         const res = await client.get(url);
-        return res; // Returns full response for some legacy components
+        return res; 
     },
 
     // Get single folio details
@@ -93,9 +121,6 @@ const foliosApi = {
 };
 
 export default foliosApi;
-
-// Named export — permite: import { foliosApi } from '...'
-// Algunos componentes usan este estilo (OrderCard, CalendarPage, etc.)
 export { foliosApi };
 
 // Helper to check if blob is actually a JSON error

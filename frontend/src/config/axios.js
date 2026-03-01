@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getToken, clearToken } from '../utils/auth';
 
 const client = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1',
+    baseURL: import.meta.env.VITE_API_URL || '/api/v1',
     headers: {
         'Content-Type': 'application/json'
     }

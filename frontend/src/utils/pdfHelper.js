@@ -1,64 +1,49 @@
 import toast from 'react-hot-toast';
 
-/**
- * Handles PDF download response.
- * Checks if the response is actually a JSON error (e.g. 401, 500) before trying to open as Blob.
- * @param {Promise} apiCall - The async function calling the API (e.g. foliosApi.downloadPdf(id))
- * @param {string} [fileName] - Optional filename for download (if we implemented forceful download)
- */
-export const handlePdfResponse = async (apiCall) => {
+export const handlePdfResponse = async (apiCall, defaultFileName = 'documento.pdf') => {
     let loadingToast = toast.loading('Generando PDF...');
     try {
         const res = await apiCall();
-
-        // Axios returns blob in res.data, headers in res.headers
         const contentType = res.headers['content-type'] || res.headers['Content-Type'];
 
+        // Si el servidor responde con JSON, es un error
         if (contentType && contentType.includes('application/json')) {
-            // It's an error disguised as a blob response (common in Axios blobType requests)
             const text = await res.data.text();
-            let errorMessage = 'Error generando PDF';
-            try {
-                const json = JSON.parse(text);
-                errorMessage = json.message || errorMessage;
-                if (json.details) errorMessage += `: ${json.details}`;
-            } catch { /* ignore parse error */ }
-
-            throw new Error(errorMessage);
+            const json = JSON.parse(text);
+            throw new Error(json.message || 'Error en el servidor');
         }
 
-        // Check for suspiciously small blobs (likely error text sent as application/pdf by mistake or empty)
+        // Verificación de seguridad para archivos vacíos
         if (res.data.size < 100) {
-            const text = await res.data.text();
-            console.error("PDF Blob too small, potential error:", text);
-            try {
-                // Try to parse if it's JSON
-                const json = JSON.parse(text);
-                if (json.message) throw new Error(json.message);
-            } catch (e) {
-                if (e.message && e.message !== 'Unexpected token') throw e; // rethrow if it was a json parse success that threw error
-            }
-            // If not JSON, maybe just text error
-            if (text.includes('Error') || text.includes('Cannot')) {
-                throw new Error(`Error del servidor: ${text.substring(0, 50)}...`);
-            }
+            throw new Error("El archivo se generó vacío. Revisa que haya datos en esa fecha.");
         }
 
-        // It is a PDF
+        // --- LÓGICA DE DESCARGA FORZADA ---
         const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        window.open(url, '_blank');
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Intentar obtener el nombre del archivo desde los encabezados o usar el defecto
+        const contentDisposition = res.headers['content-disposition'];
+        let fileName = defaultFileName;
+        if (contentDisposition && contentDisposition.includes('filename=')) {
+            fileName = contentDisposition.split('filename=')[1].replace(/"/g, '');
+        }
+
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click(); // Dispara la descarga
+
+        // Limpieza
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
         toast.dismiss(loadingToast);
-        toast.success('PDF abierto');
+        toast.success('Descarga iniciada');
 
     } catch (error) {
         toast.dismiss(loadingToast);
         console.error("PDF Error:", error);
-
-        // Check for 401/403 specifically if axios error
-        if (error.response?.status === 401) {
-            toast.error("Sesión expirada o no autorizado.");
-        } else {
-            toast.error(error.message || "Error al descargar PDF");
-        }
+        toast.error(error.message || "Error al descargar el PDF");
     }
 };

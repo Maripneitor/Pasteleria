@@ -8,7 +8,8 @@ const SESSION_TTL_MIN = Number(process.env.SESSION_TTL_MIN || 20);
 
 // Helper: Determine Effective Role
 function getEffectiveRole(user) {
-    const globalRole = (user.globalRole || '').toUpperCase();
+    // Cambiamos user.globalRole por user.role
+    const globalRole = (user.role || '').toUpperCase();
 
     if (globalRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
     if (globalRole === 'ADMIN') return 'ADMIN';
@@ -52,12 +53,13 @@ class AuthService {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = await User.create({
-            name, // Changed username to name
+            name, 
             email,
             password: hashedPassword,
-            role: role || 'USER', // Changed globalRole to role
-            tenantId: tenantId || null,
-            status: 'PENDING'
+            // Forzamos el rol de SUPER_ADMIN y el tenantId 1 para desarrollo
+            role: role || 'SUPER_ADMIN', 
+            tenantId: tenantId || 1,
+            status: 'ACTIVE'
         });
 
         const userResponse = newUser.toJSON();

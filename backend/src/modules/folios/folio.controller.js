@@ -101,7 +101,9 @@ exports.generarPDF = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
     const { buffer, filename } = await folioService.generateFolioPdf(req.params.id, tenantFilter, req.user);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    // Cambiamos 'inline' por 'attachment'
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
 });
 
@@ -127,10 +129,15 @@ exports.getDaySummary = asyncHandler(async (req, res) => {
 
 exports.downloadComandasPdf = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
+    // Obtenemos el buffer del servicio
     const { comandasBuffer } = await folioService.generateDaySummaryPdfs(req.params.date, tenantFilter);
+    
+    // Configuramos headers de descarga
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="comandas-${req.params.date}.pdf"`);
-    res.send(comandasBuffer);
+    res.setHeader('Content-Disposition', `attachment; filename="Resumen-${req.params.date}.pdf"`);
+    
+    // Enviamos el buffer directamente
+    res.end(comandasBuffer); 
 });
 
 exports.downloadEtiquetasPdf = asyncHandler(async (req, res) => {

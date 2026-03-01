@@ -3,9 +3,10 @@ const Folio = require('../../../models/Folio');
 const FolioComplemento = require('../../../models/FolioComplemento');
 const CakeFlavor = require('../../../models/CakeFlavor');
 const Filling = require('../../../models/Filling');
-const { renderPdf } = require('../../../services/pdfRenderer'); // Temp path until services are moved
+const { renderPdf } = require('../../../services/pdfRenderer');
 const commissionService = require('../../../services/commissionService');
 const auditService = require('../../../services/auditService');
+const pdfService = require('../../../services/pdfService');
 
 // Helper: Compute Watermark
 function computeWatermark(folio) {
@@ -177,41 +178,22 @@ class FolioService {
         return row;
     }
 
-    /**
-     * UPDATE FOLIO — con trazabilidad:
-     * Captura snapshot ANTES del cambio y lo persiste en AuditLog.
-     */
     async updateFolio(id, data, tenantFilter, t = null, userId = null) {
         const row = await this.getFolioById(id, tenantFilter, false);
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
 
-        // Snapshot BEFORE
         const before = row.toJSON();
-
         await row.update(data, { transaction: t });
 
-        // Snapshot AFTER — solo incluye los campos que cambiaron
-        const after = {};
         const changed = {};
         Object.keys(data).forEach((k) => {
             if (JSON.stringify(before[k]) !== JSON.stringify(row[k])) {
                 changed[k] = { from: before[k], to: row[k] };
-                after[k] = row[k];
             }
         });
 
-        // Solo auditamos si hubo cambios reales
         if (Object.keys(changed).length > 0) {
-            auditService.log(
-                'UPDATE',
-                'FOLIO',
-                row.id,
-                {
-                    folio: row.folioNumber,
-                    changes: changed, // diff legible: { total: { from: 500, to: 600 } }
-                },
-                userId
-            );
+            auditService.log('UPDATE', 'FOLIO', row.id, { folio: row.folioNumber, changes: changed }, userId);
         }
 
         return row;
@@ -288,7 +270,10 @@ class FolioService {
     async generateFolioPdf(id, tenantFilter, user) {
         const folio = await this.getFolioById(id, tenantFilter, true);
         if (!folio) throw { status: 404, message: 'Folio no encontrado' };
+        
         const f = folio.toJSON();
+        const branding = pdfService.getDefaultBranding(); // ✅ Branding real
+
         const folioData = {
             folioNumber: f.folioNumber,
             formattedDeliveryDate: f.fecha_entrega,
@@ -304,9 +289,33 @@ class FolioService {
         const buffer = await renderPdf({
             templateName: 'folioTemplate',
             data: { folio: folioData, watermark: computeWatermark(f) },
-            branding: {}
+            branding: branding // ✅ Ahora con branding
         });
         return { buffer, filename: `${folio.folioNumber}.pdf` };
+    }
+
+    async generateLabelPdf(id, tenantFilter) {
+        const folio = await this.getFolioById(id, tenantFilter, false);
+        if (!folio) throw { status: 404, message: 'Folio no encontrado' };
+        
+        const branding = pdfService.getDefaultBranding();
+
+        const buffer = await renderPdf({
+            templateName: 'labelsTemplate',
+            data: { 
+                etiquetas: [{
+                    folio: folio.folioNumber,
+                    horaEntrega: folio.hora_entrega,
+                    personas: folio.numero_personas + 'p',
+                    clientName: folio.cliente_nombre
+                }],
+                fecha: folio.fecha_entrega
+            },
+            branding: branding,
+            options: { format: 'A4', printBackground: true }
+        });
+
+        return { buffer, filename: `etiqueta-${folio.folioNumber}.pdf` };
     }
 
     async generateDaySummaryPdfs(date, tenantFilter) {
@@ -316,19 +325,33 @@ class FolioService {
             include: [{ association: 'complementosList' }]
         });
 
+        const branding = pdfService.getDefaultBranding();
+
         const foliosData = folios.map(f => {
             const json = f.toJSON();
+            const base = Number(json.costo_base || 0);
+            const envio = Number(json.costo_envio || 0);
+            const total = Number(json.total || 0);
+            const adicionales = total - base - envio;
+
             return {
                 folio: json.folioNumber,
                 horaEntrega: json.hora_entrega,
                 cliente: { nombre: json.cliente_nombre, telefono: json.cliente_telefono },
-                costo: { total: Number(json.total), anticipo: Number(json.anticipo) }
+                costo: { 
+                    total: total, 
+                    anticipo: Number(json.anticipo || 0),
+                    pastel: base,
+                    envio: envio,
+                    adicionales: adicionales > 0 ? adicionales : 0
+                }
             };
         });
 
         const comandasBuffer = await renderPdf({
             templateName: 'ordersTemplate',
-            data: { folios: foliosData, date },
+            data: { folios: foliosData, fecha: date },
+            branding: branding,
             options: { format: 'A4', printBackground: true }
         });
 
@@ -341,7 +364,8 @@ class FolioService {
 
         const etiquetasBuffer = await renderPdf({
             templateName: 'labelsTemplate',
-            data: { etiquetas: labelsData, date },
+            data: { etiquetas: labelsData, fecha: date },
+            branding: branding,
             options: { format: 'A4', printBackground: true }
         });
 
