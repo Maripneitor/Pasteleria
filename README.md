@@ -1,130 +1,89 @@
 # 🎂 Pastelería La Fiesta - Sistema de Gestión
 
-Sistema integral para la gestión de pedidos, clientes y reportes de la pastelería. Construido con un enfoque de alto rendimiento, multi-tenencia y confiabilidad.
+Sistema integral para la gestión de pedidos, clientes y reportes de la pastelería. Construido con un enfoque de alto rendimiento, multi-tenencia y una interfaz de usuario moderna y fluida.
+
+---
 
 ## 🛠️ Stack Tecnológico
-- **Frontend:** React + Vite + Tailwind CSS
-- **Backend:** Node.js + Express
-- **Base de Datos:** MySQL + Sequelize (ORM)
-- **Infraestructura:** Docker & Docker Compose
-- **Calidad:** Puppeteer (PDFs), Jest/Node Test Runner (QA Smoke)
-
----
-
-## 🚀 Guía de Inicio Rápido (Docker)
-
-Esta es la forma recomendada para levantar todo el entorno (Backend + DB + Frontend) en segundos.
-
-### 1. Iniciar Entorno
-```bash
-docker compose up -d --build
-```
-
-### 2. Inicializar Datos (Seeding)
-Para cargar datos de prueba (HQ, Sucursales, Roles y Catálogo):
-```bash
-docker compose exec backend npm run seed:full
-```
-- **SuperAdmin:** `admin@macair.com` / `admin123`
-- **Owner:** `owner@demo.com` / `admin123`
-
-### 3. Verificar Salud del Sistema
-```bash
-docker compose exec backend npm run qa:smoke
-```
-
----
-
-## 🛠️ Comandos Globales (Root)
-Si tienes Node instalado localmente, puedes usar estos atajos desde la raíz:
-- `npm run dev`: Levanta todo con Docker Compose.
-- `npm run stop`: Detiene los contenedores.
-- `npm run clean`: Detiene y borra volúmenes (reset DB).
-- `npm run seed`: Ejecuta el seeding de datos.
-- `npm run test`: Corre los smoke tests.
-
----
-
-## 💻 Desarrollo Local (Sin Docker)
-
-Si prefieres trabajar fuera de contenedores:
-
-### Backend
-1. `cd backend`
-2. `npm install`
-3. Configura el `.env` (basado en `.env.example`).
-4. `npm run dev`
 
 ### Frontend
-1. `cd frontend`
-2. `npm install`
-3. `npm run dev`
+- **Framework:** React 19 + Vite
+- **Estilos:** Tailwind CSS 3.4
+- **Animaciones:** Framer Motion 12
+- **UI Components:** Lucide React, Recharts, FullCalendar
+- **Gestión:** React Hook Form, Context API
+
+### Backend
+- **Core:** Node.js (v24+) + Express
+- **Base de Datos:** MySQL + Sequelize (ORM)
+- **Generación de Documentos:** Puppeteer (para PDFs de alta fidelidad), PDFKit (ligero)
+- **Integraciones:** WhatsApp Web.js (Notificaciones), OpenAI (Asistente IA Voice-to-Order)
 
 ---
 
-## 📄 Estrategia de Generación de PDFs
+## 🚀 Cómo Correr el Proyecto
 
-Para la generación de documentos (facturas, reportes, tickets), seguimos estas tres estrategias dependiendo de la necesidad:
+### Opción A: Con Docker (Recomendado)
+Esta opción levanta automáticamente el Frontend, Backend y la Base de Datos.
 
-### 1. Generación en el Cliente (Frontend)
-Ideal para descargas rápidas de lo que el usuario ve en pantalla.
-- **Lib:** `html2pdf.js`
-- **Uso:** "Foto" del DOM -> Canvas -> PDF.
-- **Ventaja:** No satura el servidor.
+1.  **Iniciar Entorno:**
+    ```bash
+    docker compose up -d --build
+    ```
+2.  **Inicializar Datos (Seeding):**
+    Para cargar el catálogo de prueba, sucursales y roles:
+    ```bash
+    docker compose exec backend npm run seed:full
+    ```
+3.  **Credenciales por Defecto:**
+    - **SuperAdmin:** `admin@macair.com` / `admin123`
+    - **Owner:** `owner@demo.com` / `admin123`
+4.  **Limpiar Entorno:**
+    ```bash
+    docker compose down -v
+    ```
 
-### 2. Generación en el Servidor (Backend con Node.js)
-Para reportes pesados, facturas oficiales o procesos desatendidos.
-- **Puppeteer:** Navegador "Headless". Alta fidelidad (CSS moderno).
-- **PDFKit:** Dibujo manual por código. Ultra ligero, ideal para miles de páginas de texto simple.
+### Opción B: Con NPM (Desarrollo Local)
+Necesitarás tener una instancia de MySQL corriendo localmente.
 
-### 3. El Secreto: Headers Correctos
-Independientemente del método, el servidor debe enviar:
-- `Content-Type: application/pdf`
-- `Content-Disposition: attachment; filename="archivo.pdf"`
+#### 1. Backend
+1.  Entra a la carpeta: `cd backend`
+2.  Instala dependencias: `npm install`
+3.  Configura tu archivo `.env` (usa `.env.example` como base).
+4.  Inicia el servidor: `npm run dev`
 
----
-
-## 🧪 Calidad y Diagnóstico (QA)
-
-### Smoke Tests & Contratos
-```bash
-# Verificar respuesta de endpoints críticos
-docker compose exec backend npm run qa:contract
-
-# Probar flujo completo de pedidos
-docker compose exec backend npm run qa:full
-```
-
-### Modo Diagnóstico
-Habilita `VITE_DEBUG_MODE=true` en el cliente para ver el panel de Request IDs y errores técnicos en tiempo real.
-
----
-
-## 🔧 Gestión y Mantenimiento
-
-### Reparación de DB (Sincronización)
-Si cambias el esquema y necesitas forzar la sincronización:
-```bash
-# En docker-compose.yml o .env usa:
-DB_SYNC_MODE=smart # (Recomendado para desarrollo)
-```
-
-### Troubleshooting Típico
-- **DB no inicia:** `docker compose down -v` para limpiar volúmenes y reiniciar.
-- **Puerto ocupado:** Asegúrate de no tener otro local MySQL en el 3307 o App en el 3000.
-
-### 🌐 Desarrollo con HTTPS / Proxy (ngrok)
-Si usas ngrok, configura las variables en `docker-compose.yml` para el servicio `client`:
-- **VITE_HMR_PORT**: `443`
-- **VITE_HMR_HOST**: `tu-url.ngrok-free.app`
-- **VITE_HMR_PROTOCOL**: `wss`
+#### 2. Frontend
+1.  Entra a la carpeta: `cd frontend`
+2.  Instala dependencias: `npm install`
+3.  Inicia la aplicación: `npm run dev`
 
 ---
 
-## 📦 Control de Versiones (Git)
-Para un despliegue rápido y commit:
-```bash
-git add .
-git commit -m "v.x.x.x-Descripción"
-git push origin main
-```
+## 🧪 Comandos Útiles
+
+### Gestión de Datos
+- `npm run seed:full`: Carga todos los datos iniciales (Roles, HQ, Catálogo).
+- `npm run fix:db`: Intenta reparar inconsistencias en la BD.
+
+### QA y Pruebas
+- `npm run qa:smoke`: Ejecuta pruebas rápidas de conexión y salud.
+- `npm run qa:contract`: Verifica que los endpoints respondan con el formato correcto.
+- `npm run qa:full`: Simulación de flujo completo de pedidos por roles.
+
+---
+
+## 🎨 Sistema Visual y Vistas
+La aplicación utiliza una estética **"Vibrant & Clean"**:
+- **Colores:** Rosa intenso (`#ec4899`) para la marca y Violeta (`#8b5cf6`) para funciones de IA.
+- **Micro-interacciones:** Uso de `Framer Motion` para transiciones suaves y efectos de escala en botones.
+- **Vistas Principales:**
+  - **Dashboard:** KPIs en tiempo real y gráficos de ventas.
+  - **Wizard de Pedidos:** Proceso guiado de 6 pasos para captura de folios.
+  - **Producción:** Tablero estilo Kanban para seguimiento de estados (Pendiente, Decoración, Terminado).
+
+---
+
+## 🔧 Troubleshooting Típico
+- **Error de conexión a BD:** Asegúrate de que el puerto 3307 (Docker) o 3306 (Local) no esté ocupado.
+- **PDFs no se generan:** Verifica que las dependencias de Puppeteer estén instaladas correctamente en tu sistema si corres sin Docker.
+- **Limpieza profunda:** `docker compose down -v` eliminará incluso la base de datos para un inicio desde cero.
