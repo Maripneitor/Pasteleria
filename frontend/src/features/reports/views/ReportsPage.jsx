@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import PageHeader from '@/components/common/PageHeader';
 import Card from '@/components/common/Card';
@@ -64,17 +63,20 @@ const DailyCutTab = () => {
     };
 
     const handleSendEmail = async (force = false) => {
-        if (!force && !window.confirm(`¿Enviar corte del día ${date} por correo?`)) return;
+        // Si 'force' no es estrictamente un booleano, lo ignoramos para evitar estructuras circulares
+        const shouldForce = force === true;
+
+        if (!shouldForce && !window.confirm(`¿Enviar corte del día ${date} por correo?`)) return;
 
         setSendingEmail(true);
         try {
-            const res = await reportsApi.sendDailyCut(date, force);
+            const res = await reportsApi.sendDailyCut(date, shouldForce);
 
             if (res.skipped) {
                 // Already sent case
                 if (window.confirm(`${res.message}\n¿Deseas FORZAR el reenvío a los admin?`)) {
-                    // Recursive call with force=true
-                    setSendingEmail(false); // Reset state to avoid lock
+                    // Reset state to avoid lock and re-run
+                    setSendingEmail(false); 
                     handleSendEmail(true);
                     return;
                 }
@@ -110,7 +112,7 @@ const DailyCutTab = () => {
                         <Button
                             variant="primary"
                             icon={loadingPdf ? Loader2 : FileText}
-                            onClick={handlePreview}
+                            onClick={() => handlePreview()}
                             disabled={loadingPdf}
                         >
                             {loadingPdf ? 'Generando PDF...' : 'Ver PDF (Vista Previa)'}
@@ -119,7 +121,8 @@ const DailyCutTab = () => {
                         <Button
                             variant="secondary"
                             icon={sendingEmail ? Loader2 : Mail}
-                            onClick={handleSendEmail}
+                            // FIJATE AQUÍ: Evitamos pasarle el objeto 'event' a handleSendEmail
+                            onClick={() => handleSendEmail(false)}
                             disabled={sendingEmail}
                         >
                             {sendingEmail ? 'Enviando...' : 'Enviar por Correo a Admin'}
@@ -154,7 +157,6 @@ const CommissionsTab = () => {
         setLoading(true);
         try {
             const res = await commissionsApi.getReport(from, to);
-            // Verify structure from backend: res.reportData
             setData(res.reportData || []);
         } catch (e) {
             console.error(e);
@@ -204,7 +206,7 @@ const CommissionsTab = () => {
                     <div className="flex gap-2">
                         <Button
                             icon={Search}
-                            onClick={fetchReport}
+                            onClick={() => fetchReport()}
                             disabled={loading}
                         >
                             {loading ? 'Cargando...' : 'Consultar'}
@@ -212,7 +214,7 @@ const CommissionsTab = () => {
                         <Button
                             variant="secondary"
                             icon={loadingPdf ? Loader2 : FileText}
-                            onClick={handlePdf}
+                            onClick={() => handlePdf()}
                             disabled={loadingPdf}
                         >
                             PDF

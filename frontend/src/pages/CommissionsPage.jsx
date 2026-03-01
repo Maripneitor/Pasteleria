@@ -1,37 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import commissionsApi from '../services/commissionsApi';
 import { toast } from 'react-hot-toast';
-import { Mail, RefreshCw } from 'lucide-react';
-
-
+import { 
+    Mail, 
+    RefreshCw, 
+    Download, 
+    DollarSign, 
+    CheckCircle, 
+    Clock, 
+    Loader2 
+} from 'lucide-react';
+import { handlePdfResponse } from '../utils/pdfHelper';
 
 const CommissionsPage = () => {
     // State
     const [loading, setLoading] = useState(false);
+    const [loadingPdf, setLoadingPdf] = useState(false);
     const [report, setReport] = useState(null);
+    const [sendingEmail, setSendingEmail] = useState(false);
 
     // Dates (Defaults to current month)
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-
-
-    const [sendingEmail, setSendingEmail] = useState(false);
-
-    const handleSendEmail = async () => {
-        if (!window.confirm("¿Enviar reporte por correo a los administradores?")) return;
-
-        setSendingEmail(true);
-        try {
-            await commissionsApi.sendReportEmail(filters.from, filters.to);
-            toast.success("Correo enviado exitosamente");
-        } catch (e) {
-            console.error(e);
-            toast.error("Error enviando correo");
-        } finally {
-            setSendingEmail(false);
-        }
-    };
 
     const [filters, setFilters] = useState({
         from: firstDay,
@@ -59,10 +50,39 @@ const CommissionsPage = () => {
         setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
+    const handleSendEmail = async () => {
+        if (!window.confirm("¿Enviar reporte por correo a los administradores?")) return;
+
+        setSendingEmail(true);
+        try {
+            await commissionsApi.sendReportEmail(filters.from, filters.to);
+            toast.success("Correo enviado exitosamente");
+        } catch (e) {
+            console.error(e);
+            toast.error("Error enviando correo");
+        } finally {
+            setSendingEmail(false);
+        }
+    };
+
+    // FUNCIÓN PARA DESCARGAR PDF
+    const handleDownloadPdf = async () => {
+        setLoadingPdf(true);
+        try {
+            // Utilizamos la utilidad handlePdfResponse que configuramos para descargas forzadas
+            await handlePdfResponse(() => commissionsApi.getReportPdf(filters.from, filters.to));
+        } catch (e) {
+            console.error(e);
+            // El helper ya muestra el toast de error si falla
+        } finally {
+            setLoadingPdf(false);
+        }
+    };
+
     // Calculate totals from report data safely
-    const totalCommissions = report?.totalCommission || 0;
-    const appliedCommissions = report?.totalApplied || 0;
-    const pendingCommissions = totalCommissions - appliedCommissions;
+    const totalCommissions = report?.totalCommissions || 0;
+    const appliedCommissions = report?.totalAppliedToCustomer || 0;
+    const pendingCommissions = report?.totalNotApplied || 0;
 
     // Helper for currency
     const formatMoney = (amount) => {
@@ -78,7 +98,7 @@ const CommissionsPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800">Comisiones por Ventas</h1>
-                    <p className="text-gray-500 text-sm">Reporte de comisiones generadas por cajeros/vendedores.</p>
+                    <p className="text-gray-500 text-sm">Reporte de comisiones generadas en La Fiesta.</p>
                 </div>
 
                 <div className="flex flex-wrap gap-2 items-end">
@@ -117,9 +137,15 @@ const CommissionsPage = () => {
                         <Mail size={18} />
                         <span>{sendingEmail ? 'Enviando...' : 'Enviar por Correo'}</span>
                     </button>
-                    <button className="bg-pink-600 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-pink-700 transition-colors shadow-sm font-medium">
-                        <Download size={18} />
-                        <span>Exportar PDF</span>
+                    
+                    {/* BOTÓN CORREGIDO */}
+                    <button 
+                        onClick={handleDownloadPdf}
+                        disabled={loadingPdf}
+                        className="bg-pink-600 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-pink-700 transition-colors shadow-sm font-medium disabled:opacity-50"
+                    >
+                        {loadingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                        <span>{loadingPdf ? 'Generando...' : 'Exportar PDF'}</span>
                     </button>
                 </div>
             </div>
@@ -155,7 +181,7 @@ const CommissionsPage = () => {
                         <Clock size={28} />
                     </div>
                     <div>
-                        <p className="text-sm text-gray-400 font-medium">Pendientes (Est.)</p>
+                        <p className="text-sm text-gray-400 font-medium">No Aplicadas (Costo)</p>
                         <h3 className="text-2xl font-bold text-gray-800">
                             {loading ? <span className="animate-pulse bg-gray-200 h-8 w-24 block rounded" /> : formatMoney(pendingCommissions)}
                         </h3>
@@ -175,41 +201,47 @@ const CommissionsPage = () => {
                             <tr className="text-xs font-semibold text-gray-500 uppercase bg-gray-50 border-b">
                                 <th className="px-6 py-4">Fecha</th>
                                 <th className="px-6 py-4">Folio</th>
-                                <th className="px-6 py-4">Cajero/User</th>
-                                <th className="px-6 py-4 text-right">Monto Venta</th>
+                                <th className="px-6 py-4 text-right">Monto Venta (Est.)</th>
                                 <th className="px-6 py-4 text-right">Comisión Calc.</th>
+                                <th className="px-6 py-4 text-center">Aplicada</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (
-                                // Skeleton Rows
                                 [...Array(5)].map((_, i) => (
                                     <tr key={i} className="animate-pulse">
                                         <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-24"></div></td>
                                         <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-16"></div></td>
-                                        <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-32"></div></td>
                                         <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-20 ml-auto"></div></td>
                                         <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-20 ml-auto"></div></td>
+                                        <td className="px-6 py-4 text-center"><div className="h-4 bg-gray-100 rounded w-8 mx-auto"></div></td>
                                     </tr>
                                 ))
                             ) : report?.details?.length > 0 ? (
                                 report.details.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 text-sm text-gray-600">
-                                            {new Date(item.date).toLocaleDateString()}
-                                            <div className="text-xs text-gray-400">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">#{item.folio}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 text-xs font-bold">
-                                                    {(item.user || "U").charAt(0).toUpperCase()}
-                                                </div>
-                                                {item.user || "Desconocido"}
+                                            {new Date(item.createdAt).toLocaleDateString()}
+                                            <div className="text-xs text-gray-400">
+                                                {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 text-right">{formatMoney(item.saleAmount)}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-green-600 text-right">{formatMoney(item.commissionAmount)}</td>
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">#{item.folioNumber}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600 text-right">
+                                            {formatMoney(item.amount / 0.05)} 
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-bold text-green-600 text-right">
+                                            {formatMoney(item.amount)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                item.appliedToCustomer 
+                                                ? 'bg-green-100 text-green-700' 
+                                                : 'bg-orange-100 text-orange-700'
+                                            }`}>
+                                                {item.appliedToCustomer ? 'Sí' : 'No'}
+                                            </span>
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
@@ -231,7 +263,7 @@ const CommissionsPage = () => {
                 {!loading && report?.details?.length > 0 && (
                     <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
                         <div className="text-right">
-                            <span className="text-sm text-gray-500 mr-4">Total Resultados: {report.details.length}</span>
+                            <span className="text-sm text-gray-500 mr-4">Total Resultados: {report.count}</span>
                         </div>
                     </div>
                 )}

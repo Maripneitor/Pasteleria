@@ -3,9 +3,19 @@ import client from '@/config/axios';
 const reportsApi = {
     /**
      * Triggers the backend email sending process
+     * @param {string} date - Fecha del corte (YYYY-MM-DD)
+     * @param {boolean} force - Si es true, ignora el bloqueo de reenvío
      */
     sendDailyCut: async (date, force = false) => {
-        const response = await client.post('/reports/daily-cut', { date, force });
+        // CAPA DE SEGURIDAD: Forzamos que 'force' sea estrictamente un booleano.
+        // Si por error llega un evento de React (HTMLButtonElement), esto lo convertirá en 'false'
+        // evitando el error de "Circular structure to JSON".
+        const isForced = force === true;
+
+        const response = await client.post('/reports/daily-cut', { 
+            date, 
+            force: isForced 
+        });
         return response.data;
     },
 
@@ -17,7 +27,7 @@ const reportsApi = {
             params: { date },
             responseType: 'blob'
         });
-        return response; // Return full response for handlePdfResponse
+        return response; // Retorna la respuesta completa para que pdfHelper.js maneje el Blob
     }
 };
 

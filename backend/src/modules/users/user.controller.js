@@ -23,8 +23,12 @@ exports.getPendingUsers = asyncHandler(async (req, res) => {
 });
 
 exports.createUser = asyncHandler(async (req, res) => {
-  const { username, email, password, role, isActive } = req.body;
-  const globalRole = role || 'USER';
+  // 1. Extraemos los datos del body (puedes recibir 'username' o 'name' desde el front)
+  const { username, name, email, password, role, status } = req.body;
+  
+  // 2. Mapeamos: El modelo espera 'name' y 'role'
+  const nameToSave = name || username; 
+  const roleToSave = role || 'EMPLOYEE'; // 'EMPLOYEE' es el default en tu modelo
 
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) {
@@ -33,24 +37,25 @@ exports.createUser = asyncHandler(async (req, res) => {
     throw err;
   }
 
+  // 3. Creamos el usuario con los nombres de columna correctos
   const newUser = await User.create({
-    username, // Map from body
+    name: nameToSave,      // <--- Corregido: antes era 'username'
     email,
-    password,
-    globalRole,
-    isActive: isActive !== undefined ? isActive : true
+    password,              // Sequelize se encargará del hash si tienes el hook, si no, asegúrate de hashearlo antes
+    role: roleToSave,      // <--- Corregido: antes era 'globalRole'
+    status: status || 'ACTIVE' // <--- Corregido: tu modelo usa 'status', no 'isActive'
   });
 
   const userResp = newUser.toJSON();
   delete userResp.password;
 
-  auditService.log('CREATE', 'USER', newUser.id, { username: newUser.username }, req.user?.id);
+  auditService.log('CREATE', 'USER', newUser.id, { name: newUser.name }, req.user?.id);
   res.status(201).json(userResp);
 });
 
 exports.updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, role, password, phone } = req.body;
+  const { name, username, role, password, phone, status } = req.body;
 
   const user = await User.findByPk(id);
   if (!user) {
@@ -59,11 +64,12 @@ exports.updateUser = asyncHandler(async (req, res) => {
     throw err;
   }
 
-  if (name) user.username = name;
-  if (role) user.globalRole = role;
-  if (phone) user.phone = phone;
+  // Mapeo de actualización
+  if (name || username) user.name = name || username; // <--- Sincronizado con el modelo
+  if (role) user.role = role;                         // <--- Sincronizado con el modelo
+  if (phone) user.phone = phone; 
   if (password) user.password = password;
-  if (req.body.isActive !== undefined) user.isActive = req.body.isActive;
+  if (status) user.status = status;                   // <--- Usando el ENUM de tu modelo
 
   await user.save();
   auditService.log('UPDATE', 'USER', user.id, { changes: req.body }, req.user?.id);
