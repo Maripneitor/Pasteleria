@@ -142,8 +142,16 @@ exports.getCalendarEvents = async (req, res) => {
 // ✅ DASHBOARD
 exports.getDashboardStats = async (req, res) => {
     try {
+        const { buildTenantWhere, buildBranchWhere } = require('../utils/tenantScope');
         const tenantFilter = buildTenantWhere(req);
-        const stats = await folioService.getDashboardStats(tenantFilter);
+        const branchFilter = buildBranchWhere(req);
+
+        // Pass both if needed, but for now we just pass tenantFilter + branchFilter 
+        // to get the combined total correctly, though folioService was only taking tenantFilter.
+        // I'll update folioService to expect both.
+        const combinedWhere = { ...tenantFilter, ...branchFilter };
+
+        const stats = await folioService.getDashboardStats(combinedWhere, tenantFilter);
         res.json(stats);
     } catch (e) {
         console.error('getDashboardStats Error (Recovered):', e);
@@ -156,6 +164,7 @@ exports.getDashboardStats = async (req, res) => {
                 totalSales: 0,
                 totalAdvance: 0
             },
+            branchStats: [],
             recientes: [],
             populares: []
         });

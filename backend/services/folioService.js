@@ -268,21 +268,56 @@ class FolioService {
         return row;
     }
 
-    async getDashboardStats(tenantFilter) {
-        const today = new Date().toISOString().split('T')[0];
-        const baseWhere = { ...tenantFilter, estatus_folio: { [Op.ne]: 'Cancelado' } };
+    async getDashboardStats(baseFilter, tenantFilter) {
+        const todayMX = new Date().toLocaleString("en-CA", { timeZone: "America/Mexico_City" }).split(',')[0];
+        const baseWhere = { ...baseFilter, estatus_folio: { [Op.ne]: 'Cancelado' } };
 
         const totalCount = await Folio.count({ where: baseWhere });
         const pendingCount = await Folio.count({ where: { ...baseWhere, estatus_produccion: 'Pendiente' } });
-        const todayCount = await Folio.count({ where: { ...baseWhere, fecha_entrega: today } });
+        const todayCount = await Folio.count({ where: { ...baseWhere, fecha_entrega: todayMX } });
         const sumTotal = await Folio.sum('total', { where: baseWhere }) || 0;
         const sumAnticipo = await Folio.sum('anticipo', { where: baseWhere }) || 0;
 
         const recientes = await Folio.findAll({
-            where: tenantFilter,
+            where: baseFilter,
             limit: 5,
             order: [['createdAt', 'DESC']]
         });
+
+        // 🚀 NEW: Multi-Branch Stats for Owner Dashboard
+        const Branch = require('../models/Branch');
+        const { CashCut } = require('../models/CashModels');
+        const DailySalesStats = require('../models').DailySalesStats;
+
+        const branches = await Branch.findAll({ where: { ...tenantFilter, isActive: true }, raw: true });
+        const branchStats = [];
+
+        for (const branch of branches) {
+            // Check if Cash Register is open today
+            const cut = await CashCut.findOne({ where: { date: todayMX, branchId: branch.id, ...tenantFilter } });
+            const isCashOpen = cut && cut.status === 'Open';
+
+            // Daily sales from DailySalesStats
+            const dailyStats = await DailySalesStats.findOne({ where: { date: todayMX, branchId: branch.id, ...tenantFilter } });
+
+            // Active orders (Folios in preparation or pending for this location)
+            const activeOrders = await Folio.count({
+                where: {
+                    branchId: branch.id,
+                    estatus_produccion: { [Op.in]: ['Pendiente', 'En Proceso'] },
+                    estatus_folio: { [Op.ne]: 'Cancelado' },
+                    ...tenantFilter
+                }
+            });
+
+            branchStats.push({
+                id: branch.id,
+                name: branch.name,
+                cajaAbierta: !!isCashOpen,
+                ventasHoy: dailyStats ? Number(dailyStats.totalSales) : 0,
+                pedidosActivos: activeOrders
+            });
+        }
 
         return {
             metrics: {
@@ -292,6 +327,7 @@ class FolioService {
                 totalSales: Number(sumTotal),
                 totalAdvance: Number(sumAnticipo)
             },
+            branchStats,
             recientes,
             populares: []
         };
