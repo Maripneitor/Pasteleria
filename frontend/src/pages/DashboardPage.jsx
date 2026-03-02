@@ -264,6 +264,7 @@ const DashboardPage = () => {
   const { isOwnerOrAdmin } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('primary'); // 'primary' or 'hub'
 
   useEffect(() => {
     const loadStats = async () => {
@@ -311,21 +312,47 @@ const DashboardPage = () => {
     );
   }
 
-  // Owner ve el Multi-Branch, Empleados ven el Standard/Legacy.
-  // También podríamos ser más estrictos: isOwnerOrAdmin() == true -> OwnerDashboard. 
-  if (isOwnerOrAdmin()) {
-    return <OwnerDashboard stats={stats} navigate={navigate} handleLogout={handleLogout} />;
+  const toggleView = () => {
+    setViewMode(prev => prev === 'primary' ? 'hub' : 'primary');
+  };
+
+  const renderContent = () => {
+    // Si no es dueño/admin, siempre ve el primario.
+    // Si lo es, ve el que haya seleccionado (por defecto primario).
+    if (isOwnerOrAdmin() && viewMode === 'hub') {
+      return (
+        <div className="space-y-4">
+          <div className="flex justify-end max-w-7xl mx-auto px-6 pt-4">
+            <Button variant="secondary" onClick={toggleView} className="bg-white border-pink-200 text-pink-700 hover:bg-pink-50">
+              ← Volver al Dashboard Principal
+            </Button>
+          </div>
+          <OwnerDashboard stats={stats} navigate={navigate} handleLogout={handleLogout} />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {isOwnerOrAdmin() && (
+          <div className="flex justify-end max-w-7xl mx-auto px-6 pt-4 pb-0 mb-[-1rem]">
+            <Button variant="secondary" onClick={toggleView} icon={Store} className="bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100 relative z-10 w-full md:w-auto">
+              Ver Hub de Operaciones Multi-Sucursal
+            </Button>
+          </div>
+        )}
+        <EmployeeDashboard
+          stats={stats}
+          navigate={navigate}
+          handleLogout={handleLogout}
+          handleBuscar={handleBuscar}
+          handleDownloadPDF={handleDownloadPDF}
+        />
+      </div>
+    );
   }
 
-  return (
-    <EmployeeDashboard
-      stats={stats}
-      navigate={navigate}
-      handleLogout={handleLogout}
-      handleBuscar={handleBuscar}
-      handleDownloadPDF={handleDownloadPDF}
-    />
-  );
+  return renderContent();
 };
 
 export default DashboardPage;
