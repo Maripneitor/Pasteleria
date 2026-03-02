@@ -36,8 +36,9 @@ Esta opción levanta automáticamente el Frontend, Backend y la Base de Datos.
     docker compose exec backend npm run seed:full
     ```
 3.  **Credenciales por Defecto:**
-    - **SuperAdmin:** `admin@macair.com` / `admin123`
+    - **SuperAdmin:** `admin@gmail.com` / `Admin1234`
     - **Owner:** `owner@demo.com` / `admin123`
+    - **Mario Dev:** `mario@dev.com` / `mario123`
 4.  **Limpiar Entorno:**
     ```bash
     docker compose down -v

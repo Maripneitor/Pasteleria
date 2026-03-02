@@ -39,4 +39,32 @@ function buildTenantWhere(req, { tenantField = 'tenantId', allowQueryTenant = tr
     return { [tenantField]: tenantId };
 }
 
-module.exports = { buildTenantWhere };
+/**
+ * Builds a WHERE object to filter by branch based on user hierarchy.
+ * - SUPER_ADMIN: sees all, can filter by ?branchId=...
+ * - OWNER: sees all his branches, can filter by ?branchId=...
+ * - EMPLOYEE: strictly limited to his assigned branchId.
+ */
+function buildBranchWhere(req, { branchField = 'branchId' } = {}) {
+    const user = req.user;
+    if (!user) return {};
+
+    const role = user.role;
+
+    // 1. Strict limit for employees
+    if (role === 'EMPLOYEE') {
+        const branchId = user.branchId || null;
+        return { [branchField]: branchId };
+    }
+
+    // 2. Global/Owner can filter via query
+    if (req.query?.branchId) {
+        return { [branchField]: Number(req.query.branchId) };
+    }
+
+    // 3. Defaults for Owner: depends if we want to force his house matrix or see all. 
+    // Usually, if no filter, they see everything from their tenant.
+    return {};
+}
+
+module.exports = { buildTenantWhere, buildBranchWhere };

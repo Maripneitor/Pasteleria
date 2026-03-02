@@ -3,22 +3,14 @@ const { Branch } = require('../models');
 // ✅ LIST
 exports.listBranches = async (req, res, next) => {
     try {
-        const tenantId = req.user.tenantId;
-        const role = req.user.role;
-        const { buildTenantWhere } = require('../utils/tenantScope');
-        const where = buildTenantWhere(req);
+        const { buildTenantWhere, buildBranchWhere } = require('../utils/tenantScope');
+        const tenantWhere = buildTenantWhere(req);
+        const branchWhere = buildBranchWhere(req, { branchField: 'id' });
 
-        // Employee Restriction: Can only see their own branch (even within tenant)
-        if (role === 'EMPLOYEE') {
-            if (req.user.branchId) {
-                where.id = req.user.branchId;
-            } else {
-                return res.json({ data: [] });
-            }
-        }
+        const combinedWhere = { ...tenantWhere, ...branchWhere };
 
         const branches = await Branch.findAll({
-            where,
+            where: combinedWhere,
             order: [['id', 'DESC']]
         });
 
@@ -36,7 +28,7 @@ exports.createBranch = async (req, res, next) => {
         if (!tenantId) return res.status(400).json({ message: 'Tenant ID missing in token' });
 
         // Whitelist fields
-        const { name, address, phone, isActive } = req.body;
+        const { name, address, phone, isActive, isMain } = req.body;
 
         if (!name || name.trim().length < 2) {
             return res.status(400).json({ message: 'El nombre es obligatorio (min 2 caracteres)' });
@@ -59,13 +51,17 @@ exports.createBranch = async (req, res, next) => {
             });
         }
 
+        // --- REFUERZO SPRINT 4: CASA MATRIZ AUTOMÁTICA ---
+        // Si es la primera sucursal, es Main por defecto
+        const forceMain = currentCount === 0 ? true : (isMain || false);
+
         const branch = await Branch.create({
             tenantId,
             name: name.trim(),
             address: address || null,
             phone: phone || null,
             isActive: isActive !== undefined ? isActive : true,
-            isMain: false // Default to false
+            isMain: forceMain
         });
 
         res.status(201).json({ data: branch });
@@ -119,15 +115,13 @@ exports.updateBranch = async (req, res, next) => {
 exports.getBranchById = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const tenantId = req.user.tenantId;
+        const { buildTenantWhere, buildBranchWhere } = require('../utils/tenantScope');
 
-        const where = { id, tenantId };
+        const tenantWhere = buildTenantWhere(req);
+        const branchWhere = buildBranchWhere(req, { branchField: 'id' });
 
-        // Employee check again? Or assume if they have ID they can view details?
-        // Let's enforce strictly
-        if (req.user.role === 'EMPLOYEE' && String(req.user.branchId) !== String(id)) {
-            return res.status(403).json({ message: 'No tienes acceso a esta sucursal' });
-        }
+        // Override id from params if it's already in branchWhere (employees)
+        const where = { ...tenantWhere, ...branchWhere, id };
 
         const branch = await Branch.findOne({ where });
         if (!branch) return res.status(404).json({ message: 'No encontrado' });

@@ -1,11 +1,14 @@
 const folioService = require('../services/folioService');
-const { buildTenantWhere } = require('../utils/tenantScope');
+const { buildTenantWhere, buildBranchWhere } = require('../utils/tenantScope');
 
 // ✅ LIST
 exports.listFolios = async (req, res) => {
     try {
         const tenantFilter = buildTenantWhere(req);
-        const data = await folioService.listFolios(req.query, tenantFilter);
+        const branchFilter = buildBranchWhere(req);
+        const combinedFilter = { ...tenantFilter, ...branchFilter };
+
+        const data = await folioService.listFolios(req.query, combinedFilter);
         res.json(data);
     } catch (e) {
         console.error('listFolios:', e);
@@ -163,7 +166,19 @@ exports.getDashboardStats = async (req, res) => {
 exports.generarPDF = async (req, res) => {
     try {
         const tenantFilter = buildTenantWhere(req);
-        const { buffer, filename } = await folioService.generateFolioPdf(req.params.id, tenantFilter, req.user);
+        const { id } = req.params;
+        const type = req.query.type || 'folio'; // folio, comanda, label, nota
+
+        let result;
+
+        if (type === 'label') {
+            result = await folioService.generateLabelPdf(id, tenantFilter);
+        } else {
+            // Consolidated call passing 'type' to choose template (folio vs comanda)
+            result = await folioService.generateFolioPdf(id, tenantFilter, req.user, type);
+        }
+
+        const { buffer, filename } = result;
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
@@ -177,17 +192,9 @@ exports.generarPDF = async (req, res) => {
 };
 
 exports.generarEtiqueta = async (req, res) => {
-    try {
-        const tenantFilter = buildTenantWhere(req);
-        const { buffer, filename } = await folioService.generateLabelPdf(req.params.id, tenantFilter);
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-        res.send(buffer);
-    } catch (e) {
-        const status = e.status || 500;
-        res.status(status).json({ message: 'Error Etiqueta' });
-    }
+    // Forwarding to the consolidated method
+    req.query.type = 'label';
+    return exports.generarPDF(req, res);
 };
 
 // ✅ DAY SUMMARY (Comandas & Labels)

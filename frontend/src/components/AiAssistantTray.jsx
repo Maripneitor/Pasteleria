@@ -116,19 +116,32 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                 case 'CREATE':
                     response = await aiService.createOrderWithAI(userMessage);
 
-                    setMessages(prev => [...prev, {
-                        role: 'ai',
-                        text: response.aiConfirmation || 'Pedido creado exitosamente',
-                        mode: 'CREATE',
-                        orderData: response.folio,
-                        folioNumber: response.folioNumber,
-                        extractedData: response.extractedData
-                    }]);
+                    if (response.isPartial) {
+                        setMessages(prev => [...prev, {
+                            role: 'ai',
+                            text: response.message || 'Entiendo, ¿podrías darme más detalles?',
+                            mode: 'CREATE',
+                            extractedData: response.extractedData
+                        }]);
+                    } else {
+                        setMessages(prev => [...prev, {
+                            role: 'ai',
+                            text: response.aiConfirmation || '¡Pedido creado exitosamente!',
+                            mode: 'CREATE',
+                            orderData: response.folio,
+                            folioNumber: response.folioNumber,
+                            extractedData: response.extractedData
+                        }]);
+                    }
 
-                    // Auto-fill form si existe
+                    // Auto-fill form si existe (tanto parcial como completo)
                     if (response.extractedData && updateOrder) {
-                        updateOrder(response.extractedData);
-                        toast.success("Borrador actualizado");
+                        const cleanDraft = Object.fromEntries(
+                            Object.entries(response.extractedData).filter(([_, v]) => v != null)
+                        );
+                        updateOrder(prev => ({ ...prev, ...cleanDraft }));
+                        if (!response.isPartial) toast.success("Pedido registrado");
+                        else toast.success("Borrador actualizado con IA");
                     }
 
                     loadSessions();

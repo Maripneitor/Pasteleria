@@ -1,45 +1,49 @@
-// Role-based authorization middleware
-// Validates user permissions based on globalRole or tenantRole
-
 /**
- * Generic authorization function
- * @param {string[]} roles - Array of allowed roles
- * @param {string} type - 'global' or 'tenant' (default: 'global')
+ * authorize
+ * Generic authorization middleware that leverages the hierarchical methods of the User instance.
+ * @param {string|string[]} roles - Array of allowed roles or single role
+ * @param {string} type - 'global' or 'tenant' (contextual metadata)
  */
 function authorize(roles = [], type = 'global') {
-  if (typeof roles === 'string') {
-    roles = [roles];
-  }
+  const allowed = Array.isArray(roles) ? roles : [roles];
 
   return (req, res, next) => {
-    if (!req.user) {
+    const user = req.user;
+
+    if (!user) {
       return res.status(401).json({ message: 'No autenticado.' });
     }
 
-    // Role is already normalized in authMiddleware and put in req.user.role
-    const userRole = req.user.role;
-
-    // SUPER_ADMIN bypass
-    if (userRole === 'SUPER_ADMIN') {
+    // Bypass SUPER_ADMIN
+    if (user.role === 'SUPER_ADMIN') {
       return next();
     }
 
-    // Standard check
-    if (!roles.includes(userRole)) {
-      return res.status(403).json({
-        message: 'No tienes permiso para realizar esta acción.',
-        required: roles,
-        current: userRole
-      });
+    // Validar usando jerarquía acumulativa si es posible
+    if (allowed.includes('ADMIN') && user.isAdmin && user.isAdmin()) {
+      return next();
     }
 
-    next();
+    if (allowed.includes('OWNER') && user.isOwner && user.isOwner()) {
+      return next();
+    }
+
+    // Validación estándar por inclusión exacta de rol
+    if (allowed.includes(user.role)) {
+      return next();
+    }
+
+    // Forbidden
+    return res.status(403).json({
+      message: 'No tienes permiso para realizar esta acción.',
+      required: allowed,
+      current: user.role
+    });
   };
 }
 
 /**
  * Require global role (SUPER_ADMIN, ADMIN, USER)
- * @param {string[]} roles - Allowed global roles
  */
 function requireGlobal(roles) {
   return authorize(roles, 'global');
@@ -47,13 +51,11 @@ function requireGlobal(roles) {
 
 /**
  * Require tenant role (OWNER, EMPLOYEE)
- * @param {string[]} roles - Allowed tenant roles
  */
 function requireTenant(roles) {
   return authorize(roles, 'tenant');
 }
 
-// Export default as authorize for backward compatibility
 module.exports = authorize;
 module.exports.requireGlobal = requireGlobal;
 module.exports.requireTenant = requireTenant;

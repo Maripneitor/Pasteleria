@@ -11,13 +11,16 @@ const DEFAULTS = {
 // GET /api/tenant/config
 exports.getTenantConfig = async (req, res, next) => {
     try {
-        const tenantId = req.user.tenantId;
-        if (!tenantId && req.user.role !== 'SUPER_ADMIN') {
-            return res.status(400).json({ message: 'Tenant ID required' });
+        let tenantId = req.user.tenantId;
+
+        // Bypassing for SuperAdmin to allow global management
+        if (req.user.role === 'SUPER_ADMIN' && req.query.tenantId) {
+            tenantId = req.query.tenantId;
         }
 
-        // If Super Admin and no tenantId in token, maybe query param? 
-        // For now, strict: use user's tenantId.
+        if (!tenantId) {
+            return res.status(400).json({ message: 'Tenant ID is required for this operation.' });
+        }
 
         const config = await TenantConfig.findOne({ where: { tenantId } });
 
@@ -43,7 +46,11 @@ exports.getTenantConfig = async (req, res, next) => {
 // PUT /api/tenant/config
 exports.updateTenantConfig = async (req, res, next) => {
     try {
-        const tenantId = req.user.tenantId;
+        let tenantId = req.user.tenantId;
+        if (req.user.role === 'SUPER_ADMIN') {
+            tenantId = req.body.tenantId || req.query.tenantId || tenantId;
+        }
+
         if (!tenantId) return res.status(403).json({ message: 'Tenant context required' });
 
         const { logoUrl, primaryColor, footerText, businessName } = req.body;

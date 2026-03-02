@@ -168,4 +168,22 @@ module.exports = {
 // 🟢 AUTO-ARRANQUE SI SE EJECUTA DESDE DOCKER/COMANDE (node whatsapp-gateway.js)
 if (require.main === module) {
     initializeWhatsApp();
+
+    // Iniciar mini-servidor para que el backend pueda consultar el QR desde otro contenedor
+    const express = require('express');
+    const app = express();
+    const port = 3001;
+
+    app.get('/status', (req, res) => {
+        res.json({ status, qr: qrCodeData });
+    });
+
+    app.post('/restart', async (req, res) => {
+        await module.exports.restart();
+        res.json({ success: true });
+    });
+
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`🌐 Gateway HTTP Server listening on port ${port}`);
+    });
 }

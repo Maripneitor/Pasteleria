@@ -16,10 +16,16 @@ exports.getAllClients = async (req, res) => {
 exports.createClient = async (req, res) => {
   try {
     const tenantId = req.user?.tenantId || 1;
-    const clientData = { ...req.body, tenantId }; // Ensure tenant isolation
+    const clientData = { ...req.body, tenantId };
+
+    // Limpiar campos opcionales para evitar fallos de validación con strings vacíos
+    if (clientData.email === '') clientData.email = null;
+    if (clientData.phone2 === '') clientData.phone2 = null;
+
     const newClient = await Client.create(clientData);
     res.status(201).json(newClient);
   } catch (error) {
+    console.error('[CreateClient] Error:', error); // Log detailed error
     if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
       const errors = error.errors.map(err => err.message);
       return res.status(400).json({ message: 'Error de validación', errors });

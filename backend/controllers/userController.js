@@ -1,4 +1,5 @@
-const User = require('../models/user');
+const { User } = require('../models');
+const { Op } = require('sequelize');
 const auditService = require('../services/auditService');
 const { buildTenantWhere } = require('../utils/tenantScope');
 
@@ -42,6 +43,30 @@ exports.createUser = async (req, res) => {
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) return res.status(400).json({ message: 'El correo ya está registrado' });
 
+    // --- REFUERZO SPRINT 4: CONTROL DE LÍMITE DE USUARIOS ---
+    // Si no es Super Admin, verificamos el límite
+    if (req.user.role !== 'SUPER_ADMIN') {
+      // 1. Buscamos al Dueño (OWNER) de este tenant para ver su 'maxUsers'
+      const owner = await User.findOne({
+        where: { tenantId, role: 'OWNER' }
+      });
+
+      if (owner) {
+        // 2. Contamos cuántos usuarios tiene ya este tenant (excluyendo al Super Admin si existiera en ese tenant)
+        const currentUsersCount = await User.count({
+          where: { tenantId, role: { [Op.ne]: 'SUPER_ADMIN' } }
+        });
+
+        if (currentUsersCount >= owner.maxUsers) {
+          return res.status(403).json({
+            message: `Límite de empleados alcanzado. Contacta al administrador para ampliar tu plan.`,
+            limit: owner.maxUsers,
+            current: currentUsersCount
+          });
+        }
+      }
+    }
+
     const newUser = await User.create({
       name: name || username,
       email,
@@ -49,14 +74,15 @@ exports.createUser = async (req, res) => {
       role: role || 'EMPLOYEE',
       isActive: isActive !== undefined ? isActive : true,
       tenantId,
-      branchId
+      branchId,
+      ownerId: req.user.role === 'OWNER' ? req.user.id : (req.user.ownerId || null)
     });
 
     const userResp = newUser.toJSON();
     delete userResp.password;
 
     // AUDIT
-    auditService.log('CREATE', 'USER', newUser.id, { email: newUser.email, role: newUser.role }, req.user?.id);
+    auditService.log('CREATE', 'USER', newUser.id, { email: newUser.email, role: newUser.role, tenantId }, req.user?.id);
 
     res.status(201).json(userResp);
   } catch (error) {

@@ -17,7 +17,16 @@ exports.parseOrder = async (req, res) => {
 
         // 1. Parse with AI
         const result = await aiOrderParsingService.parseOrder(text, req.user.tenantId);
-        const aiData = result.data;
+
+        if (!result.valid && !result.data) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se pudo interpretar el pedido',
+                errors: result.errors
+            });
+        }
+
+        const aiData = result.data || {};
 
         // 2. Find or Create Session (Persistence)
         let session = null;
@@ -43,12 +52,12 @@ exports.parseOrder = async (req, res) => {
         // 3. Update Session Data
         const currentData = session.extractedData || {};
         const newData = {
-            cliente_nombre: aiData.customerName || currentData.cliente_nombre,
-            cliente_telefono: aiData.phone || currentData.cliente_telefono,
-            fecha_entrega: aiData.deliveryDate || currentData.fecha_entrega,
+            cliente_nombre: aiData.customerName || currentData.cliente_nombre || '',
+            cliente_telefono: aiData.phone || currentData.cliente_telefono || '',
+            fecha_entrega: aiData.deliveryDate || currentData.fecha_entrega || null,
             sabores_pan: aiData.flavorId ? [aiData.flavorId] : (currentData.sabores_pan || []),
             rellenos: aiData.fillingId ? [aiData.fillingId] : (currentData.rellenos || []),
-            descripcion_diseno: aiData.specs || currentData.descripcion_diseno
+            descripcion_diseno: aiData.specs || currentData.descripcion_diseno || ''
         };
 
         session.extractedData = newData;
@@ -98,13 +107,15 @@ exports.createOrderWithAI = async (req, res) => {
 
         const aiData = parseResult.data;
 
-        // 2. Validar datos mínimos para crear pedido
-        if (!aiData.customerName || !aiData.phone) {
-            return res.status(400).json({
+        // 2. Validar datos mínimos para crear pedido real en BD
+        // Si falta info crítica, no lanzamos 400, mejor respondemos amigablemente lo que falta.
+        if (!aiData.customerName || !aiData.phone || !aiData.deliveryDate) {
+            return res.status(200).json({
                 success: false,
-                message: 'Necesito al menos el nombre del cliente y teléfono para crear el pedido',
+                isPartial: true,
+                message: aiData.assistant_response || 'Necesito más información para registrar el pedido.',
                 extractedData: aiData,
-                missing: aiData.missing_info || ['Nombre', 'Teléfono']
+                missing: aiData.missing_info || []
             });
         }
 

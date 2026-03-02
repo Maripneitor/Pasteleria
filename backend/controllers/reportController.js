@@ -10,14 +10,17 @@ exports.sendDailyCut = async (req, res) => {
         const force = req.body?.force === true;
 
         // FIX: Use centralized tenant scope
+        const { buildTenantWhere, buildBranchWhere } = require('../utils/tenantScope');
         const tenantWhere = buildTenantWhere(req, { allowQueryTenant: false });
+        const branchWhere = buildBranchWhere(req);
 
         const result = await processDailyCutEmail({
             date,
             branches,
             email,
             userId: req.user?.id,
-            tenantFilter: tenantWhere, // Pass valid where clause
+            tenantFilter: tenantWhere,
+            branchFilter: branchWhere,
             force
         });
 
@@ -61,12 +64,19 @@ exports.previewDailyCut = async (req, res) => {
         // FIX: Use centralized tenant scope
         const tenantWhere = buildTenantWhere(req);
 
+        // --- FILTRADO POR SUCURSAL ---
+        const where = {
+            fecha_entrega: targetDate,
+            estatus_folio: { [Op.ne]: 'Cancelado' },
+            ...tenantWhere
+        };
+
+        if (branchList.length > 0) {
+            where.branchId = { [Op.in]: branchList };
+        }
+
         const folios = await Folio.findAll({
-            where: {
-                fecha_entrega: targetDate,
-                estatus_folio: { [Op.ne]: 'Cancelado' },
-                ...tenantWhere // Spread the tenant filter
-            },
+            where,
             order: [['hora_entrega', 'ASC']],
         });
 

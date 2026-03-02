@@ -265,6 +265,26 @@ exports.generateNotaVentaPdf = async (orderId, ctx) => {
     });
 };
 
+exports.generateLabelPdf = async (orderId, ctx) => {
+    const order = await findOrderScoped(orderId, ctx);
+    const branding = await getTenantBranding(ctx.tenantId);
+    const orderDTO = await toOrderDTO(order, branding);
+
+    return await renderPdf({
+        templateName: 'labelsTemplate',
+        data: {
+            folio: orderDTO
+        },
+        branding,
+        options: {
+            width: '100mm',
+            height: '75mm',
+            printBackground: true,
+            margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' }
+        }
+    });
+};
+
 exports.renderOrdersPdf = async ({ folios, date, branches }) => {
     try {
         return await renderPdf({
@@ -283,6 +303,28 @@ exports.renderOrdersPdf = async ({ folios, date, branches }) => {
         });
     } catch (error) {
         console.error('Error rendering orders PDF:', error);
+        throw error;
+    }
+};
+
+exports.renderCommissionsPdf = async ({ reportData, from, to }) => {
+    try {
+        return await renderPdf({
+            templateName: 'commissionReport',
+            data: {
+                reportData,
+                from,
+                to
+            },
+            options: {
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' }
+            },
+            branding: getDefaultBranding()
+        });
+    } catch (error) {
+        console.error('Error rendering commissions PDF:', error);
         throw error;
     }
 };

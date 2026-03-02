@@ -60,18 +60,33 @@ module.exports = async function (req, res, next) {
     }
 
     // 5. Guardamos usuario en req CON ROL NORMALIZADO
-    req.user = {
-      ...user.toJSON(), // Use user data from DB
-      id: user.id, // Explicit
-      role: normalizeRole(user.role, user.ownerId), // Normalize with context from DB user
-      tenantId: user.tenantId || null,
-      branchId: user.branchId || null
-    };
+    // Agregamos propiedades dinámicas al objeto usuario sin destruir la instancia
+    user.effectiveRole = normalizeRole(user.role, user.ownerId);
+
+    // Para compatibilidad con código existente que usa req.user.role
+    // Pero preservando los métodos de instancia isAdmin e isOwner
+    req.user = user;
+    req.user.role = user.effectiveRole;
+    req.tenantId = user.tenantId || null;
+    req.branchId = user.branchId || null;
 
     // --- REFUERZO DE SEGURIDAD ---
     // Si es EMPLOYEE, debe tener branchId (regla de negocio estricta)
     if (req.user.role === 'EMPLOYEE' && !req.user.branchId) {
       return res.status(403).json({ message: 'Acceso Denegado: Empleado sin sucursal asignada.' });
+    }
+
+    // --- GATEKEEPER: Activación de Cuenta ---
+    if (user.status === 'PENDING') {
+      const allowedPaths = ['/activation/', '/auth/logout', '/auth/me'];
+      const isAllowed = allowedPaths.some(path => req.originalUrl.includes(path));
+
+      if (!isAllowed) {
+        return res.status(403).json({
+          code: 'ACCOUNT_PENDING',
+          message: 'Tu cuenta está pendiente de activación. Introduce tu código.'
+        });
+      }
     }
 
     // --- Heartbeat: Update session lastSeenAt ---

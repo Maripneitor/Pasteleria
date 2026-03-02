@@ -317,18 +317,15 @@ class FolioService {
     }
 
     // --- PDF GENERATION FOR INDIVIDUAL FOLIO ---
-    async generateFolioPdf(id, tenantFilter, user) {
+    async generateFolioPdf(id, tenantFilter, user, type = 'folio') {
         const folio = await this.getFolioById(id, tenantFilter, true);
         if (!folio) throw { status: 404, message: 'Folio no encontrado' };
 
-        let templateConfig = {};
-        // branding logic if needed...
-
-        // This assumes pdfService.renderPdf is available via simple wrapper if we want to bypass specific helpers
-        // But let's use the explicit helpers from controller if needed, or generic render
-        // Attempt to use pdfService.generateComandaPdf as alias for single?
-        // Or generic render:
         const { renderPdf } = require('./pdfRenderer');
+        const f = folio.toJSON();
+
+        // Template Selection
+        const templateName = type === 'comanda' ? 'comanda' : 'folioTemplate';
 
         // Helper to get color by day
         const getDayColor = (dateStr) => {
@@ -342,23 +339,17 @@ class FolioService {
                 'Sábado': { bg: '#ffc107', text: '#000000' },
                 'Domingo': { bg: '#adb5bd', text: '#000000' }
             };
-            // Ensure date is treated as local day or UTC day correctly.
-            // Since fecha_entrega is YYYY-MM-DD, let's parse it as UTC to avoid timezone shifts
             const d = new Date(dateStr);
             const dayName = days[d.getUTCDay()];
             return colorMap[dayName] || { bg: '#f8f9fa', text: '#000000' };
         };
 
-        const f = folio.toJSON();
-
-        // Get color object with bg and text
         const colors = getDayColor(f.fecha_entrega);
 
-        // Map DB fields to Template DTO
         const folioData = {
             folioNumber: f.folioNumber,
-            dayColor: colors.bg, // Background color
-            textColor: colors.text, // Dynamic text color (white or black)
+            dayColor: colors.bg,
+            textColor: colors.text,
             formattedDeliveryDate: f.fecha_entrega,
             formattedDeliveryTime: f.hora_entrega,
             client: {
@@ -384,16 +375,22 @@ class FolioService {
             accessories: f.accesorios || '',
             isPaid: f.estatus_pago === 'Pagado',
             status: f.estatus_folio,
-            imageUrls: f.imagen_referencia_url ? [f.imagen_referencia_url] : []
+            imageUrls: f.imagen_referencia_url ? [f.imagen_referencia_url] : [],
+            diseno_metadata: f.diseno_metadata || {}
         };
 
         const buffer = await renderPdf({
-            templateName: 'folioTemplate',
-            data: { folio: folioData, watermark: computeWatermark(f) },
+            templateName: templateName,
+            data: {
+                folio: folioData,
+                watermark: computeWatermark(f),
+                // Compatibility for comanda template which might expect 'qrCode' or specific structure
+                qrCode: await require('qrcode').toDataURL(String(f.folioNumber))
+            },
             branding: {}
         });
 
-        return { buffer, filename: `${folio.folioNumber}.pdf` };
+        return { buffer, filename: `${f.folioNumber}.pdf` };
     }
 
     // --- DAILY REPORTS ---
@@ -492,6 +489,62 @@ class FolioService {
         });
 
         return { comandasBuffer, etiquetasBuffer };
+    }
+
+    async generateLabelPdf(id, tenantFilter) {
+        const folio = await this.getFolioById(id, tenantFilter, true);
+        if (!folio) throw { status: 404, message: 'Folio no encontrado' };
+
+        const json = folio.toJSON();
+        const { renderPdf } = require('./pdfRenderer');
+
+        // Prepare data for labels (Main + Tiers + Complements)
+        const labelsData = [];
+
+        // Main Label
+        labelsData.push({
+            folio: json.folioNumber,
+            horaEntrega: json.hora_entrega,
+            forma: json.forma || 'Normal',
+            personas: (json.numero_personas || '') + 'p',
+            esComplemento: false,
+            clientName: json.cliente_nombre
+        });
+
+        // Tiers
+        const tiers = json.diseno_metadata?.tiers || [];
+        if (Array.isArray(tiers)) {
+            tiers.forEach((t, i) => {
+                labelsData.push({
+                    folio: `${json.folioNumber}-P${i + 1}`,
+                    horaEntrega: json.hora_entrega,
+                    forma: 'Piso ' + (i + 1),
+                    personas: (t.personas || t.persons || '') + 'p',
+                    esComplemento: false
+                });
+            });
+        }
+
+        // Complements
+        if (json.complementosList && json.complementosList.length > 0) {
+            json.complementosList.forEach((c, i) => {
+                labelsData.push({
+                    folio: `${json.folioNumber}-C${i + 1}`,
+                    horaEntrega: json.hora_entrega,
+                    forma: 'Comp.',
+                    personas: (c.personas || '') + 'p',
+                    esComplemento: true
+                });
+            });
+        }
+
+        const buffer = await renderPdf({
+            templateName: 'labelsTemplate',
+            data: { etiquetas: labelsData, date: json.fecha_entrega, fecha: json.fecha_entrega },
+            options: { format: 'A4', printBackground: true }
+        });
+
+        return { buffer, filename: `etiquetas-${json.folioNumber}.pdf` };
     }
 }
 

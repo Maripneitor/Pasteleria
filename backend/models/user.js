@@ -43,7 +43,7 @@ const User = sequelize.define('User', {
   status: {
     type: DataTypes.ENUM('PENDING', 'ACTIVE', 'BLOCKED'),
     allowNull: false,
-    defaultValue: 'ACTIVE'
+    defaultValue: 'PENDING'
   },
   ownerId: {
     type: DataTypes.BIGINT, // Referencia al Dueño (si es empleado)
@@ -58,5 +58,14 @@ const User = sequelize.define('User', {
 }, {
   tableName: 'users' // Asegura que el nombre de la tabla sea 'users'
 });
+
+// Métodos de instancia para validación jerárquica
+User.prototype.isAdmin = function () {
+  return ['SUPER_ADMIN', 'ADMIN'].includes(this.role);
+};
+
+User.prototype.isOwner = function () {
+  return ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(this.role);
+};
 
 module.exports = User;

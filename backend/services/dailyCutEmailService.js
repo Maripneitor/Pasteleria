@@ -16,8 +16,9 @@ function ymd(d) {
  * @param {string} [params.email] - Recipient email override
  * @param {number} [params.userId] - ID of user triggering the action (if any)
  * @param {Object} [params.tenantFilter] - Sequelize filter for tenant scoping
+ * @param {Object} [params.branchFilter] - Sequelize filter for branch scoping
  */
-async function processDailyCutEmail({ date, branches = [], email, userId, tenantFilter = {}, force = false }) {
+async function processDailyCutEmail({ date, branches = [], email, userId, tenantFilter = {}, branchFilter = {}, force = false }) {
     const targetDate = date ? ymd(date) : ymd(new Date());
 
     // Recipients Logic
@@ -46,10 +47,16 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
 
     let cut;
     try {
+        // Use tenantId and branchId if present in filter
+        const tenantId = tenantFilter.tenantId || 1;
+        const branchId = branchFilter.branchId || null;
+
         // 1. Find or Create CashCut record to track status
         [cut] = await CashCut.findOrCreate({
-            where: { date: targetDate },
+            where: { date: targetDate, tenantId: tenantId, branchId: branchId },
             defaults: {
+                tenantId,
+                branchId,
                 status: 'Open',
                 totalIncome: 0,
                 totalExpense: 0,
@@ -75,7 +82,8 @@ async function processDailyCutEmail({ date, branches = [], email, userId, tenant
             where: {
                 fecha_entrega: targetDate,
                 estatus_folio: { [Op.ne]: 'Cancelado' },
-                ...tenantFilter
+                ...tenantFilter,
+                ...branchFilter
             },
             order: [['hora_entrega', 'ASC']],
         });

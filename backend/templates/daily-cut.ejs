@@ -44,16 +44,20 @@
                 totalVenta += Number(f.total || 0);
                 totalAnticipo += Number(f.anticipo || 0);
                 totalSaldo += Number(saldo);
+
+                const sabores = Array.isArray(f.sabores_pan) ? f.sabores_pan.join(', ') : (f.sabores_pan || '');
+                const rellenos = Array.isArray(f.rellenos) ? f.rellenos.join(', ') : (f.rellenos || '');
+                const desc = f.descripcion_diseno || (sabores + (rellenos ? ' / ' + rellenos : '')) || 'Sin descripción';
             %>
             <tr>
-                <td><%= f.id %></td>
+                <td><%= f.folioNumber || f.id %></td>
                 <td><%= f.hora_entrega || 'N/A' %></td>
                 <td><%= f.cliente_nombre || 'General' %></td>
-                <td><%= f.descripcion_diseno || f.sabor_pan || 'Sin descripción' %></td>
+                <td><%= desc %></td>
                 <td>$<%= Number(f.total || 0).toFixed(2) %></td>
                 <td>$<%= Number(f.anticipo || 0).toFixed(2) %></td>
                 <td>$<%= saldo.toFixed(2) %></td>
-                <td><%= f.estatus_folio %></td>
+                <td><%= f.estatus_pago %></td>
             </tr>
             <% }); %>
             

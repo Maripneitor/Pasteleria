@@ -86,9 +86,10 @@ async function getInitialExtraction(conversationText) {
         * **LISTA DE RELLENOS OFICIALES:** ${fillingsTxt}
 
         **Instrucciones Generales:**
-        1.  **Analiza la conversación:** Lee todo el texto para entender los detalles del pedido.
-        2.  **Interpreta fechas y horas:** Convierte fechas relativas (ej. "mañana", "el próximo lunes") a formato AAAA-MM-DD. Convierte horas a formato HH:MM:SS de 24 horas.
-        3.  **Formato de Salida:** Responde únicamente con un objeto JSON válido, sin ningún texto adicional antes o después.
+        1.  **Analiza la conversación:** Lee todo el texto con atención. Los usuarios suelen corregirse a sí mismos (ej. "quiero sabor vainilla... espera, mejor chocolate"). Debes extraer el ÚLTIMO valor confirmado o deseado por el usuario.
+        2.  **Interpreta fechas y horas:** Convierte fechas relativas (ej. "mañana", "el próximo lunes") a formato AAAA-MM-DD. Si mencionan un día de la semana y un número de día (ej. "domingo 8"), prioriza el número del día y el mes mencionado para calcular el año correcto más cercano (actual o siguiente). Convierte horas a formato HH:MM:SS de 24 horas.
+        3.  **Manejo de Varias Opciones:** Si el usuario dice "mita y mita" para rellenos o sabores, extrae ambos y ponlos en el array correspondiente.
+        4.  **Formato de Salida:** Responde únicamente con un objeto JSON válido, sin ningún texto adicional antes o después.
 
         **Instrucciones Específicas para Tipo de Folio y Estructura:**
         1.  **Detecta el Tipo de Folio:**

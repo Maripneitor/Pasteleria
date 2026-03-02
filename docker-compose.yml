@@ -11,7 +11,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: 'America/Mexico_City'
     ports:
-      - "3306:3306" # Standard port for easier access
+      - "3307:3306" # Altered port to avoid conflicts with local MySQL
     volumes:
       - mysql_data:/var/lib/mysql
     #      - ./backend/RESPALDOS_BD/backup_2025-09-30.sql:/docker-entrypoint-initdb.d/init.sql
@@ -48,6 +48,8 @@ services:
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
       - API_URL=${API_URL}
       - PUBLIC_APP_URL=${PUBLIC_APP_URL}
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium

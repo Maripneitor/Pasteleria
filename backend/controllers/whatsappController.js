@@ -126,7 +126,15 @@ exports.handleWebhook = async (req, res) => {
  */
 exports.getQR = async (req, res) => {
   try {
-    const data = gateway.getStatus();
+    let data;
+    try {
+      // Intentamos consultar al contenedor 'whatsapp' (puerto 3001)
+      const response = await axios.get('http://whatsapp:3001/status');
+      data = response.data;
+    } catch (e) {
+      console.warn('⚠️ Gateway container not reachable, fallback to local (likely 404)');
+      data = gateway.getStatus();
+    }
 
     // Support for Direct Image Source: /api/whatsapp/qr?format=image
     if (req.query.format === 'image') {
@@ -167,7 +175,12 @@ exports.getQR = async (req, res) => {
 
 exports.refreshSession = async (req, res) => {
   try {
-    await gateway.restart();
+    try {
+      await axios.post('http://whatsapp:3001/restart');
+    } catch (e) {
+      console.warn('⚠️ Gateway container not reachable, using local fallback');
+      await gateway.restart();
+    }
     res.json({ message: 'Reiniciando sesión de WhatsApp...' });
   } catch (error) {
     res.status(500).json({ message: 'Error reiniciando sesión' });

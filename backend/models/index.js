@@ -58,6 +58,9 @@ FolioEditHistory.belongsTo(User, { as: 'editor', foreignKey: 'editorUserId' });
 User.hasMany(AuditLog, { foreignKey: 'actorUserId', as: 'auditLogs' });
 AuditLog.belongsTo(User, { foreignKey: 'actorUserId', as: 'actor' });
 
+Tenant.hasMany(AuditLog, { foreignKey: 'tenantId', as: 'auditLogs' });
+AuditLog.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
+
 // --- Relaciones Caja ---
 CashMovement.belongsTo(CashCut, { foreignKey: 'cashCutId' });
 CashCut.hasMany(CashMovement, { foreignKey: 'cashCutId' });
@@ -100,10 +103,10 @@ UserSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // --- Relaciones SaaS ---
 Tenant.hasOne(SaaSContract, { foreignKey: 'tenantId', as: 'saasContract' });
-SaaSContract.belongsTo(Tenant, { foreignKey: 'tenantId' });
+SaaSContract.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 
 Tenant.hasMany(SaaSCommissionLedger, { foreignKey: 'tenantId', as: 'commissions' });
-SaaSCommissionLedger.belongsTo(Tenant, { foreignKey: 'tenantId' });
+SaaSCommissionLedger.belongsTo(Tenant, { foreignKey: 'tenantId', as: 'tenant' });
 
 // Branch - Folio
 Branch.hasMany(Folio, { foreignKey: 'branchId', as: 'folios' });

@@ -85,8 +85,7 @@ class SaaSCommissionService {
 
             } else {
                 // DOWNSELL / POTENTIAL FRAUD
-                // Capture Alert in AuditLog (Tenant level or Super Admin?)
-                // Super Admin Alert
+                // Capture Alert in AuditLog
                 await AuditLog.create({
                     tenantId,
                     entity: 'SAAS_ALERT',
@@ -98,8 +97,26 @@ class SaaSCommissionService {
                         curr: orderTotal,
                         ledgerId: existing.id
                     },
-                    actorUserId: null // System
+                    actorUserId: null
                 }, { transaction });
+
+                // NOTIFICACIÓN CRÍTICA (Fire & Forget or non-blocking)
+                const { sendEmail } = require('./emailService');
+                sendEmail({
+                    to: process.env.ADMIN_EMAIL || 'admin@pasteleria.com',
+                    subject: `🚨 ALERTA SAAS: Discrepancia en Folio ${folioId} (Tenant ${tenantId})`,
+                    html: `
+                        <h2>Discrepancia detectada en comisión</h2>
+                        <p>El total del pedido disminuyó después del registro inicial.</p>
+                        <ul>
+                            <li><b>Folio:</b> ${folioId}</li>
+                            <li><b>Tenant:</b> ${tenantId}</li>
+                            <li><b>Total previo:</b> $${prevTotal}</li>
+                            <li><b>Total actual:</b> $${orderTotal}</li>
+                        </ul>
+                        <p>Revisa el historial de auditoría para más detalles.</p>
+                    `
+                }).catch(e => console.error("Email Alert Fail:", e.message));
             }
         }
     }

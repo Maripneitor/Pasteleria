@@ -2,7 +2,9 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const CashCut = sequelize.define('CashCut', {
-    date: { type: DataTypes.DATEONLY, allowNull: false, unique: true },
+    date: { type: DataTypes.DATEONLY, allowNull: false },
+    tenantId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 1 },
+    branchId: { type: DataTypes.BIGINT, allowNull: true }, // Added for Sprint 4 scoping
     createdByUserId: { type: DataTypes.BIGINT, allowNull: true },
     totalIncome: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
     totalExpense: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
@@ -15,11 +17,19 @@ const CashCut = sequelize.define('CashCut', {
     emailStatus: { type: DataTypes.ENUM('PENDING', 'SENT', 'FAILED'), defaultValue: 'PENDING' },
     emailTo: { type: DataTypes.STRING, allowNull: true },
     emailError: { type: DataTypes.TEXT, allowNull: true }
-}, { tableName: 'cash_cuts' });
+}, {
+    tableName: 'cash_cuts',
+    indexes: [
+        { unique: true, fields: ['date', 'tenantId', 'branchId'] }
+    ]
+});
 
 const CashMovement = sequelize.define('CashMovement', {
     type: { type: DataTypes.ENUM('Income', 'Expense'), allowNull: false },
     amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    tenantId: { type: DataTypes.BIGINT, allowNull: false, defaultValue: 1 },
+    branchId: { type: DataTypes.BIGINT, allowNull: true } // Branch context
+    ,
     category: { type: DataTypes.STRING, allowNull: false }, // 'Venta', 'Anticipo', 'Compra Insumos', 'Pago Servicio'
     description: { type: DataTypes.TEXT, allowNull: true },
     referenceId: { type: DataTypes.STRING, allowNull: true }, // Folio ID associated

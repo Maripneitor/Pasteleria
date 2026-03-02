@@ -119,8 +119,9 @@ async function renderPdf({ templateName, data, branding, options = {} }) {
         }
 
         const buffer = await page.pdf(pdfConfig);
-        console.log(`✅ [PDF] Generado con éxito. Tamaño: ${buffer.length} bytes`);
-        return buffer;
+        const finalBuffer = Buffer.from(buffer);
+        console.log(`✅ [PDF] Generado con éxito. Tamaño: ${finalBuffer.length} bytes`);
+        return finalBuffer;
 
     } catch (e) {
         await logPdfError(e);
