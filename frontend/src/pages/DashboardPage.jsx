@@ -130,17 +130,16 @@ const OwnerDashboard = ({ stats, navigate, handleLogout }) => {
 
 const EmployeeDashboard = ({ stats, navigate, handleLogout, handleBuscar, handleDownloadPDF }) => {
   const actions = [
-    { title: 'Nuevo Folio', icon: PlusCircle, bg: 'bg-pink-600', onClick: () => navigate('/pedidos/nuevo') },
-    { title: 'Dictar Pedido', icon: Mic, bg: 'bg-violet-600', onClick: () => window.dispatchEvent(new Event('open-ai-tray')) },
-    { title: 'Ver Calendario', icon: Calendar, bg: 'bg-blue-500', onClick: () => navigate('/calendario') },
-    { title: 'Reportes y Cortes', icon: FileText, bg: 'bg-emerald-600', onClick: () => navigate('/admin/reports') },
+    { title: 'Nuevo Folio', icon: PlusCircle, bg: 'bg-pink-600 border border-pink-500 shadow-md shadow-pink-200', onClick: () => navigate('/pedidos/nuevo') },
+    { title: 'Dictar Pedido', icon: Mic, bg: 'bg-violet-600 border border-violet-500 shadow-md shadow-violet-200', onClick: () => window.dispatchEvent(new Event('open-ai-tray')) },
+    { title: 'Ver Calendario', icon: Calendar, bg: 'bg-blue-500 border border-blue-400 shadow-md shadow-blue-200', onClick: () => navigate('/calendario') },
   ];
 
   const adminModules = [
-    { title: 'Usuarios', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', path: '/usuarios' },
-    { title: 'Sabores', icon: ChefHat, color: 'text-pink-600', bg: 'bg-pink-50', path: '/admin/sabores' },
-    { title: 'Reportes', icon: PieChart, color: 'text-purple-600', bg: 'bg-purple-50', path: '/admin/stats' },
-    { title: 'Comisiones', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50', path: '/admin/comisiones' },
+    { title: 'Usuarios', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50 hover:bg-blue-100', path: '/usuarios' },
+    { title: 'Sabores', icon: ChefHat, color: 'text-pink-600', bg: 'bg-pink-50 hover:bg-pink-100', path: '/admin/sabores' },
+    { title: 'Reportes', icon: PieChart, color: 'text-purple-600', bg: 'bg-purple-50 hover:bg-purple-100', path: '/admin/stats' },
+    { title: 'Comisiones', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50 hover:bg-green-100', path: '/admin/comisiones' },
   ];
 
   return (
