@@ -40,6 +40,7 @@ import CommissionsPage from './pages/CommissionsPage';
 import ReportsPage from './pages/ReportsPage';
 import BrandingPage from './pages/admin/BrandingPage';
 import TenantsPage from './pages/admin/TenantsPage';
+import TenantDetailPage from './pages/admin/TenantDetailPage';
 
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -71,7 +72,7 @@ function App() {
             <Route path="folios" element={<Navigate to="/pedidos" replace />} />
 
             <Route path="folios/:id" element={<FolioDetailPage />} />
-            <Route path="pedidos/:id" element={<Navigate to={`/folios/:id`} replace />} />
+            <Route path="pedidos/:id" element={<FolioDetailPage />} />
 
             {/* Legacy Edit Route - could be migrated later */}
             <Route path="pedidos/:id/editar" element={<EditOrderPage />} />
@@ -109,6 +110,7 @@ function App() {
             {/* SuperAdmin Management */}
             <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
               <Route path="admin/tenants" element={<TenantsPage />} />
+              <Route path="admin/tenants/:id" element={<TenantDetailPage />} />
             </Route>
 
             <Route path="admin/whatsapp" element={<WhatsAppPage />} />

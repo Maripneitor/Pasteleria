@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import { Building, Users, AlertCircle, CheckCircle, Save, Settings as SettingsIcon, Store as StoreIcon, DollarSign, Clock, Download } from 'lucide-react';
+import { Building, Users, AlertCircle, CheckCircle, Save, Settings as SettingsIcon, Store as StoreIcon, DollarSign, Clock, Download, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const TenantsPage = () => {
@@ -33,7 +34,7 @@ const TenantsPage = () => {
     const saveLimit = async (tenantId) => {
         try {
             await api.put(
-                `/super/tenants/${tenantId}/limit`,
+                `/super/tenants/${tenantId}/limits`,
                 { maxBranches: editLimit }
             );
             toast.success("Límite actualizado");
@@ -70,7 +71,11 @@ const TenantsPage = () => {
                                     {tenant.businessName.charAt(0)}
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-800">{tenant.businessName}</h3>
+                                    <Link to={`/admin/tenants/${tenant.id}`} className="hover:underline">
+                                        <h3 className="font-bold text-gray-800 flex items-center gap-1">
+                                            {tenant.businessName} <ChevronRight size={16} className="text-gray-400" />
+                                        </h3>
+                                    </Link>
                                     <span className="text-xs text-gray-400">ID: {tenant.id}</span>
                                 </div>
                             </div>

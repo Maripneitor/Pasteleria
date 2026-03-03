@@ -93,6 +93,18 @@ export default function CalendarPage() {
                             minute: '2-digit',
                             meridiem: 'short'
                         }}
+                        eventContent={(eventInfo) => {
+                            // Extract color or default to pink
+                            const bgColor = eventInfo.event.backgroundColor || '#ec4899'; // pink-500
+                            return (
+                                <div className="p-1 px-2 text-xs font-bold text-white rounded shadow-sm w-full outline-none border-none truncate" style={{ backgroundColor: bgColor }}>
+                                    <div className="flex items-center gap-1 opacity-90 text-[10px]">
+                                        <span>⏰ {eventInfo.timeText}</span>
+                                    </div>
+                                    <div className="truncate">{eventInfo.event.title}</div>
+                                </div>
+                            );
+                        }}
                     />
                 </div>
             </Card>

@@ -117,46 +117,53 @@ const StepB_OrderDetails = ({ next, prev }) => {
             </div>
 
             {/* 2. Type & Specs */}
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid lg:grid-cols-3 gap-6 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Tipo de Folio</label>
-                    <div className="flex bg-gray-100 p-1 rounded-xl">
+                    <label className="block text-sm font-bold text-gray-700 mb-3">Tipo de Pastel</label>
+                    <div className="grid grid-cols-2 gap-2">
                         <button
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${orderData.tipo_folio !== 'Base' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`py-3 px-4 rounded-xl text-sm font-bold transition-all border-2 ${orderData.tipo_folio !== 'Base' ? 'border-pink-500 bg-pink-50 text-pink-700 shadow-md transform scale-105' : 'border-gray-100 bg-gray-50 text-gray-500 hover:bg-gray-100 hover:border-gray-200'}`}
                             onClick={() => updateOrder({ tipo_folio: 'Normal' })}
                         >
-                            Normal
+                            🍰 Normal
                         </button>
                         <button
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${orderData.tipo_folio === 'Base' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`py-3 px-4 rounded-xl text-sm font-bold transition-all border-2 ${orderData.tipo_folio === 'Base' ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-md transform scale-105' : 'border-gray-100 bg-gray-50 text-gray-500 hover:bg-gray-100 hover:border-gray-200'}`}
                             onClick={() => updateOrder({ tipo_folio: 'Base' })}
                         >
-                            Base / Especial
+                            🎂 Base/Especial
                         </button>
                     </div>
                 </div>
                 <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Número de Personas</label>
-                    <input
-                        type="number"
-                        value={orderData.peopleCount || ''}
-                        onChange={(e) => updateOrder({ peopleCount: e.target.value })}
-                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500"
-                        placeholder="Ej. 20"
-                    />
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-400 font-bold">👤</span>
+                        </div>
+                        <input
+                            type="number"
+                            min="1"
+                            value={orderData.peopleCount || ''}
+                            onChange={(e) => updateOrder({ peopleCount: e.target.value })}
+                            className="w-full pl-10 p-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:ring-0 transition-colors font-bold text-gray-700 text-lg"
+                            placeholder="Ej. 20"
+                        />
+                    </div>
                 </div>
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Forma</label>
-                    <select
-                        className="w-full p-3 border border-gray-300 rounded-xl bg-white"
-                        value={orderData.shape || 'Redondo'}
-                        onChange={(e) => updateOrder({ shape: e.target.value })}
-                    >
-                        <option value="Redondo">Redondo</option>
-                        <option value="Cuadrado">Cuadrado</option>
-                        <option value="Rectangular">Rectangular</option>
-                        <option value="Corazon">Corazón</option>
-                    </select>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Forma del Pastel</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {['Redondo', 'Cuadrado', 'Rectangular', 'Corazon'].map(shape => (
+                            <button
+                                key={shape}
+                                onClick={() => updateOrder({ shape: shape })}
+                                className={`py-2 px-2 rounded-lg text-xs font-bold transition-all border ${orderData.shape === shape ? 'border-pink-500 bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-md' : 'border-gray-200 bg-white text-gray-600 hover:border-pink-300'}`}
+                            >
+                                {shape === 'Corazon' ? 'Corazón' : shape}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
