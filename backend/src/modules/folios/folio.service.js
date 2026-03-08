@@ -56,30 +56,35 @@ class FolioService {
         const where = { ...tenantFilter };
 
         if (q) {
-            where[Op.and] = [
-                tenantFilter,
-                {
-                    [Op.or]: [
-                        { folioNumber: { [Op.like]: `%${q}%` } },
-                        { cliente_nombre: { [Op.like]: `%${q}%` } },
-                        { cliente_telefono: { [Op.like]: `%${q}%` } },
-                    ]
-                }
+            // Esto permite que si buscas "Juan", lo busque en nombre, tel o folio
+            where[Op.or] = [
+                { folioNumber: { [Op.like]: `%${q}%` } },
+                { cliente_nombre: { [Op.like]: `%${q}%` } },
+                { cliente_telefono: { [Op.like]: `%${q}%` } },
             ];
         }
 
         return Folio.findAll({
             where,
             order: [['createdAt', 'DESC']],
+            limit: 10 // No satures el chat, con 10 es suficiente
         });
     }
 
     async getFolioById(id, tenantFilter, includeComplements = true) {
-        const options = { where: { id, ...tenantFilter } };
+        // 1. Limpiamos el filtro de sucursal porque los borradores de IA
+        // a veces nacen con branchId en null y eso bloquea la búsqueda.
+        const safeFilter = { ...tenantFilter };
+        delete safeFilter.branchId;
+
+        const options = { where: { id, ...safeFilter } };
         if (includeComplements) {
             options.include = [{ association: 'complementosList' }];
         }
-        return Folio.findOne(options);
+        
+        // 2. Agregamos .unscoped() para romper cualquier candado automático
+        // que esté escondiendo los estatus "DRAFT".
+        return Folio.unscoped().findOne(options);
     }
 
     async createFolio(folioData, user, tenantId, t = null) {

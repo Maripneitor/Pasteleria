@@ -12,9 +12,22 @@ exports.listFolios = asyncHandler(async (req, res) => {
 
 // ✅ GET ONE
 exports.getFolioById = asyncHandler(async (req, res) => {
+    // TRAMPA 1: Ver qué ID está recibiendo realmente
+    console.log("🔍 FRONTEND PIDIENDO EL FOLIO ID:", req.params.id); 
+    
     const tenantFilter = buildTenantWhere(req);
+    // TRAMPA 2: Ver los filtros de seguridad
+    console.log("🔐 Filtros aplicados:", tenantFilter); 
+    
     const row = await folioService.getFolioById(req.params.id, tenantFilter);
-    if (!row) return res.status(404).json({ message: 'Folio no encontrado (o sin acceso)' });
+    
+    if (!row) {
+        // TRAMPA 3: Ver si la base de datos lo rechazó
+        console.log("❌ ERROR: La base de datos devolvió NULL para el ID:", req.params.id); 
+        return res.status(404).json({ message: 'Folio no encontrado (o sin acceso)' });
+    }
+    
+    console.log("✅ FOLIO ENCONTRADO Y ENVIADO AL FRONTEND");
     res.json(row);
 });
 

@@ -279,17 +279,31 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                     return (
                         <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                             <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
-                                <Search size={16} /> {msg.count} Resultados
+                                <Search size={16} /> {msg.results.length} Resultados
                             </h4>
                             <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {msg.results.slice(0, 10).map((order) => (
-                                    <div key={order.id} onClick={() => { navigate(`/pedidos/${order.id}`); onClose(); }} className="block p-2 bg-white rounded border hover:border-yellow-400 transition cursor-pointer">
+                                {msg.results.map((order) => (
+                                    <div 
+                                        key={order.id} 
+                                        onClick={() => { 
+                                            // 🚀 Aquí es donde sucede la magia del clic
+                                            navigate(`/pedidos/${order.id}`); 
+                                            onClose(); 
+                                        }} 
+                                        className="block p-3 bg-white rounded-xl border border-gray-100 hover:border-yellow-400 hover:shadow-md transition cursor-pointer"
+                                    >
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <p className="font-semibold text-sm">{order.folioNumber}</p>
-                                                <p className="text-xs text-gray-600">{order.cliente}</p>
+                                                {/* Cambiamos order.folioNumber por order.folio */}
+                                                <p className="font-bold text-gray-900 text-sm">{order.folio}</p>
+                                                <p className="text-xs text-gray-500 font-medium">{order.cliente}</p>
                                             </div>
-                                            <span className="text-sm font-bold text-green-600">${order.total}</span>
+                                            <div className="text-right">
+                                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                                                    {order.status}
+                                                </span>
+                                                <p className="text-[10px] text-gray-400 mt-1">{order.fecha}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
