@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useOrder } from '../../context/OrderContext';
+import { useOrder } from '@/context/OrderContext';
 import { Cake, FileText, Loader2 } from 'lucide-react';
-import api from '../../config/axios';
+import api from '@/config/axios';
 import toast from 'react-hot-toast';
 
 const StepProduct = () => {

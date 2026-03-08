@@ -17,7 +17,6 @@ const AIDraftPanel = () => {
         setSuggestion(null);
 
         try {
-            // Llama al endpoint de IA (simulado o real)
             const res = await client.post('/ai/draft', { prompt });
             const { draft, missing, nextQuestion, mode, warning } = res.data;
 

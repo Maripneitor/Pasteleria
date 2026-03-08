@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import client from '../config/axios';
+import client from '@/config/axios';
 
 /**
  * usePollingQR - Hook para obtener estado y QR con backoff

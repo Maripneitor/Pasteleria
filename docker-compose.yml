@@ -5,11 +5,11 @@ services:
     container_name: pasteleria-db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      TZ: 'America/Mexico_City'
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secure_password}
+      MYSQL_DATABASE: ${DB_NAME:-pasteleria_db}
+      MYSQL_USER: ${DB_USER:-pasteleria_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secure_password}
+      TZ: "America/Mexico_City"
     ports:
       - "3307:3306" # Altered port to avoid conflicts with local MySQL
     volumes:
@@ -17,7 +17,17 @@ services:
     #      - ./backend/RESPALDOS_BD/backup_2025-09-30.sql:/docker-entrypoint-initdb.d/init.sql
     #      - ./backend/RESPALDOS_BD/02_update_schema.sql:/docker-entrypoint-initdb.d/z_update_schema.sql
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DB_PASSWORD}" ]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "--password=${DB_PASSWORD:-secure_password}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -33,29 +43,37 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+    # 👇 ESTE COMANDO HACE TODO EL TRABAJO AUTOMÁTICO 👇
+    command: >
+      sh -c "npm install && 
+             npx sequelize-cli db:migrate && 
+             npx sequelize-cli db:seed:all && 
+             npm run dev"
     environment:
       - PORT=3000
       - DB_HOST=db
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - JWT_SECRET=${JWT_SECRET}
+      - DB_USER=${DB_USER:-pasteleria_user}
+      - DB_PASSWORD=${DB_PASSWORD:-secure_password}
+      - DB_NAME=${DB_NAME:-pasteleria_db}
+      - JWT_SECRET=${JWT_SECRET:-super_secreto_desarrollo_123}
       - DB_PORT=3306
       - WEBHOOK_URL=http://backend:3000/api/webhooks/whatsapp
       # Auto-sync schema in dev mode for zero-config
-      - DB_SYNC_MODE=${DB_SYNC_MODE:-alter}
+      - DB_SYNC_MODE=${DB_SYNC_MODE:-none}
       - TZ=America/Mexico_City
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - EMAIL_USER=${EMAIL_USER}
-      - EMAIL_PASS=${EMAIL_PASS}
-      - API_URL=${API_URL}
-      - PUBLIC_APP_URL=${PUBLIC_APP_URL}
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      # 👇 AQUÍ ESTÁ LA MAGIA 👇
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-superadmin@lafiesta.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health" ]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -76,7 +94,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=/api
+      - VITE_API_URL=/api/v1
       - VITE_PROXY_TARGET=http://backend:3000
       - TZ=America/Mexico_City
       # Proxy handling is done in vite.config.js, but env var helps if dynamic
@@ -112,7 +130,6 @@ services:
 
 volumes:
   mysql_data:
-
 
 networks:
   default:

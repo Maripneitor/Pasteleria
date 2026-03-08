@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getToken, clearToken } from '../utils/auth';
 
 const client = axios.create({
-    baseURL: '/api', // Relative to use the Vite proxy
+    baseURL: import.meta.env.VITE_API_URL || '/api/v1',
     headers: {
         'Content-Type': 'application/json'
     }
@@ -53,32 +53,14 @@ client.interceptors.response.use(
         }
 
         // 1. Mostrar mensaje amigable (toast) en vez de error técnico
-        // Specialized Handler for Dashboard Stats 500 (Sync Issues)
-        if (error.config?.url?.includes('/stats') && error.response?.status === 500) {
-            console.warn("⚠️ Intercepted 500 on Stats (Returning Default)");
-            return {
-                data: {
-                    metrics: { totalOrders: 0, pendingOrders: 0, todayOrders: 0, totalSales: 0 },
-                    recientes: [],
-                    populares: []
-                }
-            };
-        }
-
-        // 🛡️ GENERAL 500 HANDLER (Sync/Maintenance)
-        if (error.response?.status === 500 && !error.config?.url?.includes('/stats')) {
-            toast.error("El sistema se está sincronizando, reintenta en 10 segundos", {
-                id: 'sync-error', // Prevent duplicates
-                duration: 6000
-            });
-        }
-
-        // Salvo que la petición cancele explícitamente el toast (config.skipToast) - future proofing
+        // Se removió el "parche" de 500 y /stats para que el ErrorBoundary o React Query maneje el fallo real.
         if (!error.config?.skipToast) {
-            const msg = friendlyError(error);
+            const msg = friendlyError(error) || "Ocurrió un error en el servidor";
             // Append Request ID if available for tracking
             const displayMsg = requestId ? `${msg} (ReqID: ${requestId.slice(0, 6)})` : msg;
-            toast.error(displayMsg);
+            toast.error(displayMsg, {
+                id: error.config?.url, // Prevent duplicates for same request
+            });
         }
 
         // 2. Manejo de Auth (401)

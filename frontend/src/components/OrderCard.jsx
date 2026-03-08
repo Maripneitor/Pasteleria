@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileText, Edit, Trash2, XCircle, DollarSign, Package } from 'lucide-react';
 import client from '../config/axios';
-import { ordersApi } from '../services/ordersApi';
+import { foliosApi } from '../features/folios/api/folios.api';
 import { handlePdfResponse } from '../utils/pdfHelper'; // Import helper
 import toast from 'react-hot-toast';
 
@@ -9,11 +9,11 @@ const OrderCard = ({ order, onUpdate }) => {
     const [loading, setLoading] = useState(false);
 
     const handlePrintPdf = () => {
-        handlePdfResponse(() => ordersApi.downloadPdf(order.id));
+        handlePdfResponse(() => foliosApi.downloadPdf(order.id));
     };
 
     const handlePrintLabel = () => {
-        handlePdfResponse(() => ordersApi.downloadLabel(order.id));
+        handlePdfResponse(() => foliosApi.downloadLabel(order.id));
     };
 
     const handleStatusUpdate = async (newStatus) => {
@@ -27,8 +27,8 @@ const OrderCard = ({ order, onUpdate }) => {
                 // For now, assume backend logic handles payment status logic via generic update or quick patch
                 // But wait, listFolios returns 'estatus_pago'. 
                 // We'll try generic update or assume specific quick action endpoint later. 
-                // Let's use ordersApi.update for now as a safe fallback or ordersApi.status if supported.
-                // The 'ordersApi.status' maps to PATCH /:id/status which updates 'estatus_produccion' usually.
+                // Let's use foliosApi.update for now as a safe fallback or foliosApi.status if supported.
+                // The 'foliosApi.status' maps to PATCH /:id/status which updates 'estatus_produccion' usually.
                 // We need to clarify if there is a payment update endpoint. 
                 // server/controllers/folioController.js has updateFolioStatus -> estatus_produccion
                 // server/routes/folioRoutes.js has updateFolio -> full update
@@ -140,13 +140,13 @@ const OrderCard = ({ order, onUpdate }) => {
                         {/* Dropdown Menu */}
                         <div className="absolute bottom-full right-0 mb-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden hidden group-hover/print:block z-20">
                             <button
-                                onClick={() => handlePdfResponse(() => ordersApi.downloadLabel(order.id, 'thermal'))}
+                                onClick={() => handlePdfResponse(() => foliosApi.downloadLabel(order.id, 'thermal'))}
                                 className="w-full text-left px-4 py-2 text-sm hover:bg-purple-50 text-gray-700 font-medium"
                             >
                                 Ticket (80mm)
                             </button>
                             <button
-                                onClick={() => handlePdfResponse(() => ordersApi.downloadLabel(order.id, 'a4'))}
+                                onClick={() => handlePdfResponse(() => foliosApi.downloadLabel(order.id, 'a4'))}
                                 className="w-full text-left px-4 py-2 text-sm hover:bg-purple-50 text-gray-700 font-medium"
                             >
                                 Hoja (A4)

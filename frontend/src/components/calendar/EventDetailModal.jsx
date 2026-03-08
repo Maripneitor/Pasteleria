@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, User, Phone, DollarSign, FileText, Clock, Calendar, CheckCircle, Package } from 'lucide-react';
-import { ordersApi } from '../../services/ordersApi';
+import { foliosApi } from '@/features/folios/api/folios.api';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,7 +13,8 @@ const EventDetailModal = ({ eventId, onClose }) => {
         const load = async () => {
             try {
                 setLoading(true);
-                const res = await ordersApi.getCalendarDetail(eventId);
+                // Usamos el eventId que viene por props
+                const res = await foliosApi.getCalendarDetail(eventId);
                 setData(res.data);
             } catch (e) {
                 console.error(e);
@@ -138,8 +139,9 @@ const EventDetailModal = ({ eventId, onClose }) => {
                                 <div className="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden hidden group-hover:block z-50">
                                     <button
                                         onClick={() => {
-                                            import('../../utils/pdfHelper').then(({ handlePdfResponse }) => {
-                                                handlePdfResponse(() => ordersApi.downloadLabel(data.id, 'thermal'));
+                                            import('@/utils/pdfHelper').then(({ handlePdfResponse }) => {
+                                                // Corregido: Usamos eventId directamente
+                                                handlePdfResponse(() => foliosApi.downloadLabel(eventId, 'thermal'));
                                             });
                                         }}
                                         className="w-full text-left px-4 py-3 text-sm hover:bg-purple-50 text-gray-700 font-medium border-b border-gray-50"
@@ -148,8 +150,9 @@ const EventDetailModal = ({ eventId, onClose }) => {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            import('../../utils/pdfHelper').then(({ handlePdfResponse }) => {
-                                                handlePdfResponse(() => ordersApi.downloadLabel(data.id, 'a4'));
+                                            import('@/utils/pdfHelper').then(({ handlePdfResponse }) => {
+                                                // Corregido: Usamos eventId directamente
+                                                handlePdfResponse(() => foliosApi.downloadLabel(eventId, 'a4'));
                                             });
                                         }}
                                         className="w-full text-left px-4 py-3 text-sm hover:bg-purple-50 text-gray-700 font-medium"
@@ -160,7 +163,8 @@ const EventDetailModal = ({ eventId, onClose }) => {
                             </div>
 
                             <button
-                                onClick={() => navigate(`/pedidos/${data.id}/editar`)}
+                                // Corregido: Cambiamos evt.id por eventId
+                                onClick={() => navigate(`/pedidos/${eventId}/editar`)}
                                 className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl transition shadow-lg shadow-pink-200"
                             >
                                 Editar Pedido

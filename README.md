@@ -1,90 +1,89 @@
-# 🎂 Pastelería La Fiesta - Sistema de Gestión
+# 🎂 Sistema de Gestión - Pastelería La Fiesta
 
-Sistema integral para la gestión de pedidos, clientes y reportes de la pastelería. Construido con un enfoque de alto rendimiento, multi-tenencia y una interfaz de usuario moderna y fluida.
-
----
-
-## 🛠️ Stack Tecnológico
-
-### Frontend
-- **Framework:** React 19 + Vite
-- **Estilos:** Tailwind CSS 3.4
-- **Animaciones:** Framer Motion 12
-- **UI Components:** Lucide React, Recharts, FullCalendar
-- **Gestión:** React Hook Form, Context API
-
-### Backend
-- **Core:** Node.js (v24+) + Express
-- **Base de Datos:** MySQL + Sequelize (ORM)
-- **Generación de Documentos:** Puppeteer (para PDFs de alta fidelidad), PDFKit (ligero)
-- **Integraciones:** WhatsApp Web.js (Notificaciones), OpenAI (Asistente IA Voice-to-Order)
+Bienvenido al sistema integral de gestión para pastelerías. Este proyecto es una solución SaaS multi-inquilino con soporte para múltiples sucursales, facturación, reportes en PDF e integración con IA.
 
 ---
 
-## 🚀 Cómo Correr el Proyecto
+## 🚀 Inicio Rápido (Docker)
 
-### Opción A: Con Docker (Recomendado)
-Esta opción levanta automáticamente el Frontend, Backend y la Base de Datos.
+La forma más rápida y recomendada de correr el proyecto es usando Docker.
 
-1.  **Iniciar Entorno:**
-    ```bash
-    docker compose up -d --build
-    ```
-2.  **Inicializar Datos (Seeding):**
-    Para cargar el catálogo de prueba, sucursales y roles:
-    ```bash
-    docker compose exec backend npm run seed:full
-    ```
-3.  **Credenciales por Defecto:**
-    - **SuperAdmin:** `admin@gmail.com` / `Admin1234`
-    - **Owner:** `owner@demo.com` / `admin123`
-    - **Mario Dev:** `mario@dev.com` / `mario123`
-4.  **Limpiar Entorno:**
-    ```bash
-    docker compose down -v
-    ```
+### 1. Preparar el Entorno
+Copia el archivo de ejemplo y ajusta tus credenciales (especialmente las llaves de API si las tienes):
+```bash
+cp .env.example .env
+```
+*(Nota: El sistema tiene valores por defecto seguros para desarrollo local si prefieres no crear el .env inmediatamente).*
 
-### Opción B: Con NPM (Desarrollo Local)
-Necesitarás tener una instancia de MySQL corriendo localmente.
+### 2. Encender Motores
+Levanta todo el ecosistema (Base de Datos, Backend y Frontend):
+```bash
+docker compose up -d --build
+```
 
-#### 1. Backend
-1.  Entra a la carpeta: `cd backend`
-2.  Instala dependencias: `npm install`
-3.  Configura tu archivo `.env` (usa `.env.example` como base).
-4.  Inicia el servidor: `npm run dev`
+### 3. Inicializar Datos (Seed)
+Si es la primera vez, inyecta los usuarios administrador y el catálogo base:
+```bash
+docker compose exec backend npm run seed:full
+```
 
-#### 2. Frontend
-1.  Entra a la carpeta: `cd frontend`
-2.  Instala dependencias: `npm install`
-3.  Inicia la aplicación: `npm run dev`
+**Credenciales por defecto:**
+- **SuperAdmin:** `superadmin@lafiesta.com` / `admin123`
+- **Owner Demo:** `owner@demo.com` / `admin123`
 
 ---
 
-## 🧪 Comandos Útiles
+## 🛠️ Desarrollo y Comandos Útiles
 
-### Gestión de Datos
-- `npm run seed:full`: Carga todos los datos iniciales (Roles, HQ, Catálogo).
-- `npm run fix:db`: Intenta reparar inconsistencias en la BD.
+### URLs del Sistema
+- **Frontend:** [http://localhost:5173](http://localhost:5173)
+- **Backend API:** [http://localhost:3000/api](http://localhost:3000/api)
+- **Documentación Swagger:** [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 
-### QA y Pruebas
-- `npm run qa:smoke`: Ejecuta pruebas rápidas de conexión y salud.
-- `npm run qa:contract`: Verifica que los endpoints respondan con el formato correcto.
-- `npm run qa:full`: Simulación de flujo completo de pedidos por roles.
+### Comandos de Control (Docker)
+| Acción | Comando |
+| :--- | :--- |
+| Detener sistema | `docker compose down` |
+| Ver Logs Backend | `docker compose logs -f backend` |
+| Reiniciar Base de Datos | `docker compose exec backend npm run db:reset` |
+| Ejecutar Pruebas (Smoke) | `docker compose exec backend npm run qa:smoke` |
+
+### Desarrollo Local (Sin Docker)
+1. **Backend**: 
+   ```bash
+   cd backend && npm install && npm run dev
+   ```
+2. **Frontend**: 
+   ```bash
+   cd frontend && npm install && npm run dev
+   ```
 
 ---
 
-## 🎨 Sistema Visual y Vistas
-La aplicación utiliza una estética **"Vibrant & Clean"**:
-- **Colores:** Rosa intenso (`#ec4899`) para la marca y Violeta (`#8b5cf6`) para funciones de IA.
-- **Micro-interacciones:** Uso de `Framer Motion` para transiciones suaves y efectos de escala en botones.
-- **Vistas Principales:**
-  - **Dashboard:** KPIs en tiempo real y gráficos de ventas.
-  - **Wizard de Pedidos:** Proceso guiado de 6 pasos para captura de folios.
-  - **Producción:** Tablero estilo Kanban para seguimiento de estados (Pendiente, Decoración, Terminado).
+## 🛡️ Calidad y Seguridad (QA)
+
+El sistema incluye una suite de pruebas de "Humo" (Smoke Tests) para validar la integridad:
+
+1. **Seguridad (RBAC)**: Valida que los roles (Admin/Empleado) estén aislados.
+   ```bash
+   docker compose exec backend node scripts/qa/error_handling.js
+   ```
+2. **Generación de PDFs**: Verifica que el motor de Puppeteer esté listo.
+   ```bash
+   docker compose exec backend node scripts/qa/test_api_pdf.js
+   ```
 
 ---
 
-## 🔧 Troubleshooting Típico
-- **Error de conexión a BD:** Asegúrate de que el puerto 3307 (Docker) o 3306 (Local) no esté ocupado.
-- **PDFs no se generan:** Verifica que las dependencias de Puppeteer estén instaladas correctamente en tu sistema si corres sin Docker.
-- **Limpieza profunda:** `docker compose down -v` eliminará incluso la base de datos para un inicio desde cero.
+## 🗝️ Archivos Importantes
+*   `.env`: Configuración maestra de secretos.
+*   `ARCHIVOS_LLAVE.md`: Registro de configuraciones críticas y recuperación de sesiones de WhatsApp.
+*   `docker-compose.yml`: Orquestación de contenedores.
+
+---
+
+## 👨‍💻 Mejores Prácticas Aplicadas
+- **Multi-tenancy**: Aislamiento estricto de datos por `tenantId`.
+- **Zero-Config**: Listo para levantar en cualquier máquina con Docker.
+- **Auditoría**: Registro de todas las acciones críticas en `AuditLogs`.
+- **Escalabilidad**: Arquitectura preparada para múltiples sucursales y gran volumen de pedidos.

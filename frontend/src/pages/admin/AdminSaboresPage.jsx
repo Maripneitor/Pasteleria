@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, CheckCircle, XCircle, Cake, Droplet, Search } from 'lucide-react';
-import catalogApi from '../../services/catalogApi';
+import catalogApi from '@/services/catalogApi';
 import toast from 'react-hot-toast';
 
 export default function AdminSaboresPage() {

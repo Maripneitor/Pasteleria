@@ -1,6 +1,6 @@
 import React from 'react';
-import PageHeader from '../../components/common/PageHeader';
-import Card from '../../components/common/Card';
+import PageHeader from '@/components/common/PageHeader';
+import Card from '@/components/common/Card';
 
 export default function AdminStatsPage() {
     return (

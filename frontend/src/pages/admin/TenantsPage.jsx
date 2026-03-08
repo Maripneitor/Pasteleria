@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../../services/api';
-import { Building, Users, AlertCircle, CheckCircle, Save, Settings as SettingsIcon, Store as StoreIcon, DollarSign, Clock, Download, ChevronRight } from 'lucide-react';
+import api from '@/config/axios';
+import { Building, Users, AlertCircle, CheckCircle, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const TenantsPage = () => {
@@ -13,7 +12,7 @@ const TenantsPage = () => {
     const fetchTenants = async () => {
         try {
             const res = await api.get('/super/tenants');
-            setTenants(res.data);
+            setTenants(Array.isArray(res.data) ? res.data : (res.data?.data || []));
         } catch (error) {
             console.error("Error fetching tenants", error);
             toast.error("Error al cargar dueños");
@@ -33,10 +32,7 @@ const TenantsPage = () => {
 
     const saveLimit = async (tenantId) => {
         try {
-            await api.put(
-                `/super/tenants/${tenantId}/limits`,
-                { maxBranches: editLimit }
-            );
+            await api.put(`/super/tenants/${tenantId}/limit`, { maxBranches: editLimit });
             toast.success("Límite actualizado");
             setEditingId(null);
             fetchTenants();

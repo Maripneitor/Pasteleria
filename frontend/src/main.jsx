@@ -17,14 +17,31 @@ console.error = (...args) => {
   originalConsoleError(...args);
 };
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Configure React Query with reasonable defaults for a production app
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2, // Reintentos en caso de fallo (Exponential Backoff implícito)
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
+      refetchOnWindowFocus: false, // Menos agresivo para no sobrecargar
+      staleTime: 5 * 60 * 1000, // 5 minutos de caché por defecto
+    },
+  },
+});
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </AuthProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </AuthProvider>
+      </BrowserRouter>
+      {/* Devtools: Estarán ocultas en producción automáticamente y solo son visibles en dev mode */}
+    </QueryClientProvider>
   </React.StrictMode>,
 )

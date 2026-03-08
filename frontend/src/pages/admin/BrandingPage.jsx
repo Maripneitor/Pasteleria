@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import api from '../../config/axios';
+import api from '@/config/axios';
 import toast from 'react-hot-toast';
 import { Palette, Save, Eye, Briefcase } from 'lucide-react';
 

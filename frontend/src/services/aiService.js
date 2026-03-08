@@ -4,15 +4,8 @@ import client from '../config/axios';
  * Service to handle AI interactions
  */
 const aiService = {
-    /**
-     * Sends a message to the AI backend
-     * @param {string} message - The user's message
-     * @param {object} contextData - Information about the current user context (e.g. current page)
-     * @returns {Promise<object>} - The AI's response { text, ... }
-     */
     sendMessageToAi: async (message, contextData = {}) => {
         try {
-            // Note: Adjust the endpoint if necessary based on your server routes
             const response = await client.post('/ai/session/message', {
                 message,
                 context: contextData
@@ -24,11 +17,6 @@ const aiService = {
         }
     },
 
-    /**
-     * Parses a natural language order intent
-     * @param {string} text - The order description
-     * @returns {Promise<object>} - { valid, draft, aiAnalysis }
-     */
     parseOrderIntent: async (text) => {
         try {
             const response = await client.post('/ai/orders/parse', { text });
@@ -39,11 +27,6 @@ const aiService = {
         }
     },
 
-    /**
-     * CREATE: Crear pedido completo usando IA
-     * @param {string} userMessage - The user's natural language message to create an order
-     * @returns {Promise<object>} - The AI's response with the created order details
-     */
     createOrderWithAI: async (userMessage) => {
         try {
             const response = await client.post('/ai/orders/create', { userMessage });
@@ -54,12 +37,6 @@ const aiService = {
         }
     },
 
-    /**
-     * EDIT: Editar pedido con instrucciones en lenguaje natural
-     * @param {string} orderId - The ID of the order to edit
-     * @param {string} editInstruction - Natural language instruction for editing the order
-     * @returns {Promise<object>} - The AI's response with the updated order details
-     */
     editOrderWithAI: async (orderId, editInstruction) => {
         try {
             const response = await client.post('/ai/orders/edit', { orderId, editInstruction });
@@ -70,11 +47,6 @@ const aiService = {
         }
     },
 
-    /**
-     * SEARCH: Buscar pedidos con consultas en lenguaje natural
-     * @param {string} query - Natural language query to search for orders
-     * @returns {Promise<object>} - The AI's response with search results
-     */
     searchOrdersWithAI: async (query) => {
         try {
             const response = await client.post('/ai/orders/search', { query });
@@ -85,11 +57,6 @@ const aiService = {
         }
     },
 
-    /**
-     * INSIGHTS: Obtener insights del dashboard
-     * @param {string} question - Natural language question for dashboard insights
-     * @returns {Promise<object>} - The AI's response with dashboard insights
-     */
     getDashboardInsights: async (question) => {
         try {
             const response = await client.post('/ai/orders/insights', { question });

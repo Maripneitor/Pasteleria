@@ -59,18 +59,40 @@ const MainLayout = () => {
     const handleNavClick = () => setIsMobileOpen(false);
 
     return (
-        <OrderProvider>
-            <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
-                {/* 🟢 SIDEBAR (Navegación Vertical) */}
-                <aside className={`
-                    fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out md:static
-                    ${isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}
-                `}>
-                    {/* Logo Area */}
-                    <div className="h-16 flex items-center px-6 border-b border-gray-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-                        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-600 tracking-tight flex items-center gap-2">
-                            🧁 La Fiesta
-                        </h1>
+        <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
+            {/* 🟢 SIDEBAR (Navegación Vertical) */}
+            <aside className={`
+                fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out lg:static
+                ${isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
+            `}>
+                {/* Logo Area */}
+                <div className="h-16 flex items-center px-6 border-b border-gray-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                    <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-600 tracking-tight flex items-center gap-2">
+                        🧁 La Fiesta
+                    </h1>
+                </div>
+
+                {/* Nav Links */}
+                <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+                    {/* 1. Bandeja de Entrada */}
+                    <NavItem path="/" icon={LayoutDashboard} label="Bandeja de Entrada" isActive={checkActive('/')} onClick={handleNavClick} />
+
+                    {/* 2. Ver Calendario */}
+                    <NavItem path="/calendario" icon={Calendar} label="Ver Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
+
+                    {/* 3. + Nuevo Folio (Primary Action) */}
+                    <div className="my-4">
+                        <Link
+                            to="/pedidos/nuevo"
+                            onClick={handleNavClick}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 mb-1
+                                ${checkActive('/pedidos/nuevo')
+                                    ? "bg-pink-600 text-white shadow-lg shadow-pink-200 font-bold"
+                                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium"}`}
+                        >
+                            <PlusCircle size={20} />
+                            <span>+ Nuevo Folio</span>
+                        </Link>
                     </div>
 
                     {/* Nav Links */}
@@ -81,15 +103,72 @@ const MainLayout = () => {
                         {/* 2. Ver Calendario */}
                         <NavItem path="/calendario" icon={Calendar} label="Ver Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
 
-                        {/* 3. + Nuevo Folio (Primary Action) */}
-                        <div className="my-4">
-                            <Link
-                                to="/pedidos/nuevo"
-                                onClick={handleNavClick}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 
-                                    ${checkActive('/pedidos/nuevo')
-                                        ? "bg-pink-600 text-white shadow-lg shadow-pink-200 font-bold"
-                                        : "bg-pink-50 text-pink-700 hover:bg-pink-100 font-bold"}`}
+                    {/* 5. Admin Usuarios */}
+                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/usuarios" icon={Users} label="Admin Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
+                    )}
+
+                    {/* Gestion de Dueños (SuperAdmin) */}
+                    {['SUPER_ADMIN'].includes(user?.role) && (
+                        <NavItem path="/admin/tenants" icon={Building} label="Gestión de Dueños" isActive={checkActive('/admin/tenants')} onClick={handleNavClick} />
+                    )}
+
+                    {/* WhatsApp Conexión */}
+                    {['SUPER_ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/admin/whatsapp" icon={MessageCircle} label="Conexión WhatsApp" isActive={checkActive('/admin/whatsapp')} onClick={handleNavClick} />
+                    )}
+
+                    {/* 6. Gestión de Sabores y Rellenos */}
+                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/admin/sabores" icon={Tags} label="Gestión de Sabores" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
+                    )}
+
+                    {/* 7. Estadísticas */}
+                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/admin/stats" icon={BarChart} label="Estadísticas" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
+                    )}
+
+                    {/* 8. Reporte de Comisiones */}
+                    {['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
+                        <NavItem path="/admin/comisiones" icon={PieChart} label="Reporte de Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
+                    )}
+                </nav>
+
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-center">
+                    <span className="text-xs text-gray-400 font-bold tracking-wider">La Fiesta © 2026</span>
+                </div>
+            </aside>
+
+            {/* Overlay Mobile Sidebar */}
+            {isMobileOpen && (
+                <div className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
+            )}
+
+            {/* 🔵 CONTENIDO PRINCIPAL */}
+            <div className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
+
+                {/* Header Desktop & Mobile */}
+                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 z-20 shadow-sm shrink-0">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg lg:hidden">
+                            <Menu size={24} />
+                        </button>
+                        <h2 className="font-bold text-gray-700 text-lg hidden lg:block">Panel de Control</h2>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        {/* 🤖 TRIGGER IA */}
+                        <button
+                            onClick={() => setIsAiOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-full shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50 hover:scale-105 transition active:scale-95"
+                        >
+                            <Bot size={18} /> <span className="hidden sm:inline font-bold text-sm">Asistente IA</span>
+                        </button>
+
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                className="w-9 h-9 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold text-sm border-2 border-white shadow-md hover:ring-2 ring-pink-300 transition-all"
                             >
                                 <PlusCircle size={20} />
                                 <span>+ Nuevo Folio</span>
@@ -244,16 +323,12 @@ const MainLayout = () => {
                         </div>
                     </header>
 
-                    {/* Main Scrollable Area */}
-                    <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 scroll-smooth relative">
-                        <div className="max-w-7xl mx-auto min-h-full pb-20">
-                            <Outlet />
-                        </div>
-                    </main>
-                </div>
-
-                {/* 🤖 COMPONENTE IA (Slide-over) */}
-                <AiAssistantTray isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} />
+                {/* Main Scrollable Area */}
+                <main className="flex-1 overflow-y-auto p-3 lg:p-6 bg-gray-50 scroll-smooth relative">
+                    <div className="max-w-7xl mx-auto min-h-full pb-20">
+                        <Outlet />
+                    </div>
+                </main>
             </div>
         </OrderProvider>
     );

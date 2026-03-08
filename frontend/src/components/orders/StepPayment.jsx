@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useOrder } from '../../context/OrderContext';
+import { useOrder } from '@/context/OrderContext';
 import { DollarSign, CheckCircle } from 'lucide-react';
-import foliosApi from '../../services/folios';
+import foliosApi from '@/services/folios';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
