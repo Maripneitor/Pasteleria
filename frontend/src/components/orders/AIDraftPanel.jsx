@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
-import client from '@/config/axios';
-import { useOrder } from '@/context/OrderContext';
+import client from '../../config/axios';
+import { useOrder } from '../../context/OrderContext';
 import toast from 'react-hot-toast';
 
 const AIDraftPanel = () => {
@@ -17,7 +17,6 @@ const AIDraftPanel = () => {
         setSuggestion(null);
 
         try {
-            // Llama al endpoint de IA (simulado o real)
             const res = await client.post('/ai/draft', { prompt });
             const { draft, missing, nextQuestion, mode, warning } = res.data;
 
