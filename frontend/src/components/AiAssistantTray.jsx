@@ -391,10 +391,13 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
             </AnimatePresence>
 
             {!isOpen && (
-                <motion.button onClick={onClose} className="fixed bottom-4 right-4 p-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full shadow-lg z-40 group">
-                    <Bot size={24} className="group-hover:rotate-12 transition-transform" />
-                </motion.button>
-            )}
+    <motion.button 
+        onClick={() => window.dispatchEvent(new Event('open-ai-tray'))} 
+        className="fixed bottom-4 right-4 p-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full shadow-lg z-40 group"
+    >
+        <Bot size={24} className="group-hover:rotate-12 transition-transform" />
+    </motion.button>
+)}
         </>
     );
 };

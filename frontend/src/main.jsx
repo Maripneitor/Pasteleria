@@ -31,8 +31,6 @@ const queryClient = new QueryClient({
   },
 });
 
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -44,7 +42,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </AuthProvider>
       </BrowserRouter>
       {/* Devtools: Estarán ocultas en producción automáticamente y solo son visibles en dev mode */}
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </React.StrictMode>,
 )
