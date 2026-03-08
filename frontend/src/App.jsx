@@ -69,10 +69,15 @@ function App() {
             <Route path="folios" element={<Navigate to="/pedidos" replace />} />
 
             <Route path="folios/:id" element={<FolioDetailPage />} />
-            <Route path="pedidos/:id" element={<Navigate to={`/folios/:id`} replace />} />
+            <Route path="pedidos/:id" element={<FolioDetailPage />} />
 
             {/* Legacy Edit Route - could be migrated later */}
-            <Route path="pedidos/:id/editar" element={<EditOrderPage />} />
+            {/* Full Edit Wizard */}
+            <Route path="pedidos/:id/editar" element={
+              <OrderProvider>
+                <EditOrderPage />
+              </OrderProvider>
+            } />
 
             <Route path="sucursales" element={<BranchesPage />} />
             <Route path="branches" element={<Navigate to="/sucursales" replace />} />

@@ -49,6 +49,12 @@ const foliosApi = {
         return res.data;
     },
 
+    // Get Edit History / Audits
+    getAudits: async (id) => {
+        const res = await client.get(`/folios/${id}/audits`);
+        return res.data;
+    },
+
     // Get (legacy compatibility)
     get: async (id) => {
         return await client.get(`/folios/${id}`);
@@ -75,6 +81,38 @@ const foliosApi = {
         }
 
         const res = await client.post('/folios', form, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return res.data;
+    },
+
+    // Update existing folio
+    updateFolio: async (id, data) => {
+        const form = new FormData();
+        Object.entries(data).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            if (key === 'referenceImages') return;
+
+            if (typeof value === 'object') {
+                form.append(key, JSON.stringify(value));
+            } else {
+                form.append(key, String(value));
+            }
+        });
+
+        if (data.referenceImages?.length > 0) {
+            data.referenceImages.forEach((file) => {
+                if (file instanceof File) {
+                    form.append('referenceImages', file);
+                } else {
+                    // If it's a URL string from existing images, we might want to handle it 
+                    // or just ignore if the backend handles existing images via diseno_metadata
+                    form.append('existingImages', file);
+                }
+            });
+        }
+
+        const res = await client.put(`/folios/${id}`, form, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return res.data;

@@ -107,7 +107,6 @@ const DashboardPage = () => {
         actions={
           <div className="flex gap-2">
             <Button variant="secondary" icon={Search} onClick={handleBuscar} className="hidden md:flex">Buscar</Button>
-            <Button variant="danger" icon={LogOut} onClick={handleLogout}>Salir</Button>
           </div>
         }
       />
@@ -116,19 +115,19 @@ const DashboardPage = () => {
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="flex flex-col gap-1 border-l-4 border-l-pink-500">
           <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span>
-          <span className="text-2xl font-bold text-gray-900">{formatMoney(stats?.metrics?.totalSales)}</span>
+          <span className="text-xl font-bold text-gray-900">{formatMoney(stats?.metrics?.totalSales)}</span>
         </Card>
         <Card className="flex flex-col gap-1 border-l-4 border-l-purple-500">
           <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Pedidos Hoy</span>
-          <span className="text-2xl font-bold text-gray-900">{stats?.metrics?.todayOrders || 0}</span>
+          <span className="text-xl font-bold text-gray-900">{stats?.metrics?.todayOrders || 0}</span>
         </Card>
         <Card className="flex flex-col gap-1 border-l-4 border-l-yellow-500">
           <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Pendientes</span>
-          <span className="text-2xl font-bold text-gray-900">{stats?.metrics?.pendingOrders || 0}</span>
+          <span className="text-xl font-bold text-gray-900">{stats?.metrics?.pendingOrders || 0}</span>
         </Card>
         <Card className="flex flex-col gap-1 border-l-4 border-l-blue-500">
           <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Histórico</span>
-          <span className="text-2xl font-bold text-gray-900">{stats?.metrics?.totalOrders || 0}</span>
+          <span className="text-xl font-bold text-gray-900">{stats?.metrics?.totalOrders || 0}</span>
         </Card>
       </section>
 
@@ -137,15 +136,15 @@ const DashboardPage = () => {
         <div className="lg:col-span-2 space-y-8">
 
           {/* Quick Actions */}
-          <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {actions.map((action, idx) => (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={idx}>
                 <div
                   onClick={action.onClick}
-                  className={`${action.bg} text-white p-6 rounded-2xl shadow-lg cursor-pointer flex flex-col items-center justify-center gap-3 h-32 hover:opacity-90 transition`}
+                  className={`${action.bg} text-white p-3 md:p-6 rounded-2xl shadow-lg cursor-pointer flex flex-col items-center justify-center gap-2 md:gap-3 h-24 md:h-32 hover:opacity-90 transition`}
                 >
-                  <action.icon size={32} />
-                  <span className="font-bold text-sm text-center">{action.label || action.title}</span>
+                  <action.icon className="w-6 h-6 md:w-8 md:h-8" />
+                  <span className="font-bold text-xs md:text-sm text-center">{action.label || action.title}</span>
                 </div>
               </motion.div>
             ))}

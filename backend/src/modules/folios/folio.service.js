@@ -266,10 +266,27 @@ class FolioService {
             id: String(f.id),
             title: `${f.folioNumber} • ${f.cliente_nombre}`,
             start: `${f.fecha_entrega}T${f.hora_entrega}`,
-            statusPago: f.estatus_pago,
-            statusFolio: f.estatus_folio,
-            color: f.estatus_folio === 'Cancelado' ? '#ef4444' : f.estatus_pago === 'Pagado' ? '#10b981' : '#f59e0b'
+            color: f.estatus_folio === 'Cancelado' ? '#ef4444' : f.estatus_pago === 'Pagado' ? '#10b981' : '#f59e0b',
+            // Detailed props
+            folio_numero: f.folioNumber,
+            cliente_nombre: f.cliente_nombre,
+            hora_entrega: f.hora_entrega,
+            estatus_pago: f.estatus_pago,
+            estatus_folio: f.estatus_folio
         }));
+    }
+
+    async getFolioAudits(folioId, tenantFilter) {
+        const row = await this.getFolioById(folioId, tenantFilter, false);
+        if (!row) throw { status: 404, message: 'Folio no encontrado' };
+
+        const { AuditLog, User } = require('../../../models');
+        const audits = await AuditLog.findAll({
+            where: { entity: 'FOLIO', entityId: folioId },
+            include: [{ model: User, as: 'actor', attributes: ['id', 'name'] }],
+            order: [['createdAt', 'DESC']]
+        });
+        return audits;
     }
 
     async generateFolioPdf(id, tenantFilter, user) {
@@ -332,7 +349,9 @@ class FolioService {
 
         const branding = pdfService.getDefaultBranding();
 
-        const foliosData = folios.map(f => {
+        const foliosData = folios
+            .filter(f => f.is_delivery === true)
+            .map(f => {
             const json = f.toJSON();
             const base = Number(json.costo_base || 0);
             const envio = Number(json.costo_envio || 0);

@@ -30,6 +30,7 @@ router.get('/:id/label-pdf', folioController.generarEtiqueta);
 router.get('/', folioController.listFolios);
 router.post('/', uploadReference.array('referenceImages', 5), validateRequest(createFolioSchema), folioController.createFolio);
 router.get('/:id', folioController.getFolioById);
+router.get('/:id/audits', folioController.getFolioAudits);
 router.put('/:id', uploadReference.array('referenceImages', 5), validateRequest(updateFolioSchema), folioController.updateFolio);
 router.patch('/:id/cancel', folioController.cancelFolio);
 router.patch('/:id/status', folioController.updateFolioStatus);

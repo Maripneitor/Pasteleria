@@ -60,8 +60,8 @@ const MainLayout = () => {
         <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
             {/* 🟢 SIDEBAR (Navegación Vertical) */}
             <aside className={`
-                fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out md:static
-                ${isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}
+                fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out lg:static
+                ${isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
             `}>
                 {/* Logo Area */}
                 <div className="h-16 flex items-center px-6 border-b border-gray-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
@@ -83,10 +83,10 @@ const MainLayout = () => {
                         <Link
                             to="/pedidos/nuevo"
                             onClick={handleNavClick}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 
+                            className={`flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 mb-1
                                 ${checkActive('/pedidos/nuevo')
                                     ? "bg-pink-600 text-white shadow-lg shadow-pink-200 font-bold"
-                                    : "bg-pink-50 text-pink-700 hover:bg-pink-100 font-bold"}`}
+                                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium"}`}
                         >
                             <PlusCircle size={20} />
                             <span>+ Nuevo Folio</span>
@@ -135,33 +135,26 @@ const MainLayout = () => {
                     )}
                 </nav>
 
-                {/* Footer / Danger Zone */}
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50">
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-3 w-full text-left text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl transition font-bold group"
-                    >
-                        <LogOut size={20} className="group-hover:scale-110 transition-transform" />
-                        Cerrar Sesión
-                    </button>
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-center">
+                    <span className="text-xs text-gray-400 font-bold tracking-wider">La Fiesta © 2026</span>
                 </div>
             </aside>
 
             {/* Overlay Mobile Sidebar */}
             {isMobileOpen && (
-                <div className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
+                <div className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
             )}
 
             {/* 🔵 CONTENIDO PRINCIPAL */}
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
 
                 {/* Header Desktop & Mobile */}
-                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8 z-20 shadow-sm shrink-0">
+                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 z-20 shadow-sm shrink-0">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg md:hidden">
+                        <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg lg:hidden">
                             <Menu size={24} />
                         </button>
-                        <h2 className="font-bold text-gray-700 text-lg hidden md:block">Panel de Control</h2>
+                        <h2 className="font-bold text-gray-700 text-lg hidden lg:block">Panel de Control</h2>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -232,7 +225,7 @@ const MainLayout = () => {
                 </header>
 
                 {/* Main Scrollable Area */}
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 scroll-smooth relative">
+                <main className="flex-1 overflow-y-auto p-3 lg:p-6 bg-gray-50 scroll-smooth relative">
                     <div className="max-w-7xl mx-auto min-h-full pb-20">
                         <Outlet />
                     </div>

@@ -183,3 +183,9 @@ exports.getFolioNotaPdf = asyncHandler(async (req, res) => {
     res.setHeader('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="nota_folio-${folioId}.pdf"`);
     res.send(pdfBuffer);
 });
+
+exports.getFolioAudits = asyncHandler(async (req, res) => {
+    const tenantFilter = buildTenantWhere(req);
+    const audits = await folioService.getFolioAudits(req.params.id, tenantFilter);
+    res.json(audits);
+});

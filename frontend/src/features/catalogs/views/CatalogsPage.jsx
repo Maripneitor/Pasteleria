@@ -19,46 +19,48 @@ const TabButton = ({ active, onClick, icon: Icon, label }) => (
 const CatalogTable = ({ items, onToggle, columns }) => {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <table className="w-full text-left">
-                <thead className="bg-gray-50 text-xs uppercase text-gray-500 font-semibold">
-                    <tr>
-                        {columns.map((col, i) => (
-                            <th key={i} className="px-6 py-4">{col.header}</th>
-                        ))}
-                        <th className="px-6 py-4 text-right">Estado</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {items.length === 0 ? (
+            <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left min-w-[600px] md:min-w-full">
+                    <thead className="bg-gray-50 text-[10px] md:text-xs uppercase text-gray-500 font-semibold sticky top-0 z-10">
                         <tr>
-                            <td colSpan={columns.length + 1} className="px-6 py-8 text-center text-gray-400">
-                                No hay elementos registrados
-                            </td>
+                            {columns.map((col, i) => (
+                                <th key={i} className="px-4 md:px-6 py-4">{col.header}</th>
+                            ))}
+                            <th className="px-4 md:px-6 py-4 text-right">Estado</th>
                         </tr>
-                    ) : (
-                        items.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                                {columns.map((col, i) => (
-                                    <td key={i} className="px-6 py-4 text-sm text-gray-700">
-                                        {col.render ? col.render(item) : item[col.key]}
-                                    </td>
-                                ))}
-                                <td className="px-6 py-4 text-right">
-                                    <button
-                                        onClick={() => onToggle(item.id, !item.isActive)}
-                                        className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${item.isActive
-                                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                                            }`}
-                                    >
-                                        {item.isActive ? 'Activo' : 'Inactivo'}
-                                    </button>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {items.length === 0 ? (
+                            <tr>
+                                <td colSpan={columns.length + 1} className="px-6 py-8 text-center text-gray-400">
+                                    No hay elementos registrados
                                 </td>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+                        ) : (
+                            items.map((item) => (
+                                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                                    {columns.map((col, i) => (
+                                        <td key={i} className="px-4 md:px-6 py-4 text-xs md:text-sm text-gray-700 whitespace-nowrap">
+                                            {col.render ? col.render(item) : item[col.key]}
+                                        </td>
+                                    ))}
+                                    <td className="px-4 md:px-6 py-4 text-right">
+                                        <button
+                                            onClick={() => onToggle(item.id, !item.isActive)}
+                                            className={`px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-bold transition-colors ${item.isActive
+                                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            {item.isActive ? 'Activo' : 'Inactivo'}
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };
@@ -242,7 +244,7 @@ export default function CatalogsPage() {
                 </button>
             </header>
 
-            <div className="flex border-b border-gray-200 overflow-x-auto">
+            <div className="flex border-b border-gray-200 overflow-x-auto hide-scrollbar whitespace-nowrap scroll-smooth">
                 <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={Package} label="Productos" />
                 <TabButton active={activeTab === 'flavors'} onClick={() => setActiveTab('flavors')} icon={Layers} label="Sabores de Pan" />
                 <TabButton active={activeTab === 'fillings'} onClick={() => setActiveTab('fillings')} icon={Droplet} label="Rellenos" />

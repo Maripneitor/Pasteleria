@@ -10,9 +10,9 @@ const validateRequest = (schema) => {
         const result = schema.safeParse(req.body);
 
         if (!result.success) {
-            const details = result.error.errors.map(
+            const details = result.error?.errors?.map(
                 (err) => `${err.path.join('.')}: ${err.message}`
-            );
+            ) || [result.error?.message || 'Error de validación'];
             return res.status(400).json({
                 ok: false,
                 code: 'VALIDATION_ERROR',

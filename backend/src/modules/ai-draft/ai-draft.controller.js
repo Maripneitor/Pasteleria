@@ -18,4 +18,19 @@ const generateDraft = asyncHandler(async (req, res) => {
     res.json(result);
 });
 
-module.exports = { generateDraft };
+/**
+ * Analiza una imagen de un pastel para extraer detalles.
+ * POST /api/v1/ai-draft/analyze-image
+ * Body: { imageUrl: "/uploads/reference/xxxxx.jpg" }
+ */
+const analyzeImage = asyncHandler(async (req, res) => {
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+        return res.status(400).json({ message: "Se requiere la URL de la imagen." });
+    }
+
+    const result = await aiDraftService.analyzeImage(imageUrl);
+    res.json(result);
+});
+
+module.exports = { generateDraft, analyzeImage };

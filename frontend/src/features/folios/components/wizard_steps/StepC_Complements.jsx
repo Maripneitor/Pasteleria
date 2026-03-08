@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import catalogApi from '@/services/catalogApi';
+import catalogApi from '@/features/catalogs/api/catalogs.api';
 
 const StepC_Complements = ({ next, prev }) => {
     const { orderData, updateOrder } = useOrder();
@@ -139,7 +139,7 @@ const StepC_Complements = ({ next, prev }) => {
                     onClick={next}
                     className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 transition shadow-lg shadow-pink-200"
                 >
-                    Siguiente (Diseño) arrow_forward
+                    Siguiente
                 </button>
             </div>
         </div>

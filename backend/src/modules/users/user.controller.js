@@ -30,6 +30,15 @@ exports.createUser = asyncHandler(async (req, res) => {
   const nameToSave = name || username; 
   const roleToSave = role || 'EMPLOYEE'; // 'EMPLOYEE' es el default en tu modelo
 
+  // Medida de seguridad: Solo SUPER_ADMIN puede dar roles de ADMIN o SUPER_ADMIN
+  if (['ADMIN', 'SUPER_ADMIN'].includes(roleToSave)) {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      const err = new Error('Error de Seguridad: Solo el dueño/SuperAdmin original puede conceder permisos de ADMIN o SUPER_ADMIN.');
+      err.status = 403;
+      throw err;
+    }
+  }
+
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) {
     const err = new Error('El correo ya está registrado');
@@ -62,6 +71,15 @@ exports.updateUser = asyncHandler(async (req, res) => {
     const err = new Error('Usuario no encontrado');
     err.status = 404;
     throw err;
+  }
+
+  // Medida de Seguridad
+  if (role && ['ADMIN', 'SUPER_ADMIN'].includes(role)) {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      const err = new Error('Error de Seguridad: Solo el dueño/SuperAdmin original puede conceder permisos de ADMIN o SUPER_ADMIN.');
+      err.status = 403;
+      throw err;
+    }
   }
 
   // Mapeo de actualización

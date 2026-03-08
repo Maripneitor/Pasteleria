@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Calendar, Clock, MapPin, FileText } from 'lucide-react';
+import { X, Save, Calendar, Clock, MapPin, FileText, User, PenTool } from 'lucide-react';
 import client from '@/config/axios';
 import toast from 'react-hot-toast';
 
@@ -47,82 +47,88 @@ const EditOrderModal = ({ order, isOpen, onClose, onUpdate }) => {
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Cliente</label>
-                        <input
-                            type="text"
-                            name="cliente_nombre"
-                            value={formData.cliente_nombre}
-                            onChange={handleChange}
-                            className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
-                        />
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Nombre Cliente</label>
+                        <div className="relative">
+                            <User size={18} className="absolute left-3 top-3 text-pink-500" />
+                            <input
+                                type="text"
+                                name="cliente_nombre"
+                                value={formData.cliente_nombre}
+                                onChange={handleChange}
+                                className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-pink-500 outline-none transition"
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Entrega</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Fecha Entrega</label>
                             <div className="relative">
-                                <Calendar size={16} className="absolute left-3 top-3 text-gray-400" />
+                                <Calendar size={18} className="absolute left-3 top-3 text-pink-500" />
                                 <input
                                     type="date"
                                     name="fecha_entrega"
                                     value={formData.fecha_entrega}
                                     onChange={handleChange}
-                                    className="w-full pl-9 p-2.5 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
+                                    className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-pink-500 outline-none transition"
                                 />
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Hora Entrega</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Hora Entrega</label>
                             <div className="relative">
-                                <Clock size={16} className="absolute left-3 top-3 text-gray-400" />
+                                <Clock size={18} className="absolute left-3 top-3 text-pink-500" />
                                 <input
                                     type="time"
                                     name="hora_entrega"
                                     value={formData.hora_entrega}
                                     onChange={handleChange}
-                                    className="w-full pl-9 p-2.5 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
+                                    className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-pink-500 outline-none transition"
                                 />
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación Entrega</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Ubicación Entrega</label>
                         <div className="relative">
-                            <MapPin size={16} className="absolute left-3 top-3 text-gray-400" />
+                            <MapPin size={18} className="absolute left-3 top-3 text-pink-500" />
                             <input
                                 type="text"
                                 name="deliveryLocation"
                                 value={formData.deliveryLocation}
                                 onChange={handleChange}
-                                className="w-full pl-9 p-2.5 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
+                                className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-pink-500 outline-none transition"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Descripción / Notas</label>
-                        <textarea
-                            name="descripcion_diseno"
-                            value={formData.descripcion_diseno}
-                            onChange={handleChange}
-                            rows={3}
-                            className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
-                        />
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Descripción / Notas</label>
+                        <div className="relative">
+                            <PenTool size={18} className="absolute left-3 top-3 text-pink-500" />
+                            <textarea
+                                name="descripcion_diseno"
+                                value={formData.descripcion_diseno}
+                                onChange={handleChange}
+                                rows={3}
+                                className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-pink-500 outline-none transition"
+                            />
+                        </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-4">
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-100 rounded-lg transition"
+                            className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="px-4 py-2 bg-pink-600 text-white font-medium rounded-lg hover:bg-pink-700 transition flex items-center gap-2"
+                            className="px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-pink-200 transition flex items-center gap-2 transform hover:-translate-y-0.5"
                         >
                             {loading ? 'Guardando...' : <><Save size={18} /> Guardar Cambios</>}
                         </button>

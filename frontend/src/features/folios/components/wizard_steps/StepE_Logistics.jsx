@@ -119,7 +119,7 @@ const StepE_Logistics = ({ next, prev }) => {
 
             <div className="flex justify-between pt-6">
                 <button onClick={prev} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition">Atrás</button>
-                <button onClick={next} disabled={!isValid} className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 disabled:opacity-50 transition shadow-lg shadow-pink-200">Siguiente (Pago) arrow_forward</button>
+                <button onClick={next} disabled={!isValid} className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 disabled:opacity-50 transition shadow-lg shadow-pink-200">Siguiente</button>
             </div>
         </div>
     );

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '@/config/axios';
 import { Building, Users, AlertCircle, CheckCircle, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -11,11 +11,8 @@ const TenantsPage = () => {
 
     const fetchTenants = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/super/tenants`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setTenants(res.data);
+            const res = await api.get('/super/tenants');
+            setTenants(Array.isArray(res.data) ? res.data : (res.data?.data || []));
         } catch (error) {
             console.error("Error fetching tenants", error);
             toast.error("Error al cargar dueños");
@@ -35,12 +32,7 @@ const TenantsPage = () => {
 
     const saveLimit = async (tenantId) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.put(
-                `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/super/tenants/${tenantId}/limit`,
-                { maxBranches: editLimit },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.put(`/super/tenants/${tenantId}/limit`, { maxBranches: editLimit });
             toast.success("Límite actualizado");
             setEditingId(null);
             fetchTenants();

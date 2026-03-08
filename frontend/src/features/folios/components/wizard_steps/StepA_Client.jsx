@@ -5,15 +5,13 @@ import { User, Phone } from 'lucide-react';
 
 const StepA_Client = ({ next, prev }) => {
     const { orderData, updateOrder } = useOrder();
-    const [isAnonymous, setIsAnonymous] = useState(!orderData.selectedClient && !!orderData.clientName);
+    const [isRegistered, setIsRegistered] = useState(!!orderData.selectedClient);
 
-    const handleAnonymousToggle = (e) => {
+    const handleRegisterToggle = (e) => {
         const checked = e.target.checked;
-        setIsAnonymous(checked);
-        if (checked) {
+        setIsRegistered(checked);
+        if (!checked) {
             updateOrder({ selectedClient: null });
-        } else {
-            updateOrder({ clientName: '', clientPhone: '' }); // Clear manual if switching back
         }
     };
 
@@ -26,21 +24,21 @@ const StepA_Client = ({ next, prev }) => {
                 Datos del Cliente
             </h2>
 
-            {/* Toggle Anonymous */}
+            {/* Toggle Registered */}
             <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <input
                     type="checkbox"
-                    id="anon-toggle"
-                    checked={isAnonymous}
-                    onChange={handleAnonymousToggle}
+                    id="register-toggle"
+                    checked={isRegistered}
+                    onChange={handleRegisterToggle}
                     className="w-5 h-5 text-pink-600 rounded focus:ring-pink-500 border-gray-300"
                 />
-                <label htmlFor="anon-toggle" className="text-gray-700 font-medium cursor-pointer select-none">
-                    Cliente Ocasional / Anónimo (Sin registro)
+                <label htmlFor="register-toggle" className="text-gray-700 font-medium cursor-pointer select-none">
+                    Buscar / Registrar Cliente en Sistema (Opcional)
                 </label>
             </div>
 
-            {isAnonymous ? (
+            {!isRegistered ? (
                 // Manual Fields
                 <div className="grid md:grid-cols-2 gap-4">
                     <div>
@@ -118,7 +116,7 @@ const StepA_Client = ({ next, prev }) => {
                     disabled={!isValid}
                     className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-pink-200"
                 >
-                    Siguiente (Detalles) arrow_forward
+                    Siguiente
                 </button>
             </div>
         </div>

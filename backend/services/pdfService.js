@@ -73,11 +73,10 @@ async function findOrderScoped(orderId, ctx) {
         tenantId: tenantId
     };
 
-    if (branchId && role !== 'SUPER_ADMIN' && role !== 'ADMIN' && role !== 'OWNER') {
-        where.branchId = branchId;
-    }
+    // Quitamos filtro de branchId estricto porque el pedido puede ser global o no tener branch asignado
+    // Y usamos unscoped() para acceder a folios aunque no estén "activos"
 
-    const order = await Folio.findOne({
+    const order = await Folio.unscoped().findOne({
         where,
         include: [
             { model: Client, as: 'client', required: false },

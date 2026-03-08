@@ -14,7 +14,7 @@
 
 body {
   background-color: var(--bg-app);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   overflow-x: hidden;
   /* Previene scroll horizontal indeseado */
 }
@@ -40,6 +40,10 @@ body {
 
 /* Utilidades Responsive Manuales (Por si Tailwind falla) */
 @media (max-width: 768px) {
+  html {
+    font-size: 14px; /* Reducción global de escala para móvil (aprox 12-15%) */
+  }
+
   .hide-on-mobile {
     display: none !important;
   }
@@ -53,11 +57,26 @@ body {
   }
 
   .padding-mobile {
-    padding: 1rem !important;
+    padding: 0.75rem !important;
   }
 
   .sidebar-collapsed {
     transform: translateX(-100%);
+  }
+
+  /* Ajuste para FullCalendar en móvil */
+  .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .fc .fc-toolbar-title {
+    font-size: 1.2rem !important;
+  }
+
+  .fc .fc-button {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.8rem !important;
   }
 }
 

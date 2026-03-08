@@ -1,4 +1,6 @@
 const { OpenAI } = require('openai');
+const fs = require('fs');
+const path = require('path');
 
 // Initialize OpenAI client if key exists
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
@@ -65,9 +67,47 @@ const aiDraftService = {
 
         } catch (error) {
             console.error("OpenAI Service Error:", error);
-            // Fallback on error? Or rethrow? 
-            // Let's rethrow to keep it simple, or fallback if network error.
             throw error;
+        }
+    },
+
+    async analyzeImage(imageUrl) {
+        if (!openai) throw new Error("OpenAI API Key no configurada.");
+        try {
+            // imageUrl llega como "/uploads/reference/xxxxx.jpg"
+            const localPath = path.join(__dirname, '../../', imageUrl);
+            
+            if (!fs.existsSync(localPath)) {
+                throw new Error("La imagen no existe en el servidor.");
+            }
+
+            const imageAsBase64 = fs.readFileSync(localPath, 'base64');
+            const extension = path.extname(localPath).replace('.', '') || 'jpeg';
+            const mimeType = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg';
+            const dataUri = `data:${mimeType};base64,${imageAsBase64}`;
+
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    {
+                        role: "system",
+                        content: "Eres un asistente experto en diseño de pasteles. Analiza la imagen y describe detalladamente: colores principales, la temática, la estructura (si es de pisos), adornos (fondant, texturas, perlas, personajes). Esta descripción servirá para que un pastelero pueda replicarlo."
+                    },
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: "Analiza el diseño de este pastel detalladamente." },
+                            { type: "image_url", image_url: { url: dataUri } }
+                        ]
+                    }
+                ],
+                max_tokens: 300,
+            });
+            
+            return { description: completion.choices[0].message.content };
+        } catch (error) {
+            console.error("OpenAI Image Analysis Error:", error);
+            throw new Error("No se pudo analizar la imagen.");
         }
     },
 
