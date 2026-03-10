@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 // Asegúrate de que esta ruta sea la correcta en tu estructura de carpetas
 import foliosApi, { downloadPdfBlob } from '@/features/folios/api/folios.api'; 
-import { ArrowLeft, FileText, Calendar, User, DollarSign, Package } from 'lucide-react';
+import { ArrowLeft, FileText, Calendar, User, DollarSign, Package, Edit, History } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const FolioDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [folio, setFolio] = useState(null);
+    const [audits, setAudits] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -17,12 +18,17 @@ const FolioDetailPage = () => {
 
         const fetchFolio = async () => {
             try {
-                console.log("🛰️ Trayendo datos para ID:", id);
-                const data = await foliosApi.getFolio(id);
-                console.log("📦 Datos recibidos del server:", data);
+                const [data, auditsData] = await Promise.all([
+                    foliosApi.getFolio(id),
+                    foliosApi.getAudits(id).catch(e => {
+                        console.error('Error fetching audits', e);
+                        return [];
+                    })
+                ]);
                 
                 // Forzamos la actualización del estado
                 setFolio(data.folio || data);
+                setAudits(auditsData || []);
             } catch (error) {
                 console.error("❌ Error fetchFolio:", error);
                 toast.error('No se pudo cargar la información del pedido');
@@ -54,8 +60,28 @@ const FolioDetailPage = () => {
         }
     };
 
-    if (loading) return <div className="p-10 text-center">Cargando detalles del pedido...</div>;
-    if (!folio) return null;
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+            <div className="w-16 h-16 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div>
+            <p className="text-gray-500 font-medium animate-pulse">Cargando detalles del pedido...</p>
+        </div>
+    );
+
+    if (!folio) return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 p-6">
+            <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center text-red-400 mb-2">
+                <Package size={48} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">Pedido no encontrado</h2>
+            <p className="text-gray-500 text-center max-w-md">No pudimos cargar la información de este pedido. Puede que haya sido eliminado o no tengas acceso.</p>
+            <button
+                onClick={() => navigate('/pedidos')}
+                className="mt-4 px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition shadow-lg"
+            >
+                Regresar a Pedidos
+            </button>
+        </div>
+    );
 
     return (
         <div className="p-6 max-w-5xl mx-auto animate-in fade-in duration-500">
@@ -85,7 +111,14 @@ const FolioDetailPage = () => {
                     </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={() => navigate(`/pedidos/${id}/editar`)}
+                        className="flex items-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium shadow-sm transition"
+                    >
+                        <Edit size={18} />
+                        Editar
+                    </button>
                     <button
                         onClick={handleOpenComanda}
                         className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition"
@@ -176,6 +209,50 @@ const FolioDetailPage = () => {
                         }`}>
                             {folio.estatus_pago?.toUpperCase() || 'PENDIENTE'}
                         </div>
+                    </div>
+
+                    {/* Historial de Edición */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                        <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2 uppercase text-xs tracking-wider">
+                            <History size={18} /> Historial de Cambios
+                        </h3>
+                        {audits.length === 0 ? (
+                            <p className="text-gray-400 text-sm text-center py-4">No hay cambios registrados.</p>
+                        ) : (
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                                {audits.map((audit) => (
+                                    <div key={audit.id} className="relative pl-4 border-l-2 border-gray-100 pb-2 last:pb-0">
+                                        <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-pink-400"></div>
+                                        <div className="text-xs font-bold text-gray-800 flex justify-between">
+                                            <span>
+                                                {audit.action === 'CREATE' ? 'Creado' : audit.action === 'UPDATE' ? 'Actualizado' : audit.action}
+                                            </span>
+                                            <span className="text-gray-400 font-normal">{new Date(audit.createdAt).toLocaleString('es-MX', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}</span>
+                                        </div>
+                                        <div className="text-sm text-gray-600 mt-1">
+                                            Por: <span className="font-medium text-gray-800">{audit.actor?.name || 'Sistema'}</span>
+                                        </div>
+                                        {audit.meta?.changes && Object.keys(audit.meta.changes).length > 0 && (
+                                            <div className="mt-2 bg-gray-50 text-[10px] p-2 rounded border border-gray-100 space-y-1">
+                                                {Object.keys(audit.meta.changes).map(key => {
+                                                    let from = audit.meta.changes[key].from;
+                                                    let to = audit.meta.changes[key].to;
+                                                    if (typeof from === 'object') from = JSON.stringify(from);
+                                                    if (typeof to === 'object') to = JSON.stringify(to);
+                                                    return (
+                                                        <div key={key}>
+                                                            <span className="font-bold text-gray-700 mr-1">{key}:</span>
+                                                            <span className="text-gray-400 line-through">{from || 'vacío'}</span>
+                                                            <span className="text-green-600 ml-1">➔ {to || 'vacío'}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

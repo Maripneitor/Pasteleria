@@ -2,6 +2,7 @@ import React from 'react';
 import usePollingQR from '@/hooks/usePollingQR';
 import { Smartphone, RefreshCw, CheckCircle, Power, LogOut, WifiOff, QrCode } from 'lucide-react';
 import { Loader } from 'lucide-react';
+import { getToken } from '@/utils/auth';
 
 
 const WhatsAppPage = () => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useOrder } from '@/context/OrderContext';
-import { Upload, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Upload, Sparkles, Image as ImageIcon, Trash2, Loader2 } from 'lucide-react';
 import api from '@/config/axios';
 import toast from 'react-hot-toast';
 
@@ -45,12 +45,27 @@ const StepD_Design = ({ next, prev }) => {
     };
 
     const handleAnalyzeAI = async () => {
+        if (!orderData.referenceImages || orderData.referenceImages.length === 0) return;
+        
         setAnalyzing(true);
-        // Mock AI analysis for now, or call distinct endpoint
-        setTimeout(() => {
+        const toastId = toast.loading('Analizando diseño con IA (Visual)...');
+        try {
+            const imageUrl = orderData.referenceImages[0];
+            const { data } = await api.post('/ai-draft/analyze-image', { imageUrl });
+            
+            const currentDesc = orderData.descripcion_diseno || '';
+            const newDesc = currentDesc 
+                ? `${currentDesc}\n\n[Análisis IA]: ${data.description}`
+                : `[Análisis IA]: ${data.description}`;
+                
+            updateOrder({ descripcion_diseno: newDesc });
+            toast.success("¡Diseño analizado exitosamente!", { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Error al analizar la imagen con IA", { id: toastId });
+        } finally {
             setAnalyzing(false);
-            toast.success("Diseño analizado: Colores pastel detectados.");
-        }, 1500);
+        }
     };
 
     // Extras / Accessories logic (Simple array or text?)
@@ -68,8 +83,8 @@ const StepD_Design = ({ next, prev }) => {
             <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Descripción General del Diseño</label>
                 <textarea
-                    value={orderData.designDescription || ''}
-                    onChange={(e) => updateOrder({ designDescription: e.target.value })}
+                    value={orderData.descripcion_diseno || ''}
+                    onChange={(e) => updateOrder({ descripcion_diseno: e.target.value })}
                     className="w-full p-4 border border-gray-300 rounded-xl h-32 focus:ring-2 focus:ring-pink-500"
                     placeholder="Detalles sobre colores, temática, posición de figuras..."
                 />
@@ -80,8 +95,8 @@ const StepD_Design = ({ next, prev }) => {
                 <label className="block text-sm font-bold text-gray-700 mb-2">Dedicatoria</label>
                 <input
                     type="text"
-                    value={orderData.dedication || ''}
-                    onChange={(e) => updateOrder({ dedication: e.target.value })}
+                    value={orderData.dedicatoria || ''}
+                    onChange={(e) => updateOrder({ dedicatoria: e.target.value })}
                     className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500"
                     placeholder="Ej. ¡Feliz Cumpleaños María!"
                 />
@@ -111,7 +126,7 @@ const StepD_Design = ({ next, prev }) => {
                         {(orderData.referenceImages || []).map((imgUrl, idx) => (
                             <div key={idx} className="relative group">
                                 <img
-                                    src={`${import.meta.env.VITE_API_URL}${imgUrl}`.replace('/api', '')}
+                                    src={imgUrl.startsWith('http') ? imgUrl : `${import.meta.env.VITE_API_URL}${imgUrl}`.replace('/api', '')}
                                     className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                                     alt="ref"
                                 />
@@ -152,7 +167,7 @@ const StepD_Design = ({ next, prev }) => {
 
             <div className="flex justify-between pt-6">
                 <button onClick={prev} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition">Atrás</button>
-                <button onClick={next} className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 transition shadow-lg shadow-pink-200">Siguiente (Entrega) arrow_forward</button>
+                <button onClick={next} className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 transition shadow-lg shadow-pink-200">Siguiente</button>
             </div>
         </div>
     );

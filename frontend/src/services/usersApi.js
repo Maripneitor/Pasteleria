@@ -17,8 +17,8 @@ const usersApi = {
         const response = await api.delete(`/users/${id}`);
         return response.data;
     },
-    toggleStatus: async (id, isActive) => {
-        const response = await api.put(`/users/${id}`, { isActive });
+    toggleStatus: async (id, status) => {
+        const response = await api.put(`/users/${id}`, { status });
         return response.data;
     }
 };

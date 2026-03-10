@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Package, DollarSign, Settings, Bot, FileText, ClipboardList, BarChart, Tags, PieChart, Building, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Menu, LogOut, LayoutDashboard, Calendar, PlusCircle, Users, Bot, BarChart, Tags, PieChart, Building, MessageCircle, ContactRound, BookOpen } from 'lucide-react';
 import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AiAssistantTray from './AiAssistantTray';
+import { useAuth } from '../context/AuthContext';
 
 // Extracted NavItem to avoid re-creation on every render
-const NavItem = ({ path, icon: Icon, label, isActive, onClick }) => ( // eslint-disable-line
+const NavItem = ({ path, icon: Icon, label, isActive, onClick }) => (
     <Link
         to={path}
         onClick={onClick}
@@ -15,10 +16,6 @@ const NavItem = ({ path, icon: Icon, label, isActive, onClick }) => ( // eslint-
         <span>{label}</span>
     </Link>
 );
-
-import { useAuth } from '../context/AuthContext';
-
-// ... (NavItem remains same)
 
 const MainLayout = () => {
     const navigate = useNavigate();
@@ -31,13 +28,12 @@ const MainLayout = () => {
     const { user, logout } = useAuth();
 
     // Allow opening from anywhere
-    React.useEffect(() => {
+    useEffect(() => {
         const handler = () => setIsAiOpen(true);
         window.addEventListener('open-ai-tray', handler);
         return () => window.removeEventListener('open-ai-tray', handler);
     }, []);
 
-    // 🔐 Lógica de Logout Robusta
     // 🔐 Lógica de Logout Robusta
     const handleLogout = () => {
         if (window.confirm("¿Estás seguro que deseas cerrar sesión?")) {
@@ -58,10 +54,11 @@ const MainLayout = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
+            
             {/* 🟢 SIDEBAR (Navegación Vertical) */}
             <aside className={`
-                fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out md:static
-                ${isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}
+                fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out lg:static
+                ${isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
             `}>
                 {/* Logo Area */}
                 <div className="h-16 flex items-center px-6 border-b border-gray-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
@@ -72,96 +69,98 @@ const MainLayout = () => {
 
                 {/* Nav Links */}
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-                    {/* 1. Bandeja de Entrada */}
+                    
+                    {/* Operaciones Core */}
                     <NavItem path="/" icon={LayoutDashboard} label="Bandeja de Entrada" isActive={checkActive('/')} onClick={handleNavClick} />
-
-                    {/* 2. Ver Calendario */}
                     <NavItem path="/calendario" icon={Calendar} label="Ver Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
 
-                    {/* 3. + Nuevo Folio (Primary Action) */}
+                    {/* + Nuevo Folio (Primary Action) */}
                     <div className="my-4">
                         <Link
                             to="/pedidos/nuevo"
                             onClick={handleNavClick}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 
+                            className={`flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 mb-1
                                 ${checkActive('/pedidos/nuevo')
                                     ? "bg-pink-600 text-white shadow-lg shadow-pink-200 font-bold"
-                                    : "bg-pink-50 text-pink-700 hover:bg-pink-100 font-bold"}`}
+                                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium"}`}
                         >
                             <PlusCircle size={20} />
                             <span>+ Nuevo Folio</span>
                         </Link>
                     </div>
 
-                    {/* 4. Dictar Pedido (AI) */}
+                    {/* Dictar Pedido (AI) */}
                     <button
                         onClick={() => { setIsAiOpen(true); handleNavClick(); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 text-gray-600 hover:bg-purple-50 hover:text-purple-700 font-medium text-left"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 text-gray-600 hover:bg-purple-50 hover:text-purple-700 font-medium text-left mb-4"
                     >
                         <Bot size={20} className="text-purple-500" />
                         <span>Dictar Pedido</span>
                     </button>
 
-                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
+                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-2">Administración</div>
 
-                    {/* 5. Admin Usuarios */}
+                    {/* Links de Administración basados en Roles */}
                     {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
                         <NavItem path="/usuarios" icon={Users} label="Admin Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
                     )}
 
-                    {/* Gestion de Dueños (SuperAdmin) */}
+                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/clients" icon={ContactRound} label="Clientes" isActive={checkActive('/clients')} onClick={handleNavClick} />
+                    )}
+
                     {['SUPER_ADMIN'].includes(user?.role) && (
                         <NavItem path="/admin/tenants" icon={Building} label="Gestión de Dueños" isActive={checkActive('/admin/tenants')} onClick={handleNavClick} />
                     )}
 
-                    {/* WhatsApp Conexión */}
                     {['SUPER_ADMIN', 'OWNER'].includes(user?.role) && (
                         <NavItem path="/admin/whatsapp" icon={MessageCircle} label="Conexión WhatsApp" isActive={checkActive('/admin/whatsapp')} onClick={handleNavClick} />
                     )}
 
-                    {/* 6. Gestión de Sabores y Rellenos */}
                     {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
                         <NavItem path="/admin/sabores" icon={Tags} label="Gestión de Sabores" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
                     )}
 
-                    {/* 7. Estadísticas */}
+                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/catalogs" icon={BookOpen} label="Catálogos" isActive={checkActive('/catalogs')} onClick={handleNavClick} />
+                    )}
+
                     {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
                         <NavItem path="/admin/stats" icon={BarChart} label="Estadísticas" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
                     )}
 
-                    {/* 8. Reporte de Comisiones */}
                     {['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
-                        <NavItem path="/admin/comisiones" icon={PieChart} label="Reporte de Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
+                        <NavItem path="/admin/comisiones" icon={PieChart} label="Reporte Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
                     )}
                 </nav>
 
-                {/* Footer / Danger Zone */}
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex flex-col items-center justify-center gap-2">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-3 w-full text-left text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl transition font-bold group"
+                        className="flex items-center gap-3 px-4 py-2 w-full text-left text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl transition font-bold group"
                     >
                         <LogOut size={20} className="group-hover:scale-110 transition-transform" />
                         Cerrar Sesión
                     </button>
+                    <span className="text-xs text-gray-400 font-bold tracking-wider">La Fiesta © 2026</span>
                 </div>
             </aside>
 
             {/* Overlay Mobile Sidebar */}
             {isMobileOpen && (
-                <div className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
+                <div className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
             )}
 
             {/* 🔵 CONTENIDO PRINCIPAL */}
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative w-full">
 
                 {/* Header Desktop & Mobile */}
-                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8 z-20 shadow-sm shrink-0">
+                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 z-20 shadow-sm shrink-0">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg md:hidden">
+                        <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg lg:hidden">
                             <Menu size={24} />
                         </button>
-                        <h2 className="font-bold text-gray-700 text-lg hidden md:block">Panel de Control</h2>
+                        <h2 className="font-bold text-gray-700 text-lg hidden lg:block">Panel de Control</h2>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -222,24 +221,24 @@ const MainLayout = () => {
                                     </button>
                                 </div>
                             )}
-
-                            {/* Backdrop for click away */}
-                            {isProfileOpen && (
-                                <div className="fixed inset-0 z-[-1]" onClick={() => setIsProfileOpen(false)} />
-                            )}
                         </div>
+
+                        {/* Backdrop for click away */}
+                        {isProfileOpen && (
+                            <div className="fixed inset-0 z-[-1]" onClick={() => setIsProfileOpen(false)} />
+                        )}
                     </div>
                 </header>
 
                 {/* Main Scrollable Area */}
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 scroll-smooth relative">
+                <main className="flex-1 overflow-y-auto p-3 lg:p-6 bg-gray-50 scroll-smooth relative">
                     <div className="max-w-7xl mx-auto min-h-full pb-20">
                         <Outlet />
                     </div>
                 </main>
             </div>
-
-            {/* 🤖 COMPONENTE IA (Slide-over) */}
+            
+            {/* Renderización del componente de IA fuera del flujo principal para que no se corte */}
             <AiAssistantTray isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} />
         </div>
     );

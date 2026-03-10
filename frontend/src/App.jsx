@@ -34,6 +34,7 @@ import PendingUsersPage from './pages/PendingUsersPage';
 import CommissionsPage from './pages/CommissionsPage';
 import BrandingPage from './pages/admin/BrandingPage';
 import TenantsPage from './pages/admin/TenantsPage';
+import TenantDetailPage from './pages/admin/TenantDetailPage';
 
 import MainLayout from '@/components/MainLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -58,21 +59,22 @@ function App() {
           <Route element={<MainLayout />}>
             <Route index element={<DashboardPage />} />
             {/* 🛠 Wizard & Operatives (All Roles) */}
-            <Route path="pedidos/nuevo" element={
-              <OrderProvider>
-                <NewFolioWizard />
-              </OrderProvider>
-            } />
+            <Route path="pedidos/nuevo" element={<NewFolioWizard />} />
             <Route path="folios/new" element={<Navigate to="/pedidos/nuevo" replace />} />
 
             <Route path="pedidos" element={<FoliosPage />} />
             <Route path="folios" element={<Navigate to="/pedidos" replace />} />
 
             <Route path="folios/:id" element={<FolioDetailPage />} />
-            <Route path="pedidos/:id" element={<Navigate to={`/folios/:id`} replace />} />
+            <Route path="pedidos/:id" element={<FolioDetailPage />} />
 
             {/* Legacy Edit Route - could be migrated later */}
-            <Route path="pedidos/:id/editar" element={<EditOrderPage />} />
+            {/* Full Edit Wizard */}
+            <Route path="pedidos/:id/editar" element={
+              <OrderProvider>
+                <EditOrderPage />
+              </OrderProvider>
+            } />
 
             <Route path="sucursales" element={<BranchesPage />} />
             <Route path="branches" element={<Navigate to="/sucursales" replace />} />
@@ -104,7 +106,11 @@ function App() {
             <Route path="clients" element={<ClientsPage />} />
 
             {/* SuperAdmin Management */}
-            <Route path="admin/tenants" element={<TenantsPage />} />
+            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
+              <Route path="admin/tenants" element={<TenantsPage />} />
+              <Route path="admin/tenants/:id" element={<TenantDetailPage />} />
+            </Route>
+
             <Route path="admin/whatsapp" element={<WhatsAppPage />} />
           </Route>
         </Route>

@@ -10,7 +10,7 @@ import { handlePdfResponse } from '@/utils/pdfHelper';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/common/Table';
 
 const ReportsPage = () => {
-    const [activeTab, setActiveTab] = useState('daily'); // 'daily' | 'commissions'
+    const [activeTab, setActiveTab] = useState('daily'); // 'daily' | 'commissions' | 'balance'
 
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-6 fade-in pb-20">
@@ -38,9 +38,20 @@ const ReportsPage = () => {
                 >
                     Comisiones
                 </button>
+                <button
+                    onClick={() => setActiveTab('balance')}
+                    className={`pb-4 px-6 font-medium text-sm transition-colors relative ${activeTab === 'balance'
+                        ? 'text-pink-600 border-b-2 border-pink-600'
+                        : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                >
+                    Balance General
+                </button>
             </div>
 
-            {activeTab === 'daily' ? <DailyCutTab /> : <CommissionsTab />}
+            {activeTab === 'daily' && <DailyCutTab />}
+            {activeTab === 'commissions' && <CommissionsTab />}
+            {activeTab === 'balance' && <BalanceTab />}
         </div>
     );
 };
@@ -142,6 +153,147 @@ const DailyCutTab = () => {
                     <li>Saldos pendientes</li>
                 </ul>
             </Card>
+        </div>
+    );
+};
+
+const BalanceTab = () => {
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [email, setEmail] = useState('');
+    const [sending, setSending] = useState(false);
+    const [generating, setGenerating] = useState(false);
+
+    const handleDownloadPdf = async () => {
+        const element = document.getElementById('balance-report-content');
+        if (!element) return toast.error("No hay contenido para generar el PDF");
+
+        setGenerating(true);
+        try {
+            await generatePdfFromDom(element, `Balance_${date}.pdf`);
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    const handleSendEmail = async () => {
+        if (!email) return toast.error("Ingresa un correo de destino");
+        const element = document.getElementById('balance-report-content');
+        if (!element) return toast.error("No hay contenido para generar el PDF");
+
+        setSending(true);
+        const loadingToast = toast.loading('Generando y enviando reporte...');
+        try {
+            const pdfBlob = await getPdfBlobFromDom(element);
+            await accountingApi.sendReportByEmail(pdfBlob, email, date, "Reporte de Balance General");
+
+            toast.dismiss(loadingToast);
+            toast.success("Reporte enviado con éxito");
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error(error.message || "Error al enviar el reporte");
+        } finally {
+            setSending(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-6">
+                <Card title="Configuración del Reporte" className="md:col-span-1">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Corte</label>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Correo de Destino</label>
+                            <input
+                                type="email"
+                                placeholder="ejemplo@correo.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
+                            />
+                        </div>
+                        <div className="pt-2 space-y-2">
+                            <Button
+                                variant="primary"
+                                fullWidth
+                                icon={generating ? Loader2 : FileText}
+                                onClick={handleDownloadPdf}
+                                disabled={generating || sending}
+                            >
+                                Descargar PDF
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                fullWidth
+                                icon={sending ? Loader2 : Mail}
+                                onClick={handleSendEmail}
+                                disabled={generating || sending}
+                            >
+                                Enviar por Correo
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+
+                <Card className="md:col-span-2 overflow-hidden bg-white">
+                    <div id="balance-report-content" className="p-8 bg-white text-gray-800">
+                        <div className="text-center border-bottom pb-4 mb-6" style={{ borderBottom: '2px solid #e91e63' }}>
+                            <h2 className="text-2xl font-bold text-pink-600">Pastelería La Fiesta</h2>
+                            <p className="text-sm text-gray-500 uppercase tracking-widest">Balance General de Operaciones</p>
+                        </div>
+
+                        <div className="flex justify-between mb-8 text-sm">
+                            <div>
+                                <p className="font-bold">Sucursal: <span className="font-normal">Matriz Centro</span></p>
+                                <p className="font-bold">Periodo: <span className="font-normal">{date}</span></p>
+                            </div>
+                            <div className="text-right">
+                                <p className="font-bold">Folio de Reporte: <span className="font-normal font-mono">BG-{date.replace(/-/g, '')}</span></p>
+                                <p className="font-bold">Estado: <span className="font-normal">Cierre de Operación</span></p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-8 mb-8">
+                            <div>
+                                <h4 className="font-bold border-b mb-3 text-green-700">🟢 INGRESOS</h4>
+                                <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between"><span>Ventas Directas</span> <span>$12,500.00</span></div>
+                                    <div className="flex justify-between"><span>Anticipos Recibidos</span> <span>$4,200.00</span></div>
+                                    <div className="flex justify-between border-t pt-1 font-bold"><span>Total Ingresos</span> <span>$16,700.00</span></div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="font-bold border-b mb-3 text-red-700">🔴 EGRESOS</h4>
+                                <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between"><span>Compra de Insumos</span> <span>$3,150.00</span></div>
+                                    <div className="flex justify-between"><span>Gastos Operativos</span> <span>$1,200.00</span></div>
+                                    <div className="flex justify-between border-t pt-1 font-bold"><span>Total Egresos</span> <span>$4,350.00</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-pink-50 p-4 rounded-lg border border-pink-100 mb-8">
+                            <div className="flex justify-between items-center text-lg font-bold text-pink-700">
+                                <span>TOTAL BALANCE NETO:</span>
+                                <span>$12,350.00</span>
+                            </div>
+                        </div>
+
+                        <div className="text-center text-xs text-gray-400 mt-20 border-t pt-4">
+                            Este documento es un reporte generado automáticamente por el sistema contable de Pastelería La Fiesta.
+                            <br />© 2026 - Gestión Operativa Integral
+                        </div>
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 };

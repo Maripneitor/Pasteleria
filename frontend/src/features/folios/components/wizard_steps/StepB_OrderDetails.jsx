@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
-import { Calendar, Clock, Cake, Layers, Loader2 } from 'lucide-react';
+import { Calendar, Clock, Cake, Layers, Loader2, Plus, X, Mic } from 'lucide-react';
 import catalogApi from '@/features/catalogs/api/catalogs.api';
 
 const StepB_OrderDetails = ({ next, prev }) => {
@@ -39,13 +39,28 @@ const StepB_OrderDetails = ({ next, prev }) => {
         period: 'PM'
     });
 
-    // Update main time string when parts change
+    // Populate selectedTime from orderData on load
+    useEffect(() => {
+        if (orderData.deliveryTime) {
+            const [h24, m] = orderData.deliveryTime.split(':');
+            let h = parseInt(h24);
+            let p = 'AM';
+            if (h >= 12) {
+                p = 'PM';
+                if (h > 12) h -= 12;
+            }
+            if (h === 0) h = 12;
+            
+            setSelectedTime({
+                hour: h.toString(),
+                minute: m || '00',
+                period: p
+            });
+        }
+    }, [orderData.deliveryTime]);
+
     useEffect(() => {
         const { hour, minute, period } = selectedTime;
-        // Convert to 24h for consistency in backend if needed, or keep string?
-        // User asked for specific selector. Let's store as string "HH:mm AM/PM" or "HH:mm" (24h).
-        // Standardizing on "HH:mm" (24h) is safer for backend, but UI shows 12h.
-
         let h = parseInt(hour);
         if (period === 'PM' && h !== 12) h += 12;
         if (period === 'AM' && h === 12) h = 0;
@@ -58,10 +73,88 @@ const StepB_OrderDetails = ({ next, prev }) => {
         }
     }, [selectedTime]);
 
+    const isBase = orderData.tipo_folio === 'Base';
+    
+    // Pisos Management
+    const handleAddPiso = () => {
+        const current = orderData.pisos || [];
+        updateOrder({ pisos: [...current, { personas: '', panes: [], rellenos: [], notas: '' }] });
+    };
+
+    const handleRemovePiso = (idx) => {
+        const current = [...(orderData.pisos || [])];
+        current.splice(idx, 1);
+        updateOrder({ pisos: current });
+    };
+
+    const handleUpdatePiso = (idx, field, val) => {
+        const current = [...(orderData.pisos || [])];
+        current[idx][field] = val;
+        updateOrder({ pisos: current });
+    };
+
+    const handleAddItem = (idx, field, value) => {
+        if (!value) return;
+        const piso = orderData.pisos[idx];
+        const currentList = Array.isArray(piso[field]) ? piso[field] : (piso[field] ? [piso[field]] : []);
+        const max = field === 'panes' ? 3 : 2;
+        
+        if (currentList.length >= max) {
+            import('react-hot-toast').then(m => m.default.error(`Solo puedes agregar hasta ${max} ${field}`));
+            return;
+        }
+        if (!currentList.includes(value)) {
+            handleUpdatePiso(idx, field, [...currentList, value]);
+        }
+    };
+
+    const handleRemoveItem = (idx, field, tagIndex) => {
+        const piso = orderData.pisos[idx];
+        const currentList = Array.isArray(piso[field]) ? [...piso[field]] : [];
+        currentList.splice(tagIndex, 1);
+        handleUpdatePiso(idx, field, currentList);
+    };
+
+    const startDictation = (idx) => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            // @ts-ignore
+            import('react-hot-toast').then(m => m.default.error('Dictado por voz no soportado en este navegador'));
+            return;
+        }
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-MX';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+             // @ts-ignore
+            import('react-hot-toast').then(m => m.default.success('Escuchando... dicta ahora 🎙️'));
+        };
+
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+            const currentNotas = orderData.pisos[idx].notas || '';
+            const newNotas = currentNotas ? `${currentNotas} ${text}` : text;
+            handleUpdatePiso(idx, 'notas', newNotas);
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error', event.error);
+             // @ts-ignore
+            import('react-hot-toast').then(m => m.default.error('No se pudo escuchar correctamente.'));
+        };
+
+        recognition.start();
+    };
+
     // Validation
+    const hasPisos = isBase && orderData.pisos?.length > 0;
+    const hasSelections = orderData.panes?.length > 0 && orderData.rellenos?.length > 0;
     const isValid = orderData.deliveryDate && orderData.deliveryTime &&
-        orderData.flavorId && orderData.fillingId && // At least one
-        orderData.peopleCount; // Required per prompt Section B
+        orderData.peopleCount &&
+        (isBase ? hasPisos : hasSelections);
 
     if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin text-pink-500 mx-auto" /></div>;
 
@@ -75,7 +168,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
             {/* 1. Date & Time */}
             <div className="grid md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                    <label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
                         <Calendar size={16} className="text-pink-500" /> Fecha de Entrega
                     </label>
                     <input
@@ -86,7 +179,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                    <label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
                         <Clock size={16} className="text-pink-500" /> Hora de Entrega
                     </label>
                     <div className="flex gap-2">
@@ -122,21 +215,26 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     <label className="block text-sm font-bold text-gray-700 mb-2">Tipo de Folio</label>
                     <div className="flex bg-gray-100 p-1 rounded-xl">
                         <button
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${orderData.tipo_folio !== 'Base' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${!isBase ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                             onClick={() => updateOrder({ tipo_folio: 'Normal' })}
                         >
                             Normal
                         </button>
                         <button
-                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${orderData.tipo_folio === 'Base' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                            onClick={() => updateOrder({ tipo_folio: 'Base' })}
+                            className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${isBase ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            onClick={() => {
+                                updateOrder({ tipo_folio: 'Base' });
+                                if (!orderData.pisos || orderData.pisos.length === 0) {
+                                    updateOrder({ pisos: [{ personas: '', panes: [], rellenos: [], notas: '' }] });
+                                }
+                            }}
                         >
                             Base / Especial
                         </button>
                     </div>
                 </div>
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Número de Personas</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Número de Personas {isBase && "(Total)"}</label>
                     <input
                         type="number"
                         value={orderData.peopleCount || ''}
@@ -160,46 +258,196 @@ const StepB_OrderDetails = ({ next, prev }) => {
                 </div>
             </div>
 
-            {/* 3. Flavors & Fillings (Max 2) */}
-            <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                        <Cake size={16} /> Sabores de Pan (Máx 2)
-                    </label>
-                    <select
-                        className="w-full p-3 border border-gray-300 rounded-xl bg-white mb-2"
-                        value={orderData.flavorId || ''}
-                        onChange={(e) => {
-                            // Simple selection for primary logic, can expand to array if needed
-                            const id = e.target.value;
-                            const flav = flavors.find(f => f.id.toString() === id);
-                            updateOrder({ flavorId: id, flavorText: flav?.name });
-                        }}
-                    >
-                        <option value="">Seleccione Principal...</option>
-                        {flavors.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                    </select>
-                    {/* Secondary Flavor Logic could go here (e.g. array push) */}
-                </div>
+            {/* 3. Flavors & Fillings OR Pisos Structure */}
+            {!isBase ? (
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                            <Cake size={16} /> Sabores de Pan (Máx 3)
+                        </label>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                            {(orderData.panes || []).map((pan, i) => (
+                                <span key={i} className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-md">
+                                    {pan}
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            const newList = [...(orderData.panes || [])];
+                                            newList.splice(i, 1);
+                                            updateOrder({ panes: newList });
+                                        }} 
+                                        className="text-purple-400 hover:text-red-500 rounded-full bg-white p-0.5"
+                                    >
+                                        <X size={10} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                        <select
+                            className="w-full p-3 border border-gray-300 rounded-xl bg-white mb-2"
+                            value=""
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) return;
+                                const current = orderData.panes || [];
+                                if (current.length >= 3) {
+                                    import('react-hot-toast').then(m => m.default.error('Máximo 3 sabores de pan'));
+                                    return;
+                                }
+                                if (!current.includes(val)) {
+                                    updateOrder({ panes: [...current, val] });
+                                }
+                            }}
+                        >
+                            <option value="">+ Agregar sabor de pan...</option>
+                            {flavors.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+                        </select>
+                    </div>
 
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                        <Layers size={16} /> Rellenos (Máx 2)
-                    </label>
-                    <select
-                        className="w-full p-3 border border-gray-300 rounded-xl bg-white mb-2"
-                        value={orderData.fillingId || ''}
-                        onChange={(e) => {
-                            const id = e.target.value;
-                            const fill = fillings.find(f => f.id.toString() === id);
-                            updateOrder({ fillingId: id, fillingText: fill?.name });
-                        }}
-                    >
-                        <option value="">Seleccione Principal...</option>
-                        {fillings.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                    </select>
+                    <div>
+                        <label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                            <Layers size={16} /> Rellenos (Máx 2)
+                        </label>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                            {(orderData.rellenos || []).map((rell, i) => (
+                                <span key={i} className="inline-flex items-center gap-1 bg-pink-100 text-pink-700 text-xs font-bold px-2 py-1 rounded-md">
+                                    {rell}
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            const newList = [...(orderData.rellenos || [])];
+                                            newList.splice(i, 1);
+                                            updateOrder({ rellenos: newList });
+                                        }} 
+                                        className="text-pink-400 hover:text-red-500 rounded-full bg-white p-0.5"
+                                    >
+                                        <X size={10} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                        <select
+                            className="w-full p-3 border border-gray-300 rounded-xl bg-white mb-2"
+                            value=""
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) return;
+                                const current = orderData.rellenos || [];
+                                if (current.length >= 2) {
+                                    import('react-hot-toast').then(m => m.default.error('Máximo 2 rellenos'));
+                                    return;
+                                }
+                                if (!current.includes(val)) {
+                                    updateOrder({ rellenos: [...current, val] });
+                                }
+                            }}
+                        >
+                            <option value="">+ Agregar relleno...</option>
+                            {fillings.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
+                        </select>
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div className="bg-purple-50/50 p-6 rounded-2xl border border-purple-100">
+                    <h3 className="text-lg font-bold text-purple-800 border-b border-purple-200 pb-2 mb-4 flex items-center gap-2">
+                        <Layers size={20} className="text-purple-600" /> Estructura por Pisos
+                    </h3>
+                    
+                    <div className="space-y-4">
+                        {(orderData.pisos || []).map((piso, idx) => (
+                            <div key={idx} className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm relative group">
+                                <button 
+                                    onClick={() => handleRemovePiso(idx)} 
+                                    className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition shadow-sm hover:bg-red-200"
+                                >
+                                    <X size={14} />
+                                </button>
+                                <div className="grid md:grid-cols-4 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Personas</label>
+                                        <input 
+                                            type="number" 
+                                            value={piso.personas || ''} 
+                                            onChange={(e) => handleUpdatePiso(idx, 'personas', e.target.value)} 
+                                            className="w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm" 
+                                            placeholder="Ej. 10"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Panes (Máx 3)</label>
+                                        <div className="flex flex-wrap gap-1 mb-2">
+                                            {(Array.isArray(piso.panes) ? piso.panes : (piso.panes ? [piso.panes] : [])).map((pan, i) => (
+                                                <span key={i} className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-md">
+                                                    {pan}
+                                                    <button type="button" onClick={() => handleRemoveItem(idx, 'panes', i)} className="text-purple-400 hover:text-red-500 rounded-full bg-white p-0.5"><X size={10} /></button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <select 
+                                            value="" 
+                                            onChange={(e) => handleAddItem(idx, 'panes', e.target.value)} 
+                                            className="w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm bg-white" 
+                                        >
+                                            <option value="">+ Agregar pan...</option>
+                                            {flavors.map(f => (
+                                                <option key={f.id} value={f.name}>{f.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Rellenos (Máx 2)</label>
+                                        <div className="flex flex-wrap gap-1 mb-2">
+                                            {(Array.isArray(piso.rellenos) ? piso.rellenos : (piso.rellenos ? [piso.rellenos] : [])).map((relleno, i) => (
+                                                <span key={i} className="inline-flex items-center gap-1 bg-pink-100 text-pink-700 text-xs font-bold px-2 py-1 rounded-md">
+                                                    {relleno}
+                                                    <button type="button" onClick={() => handleRemoveItem(idx, 'rellenos', i)} className="text-pink-400 hover:text-red-500 rounded-full bg-white p-0.5"><X size={10} /></button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <select 
+                                            value="" 
+                                            onChange={(e) => handleAddItem(idx, 'rellenos', e.target.value)} 
+                                            className="w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm bg-white" 
+                                        >
+                                            <option value="">+ Agregar relleno...</option>
+                                            {fillings.map(f => (
+                                                <option key={f.id} value={f.name}>{f.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Notas / Forma</label>
+                                        <div className="flex gap-2 relative">
+                                            <input 
+                                                type="text" 
+                                                value={piso.notas || ''} 
+                                                onChange={(e) => handleUpdatePiso(idx, 'notas', e.target.value)} 
+                                                className="w-full py-2 px-3 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm" 
+                                                placeholder="Dicta la forma..." 
+                                            />
+                                            <button 
+                                                type="button"
+                                                onClick={() => startDictation(idx)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-600 transition"
+                                                title="Dictar nota por voz"
+                                            >
+                                                <Mic size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={handleAddPiso} 
+                        className="mt-4 px-4 py-2 bg-purple-100 text-purple-700 font-bold text-sm rounded-lg hover:bg-purple-200 transition flex items-center gap-2"
+                    >
+                        <Plus size={16} /> Añadir Piso
+                    </button>
+                </div>
+            )}
 
             <div className="flex justify-between pt-4">
                 <button
@@ -213,7 +461,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     disabled={!isValid}
                     className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-pink-200"
                 >
-                    Siguiente (Complementos) arrow_forward
+                    Siguiente
                 </button>
             </div>
         </div>

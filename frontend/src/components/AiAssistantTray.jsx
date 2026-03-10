@@ -246,10 +246,23 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                                 <p><strong>Cliente:</strong> {msg.orderData.cliente_nombre}</p>
                                 <p><strong>Total:</strong> ${msg.orderData.total}</p>
                             </div>
-                            <button
-                                onClick={() => { navigate(`/pedidos/${msg.orderData.id}`); onClose(); }}
-                                className="mt-2 w-full py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-sm transition"
-                            > Ver Pedido Completo </button>
+                            <div className="flex gap-2 mt-2">
+                                <button
+                                    onClick={() => { navigate(`/pedidos/${msg.orderData.id}`); onClose(); }}
+                                    className="flex-1 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-[11px] font-medium transition"
+                                > Ver Detalles </button>
+                                <button
+                                    onClick={() => { navigate(`/pedidos/${msg.orderData.id}/editar`); onClose(); }}
+                                    className="flex-1 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-[11px] font-medium transition"
+                                > Editar </button>
+                                <button
+                                    onClick={() => { 
+                                        setMode('EDIT'); 
+                                        setInput(`pedido ${msg.orderData.id} cambiar a entregado`); 
+                                    }}
+                                    className="flex-1 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 text-[11px] font-medium transition"
+                                > Entregar </button>
+                            </div>
                         </div>
                     );
                 }
@@ -337,7 +350,7 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                 {isOpen && (
                     <motion.div
                         initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
-                        className="fixed bottom-4 right-4 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden flex flex-col" style={{ maxHeight: '80vh' }}
+                        className="fixed bottom-4 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden flex flex-col" style={{ maxHeight: '80vh' }}
                     >
                         <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-4 flex justify-between items-center text-white">
                             <div className="flex items-center gap-2"><Bot size={20} /><span className="font-medium">Asistente IA</span></div>
