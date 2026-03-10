@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '../.env' }); // Adjust if .env is in backend or root
+require('dotenv').config({ path: './.env' }); // Adjust if .env is in backend or root
 
 module.exports = {
     development: {

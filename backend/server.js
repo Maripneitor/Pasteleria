@@ -155,6 +155,7 @@ async function bootstrap() {
     console.log('✅ DB Conectada.');
 
     // 2. Sync / Migrations
+    await sequelize.sync({ alter: true }); // Esto creará las tablas si no existen
     // Se ha desactivado la sincronización automática (sync) por seguridad.
     // Utilizar exclusivamente Sequelize Migrations (CLI).
     console.log('🛡️ Sincronización automática de BD desactivada. Usando migraciones.');
