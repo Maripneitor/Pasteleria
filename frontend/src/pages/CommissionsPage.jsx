@@ -34,9 +34,9 @@ const CommissionsPage = () => {
         try {
             const data = await commissionsApi.getReport(filters.from, filters.to);
             setReport(data);
-        } catch (error) {
-            console.error(error);
-            toast.error('Error cargando reporte de comisiones');
+        } catch {
+            // axios interceptor already shows toast
+            setReport(null);
         } finally {
             setLoading(false);
         }
@@ -57,9 +57,8 @@ const CommissionsPage = () => {
         try {
             await commissionsApi.sendReportEmail(filters.from, filters.to);
             toast.success("Correo enviado exitosamente");
-        } catch (e) {
-            console.error(e);
-            toast.error("Error enviando correo");
+        } catch {
+            // axios interceptor already shows toast
         } finally {
             setSendingEmail(false);
         }
@@ -71,9 +70,8 @@ const CommissionsPage = () => {
         try {
             // Utilizamos la utilidad handlePdfResponse que configuramos para descargas forzadas
             await handlePdfResponse(() => commissionsApi.getReportPdf(filters.from, filters.to));
-        } catch (e) {
-            console.error(e);
-            // El helper ya muestra el toast de error si falla
+        } catch {
+            // axios interceptor and pdfHelper handle error display
         } finally {
             setLoadingPdf(false);
         }

@@ -75,8 +75,8 @@ client.interceptors.response.use(
             window.location.href = '/login';
         }
 
-        // Log técnico en desarrollo
-        if (import.meta.env.DEV) {
+        // Log técnico en desarrollo (skip for silent requests)
+        if (import.meta.env.DEV && !error.config?.skipToast) {
             console.error("❌ API Error:", error.response?.data || error.message);
         }
 
