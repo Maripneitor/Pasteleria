@@ -4,86 +4,121 @@ Bienvenido al sistema integral de gestión para pastelerías. Este proyecto es u
 
 ---
 
-## 🚀 Inicio Rápido (Docker)
+## 🚀 Inicio Rápido (Docker) — Zero Config
 
-La forma más rápida y recomendada de correr el proyecto es usando Docker.
+> **Requisitos:** Solo necesitas tener instalado [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
-### 1. Preparar el Entorno
-Copia el archivo de ejemplo y ajusta tus credenciales (especialmente las llaves de API si las tienes):
+### 1. Clonar y preparar el entorno
 ```bash
+git clone https://github.com/Maripneitor/Pasteleria.git
+cd Pasteleria
 cp .env.example .env
 ```
-*(Nota: El sistema tiene valores por defecto seguros para desarrollo local si prefieres no crear el .env inmediatamente).*
 
-### 2. Encender Motores
-Levanta todo el ecosistema (Base de Datos, Backend y Frontend):
+### 2. Levantar todo el stack
 ```bash
 docker compose up -d --build
 ```
+Esto levanta automáticamente:
+- 🗄️ **MySQL 8** (Base de datos)
+- ⚙️ **Backend** (Node.js + Express) — sincroniza esquema y seeds automáticamente
+- 🎨 **Frontend** (Vite + React) — servidor de desarrollo con HMR
+- 💬 **WhatsApp Gateway** (Opcional — Puppeteer + WWebJS)
 
-### 3. Inicializar Datos (Seed)
-Si es la primera vez, inyecta los usuarios administrador y el catálogo base:
+### 3. Cargar catálogo demo (solo la primera vez)
 ```bash
 docker compose exec backend npm run seed:full
 ```
 
+### 4. ¡Listo! Abre tu navegador
+- **Aplicación:** [http://localhost:5173](http://localhost:5173)
+- **API:** [http://localhost:3000/api](http://localhost:3000/api)
+- **Swagger Docs:** [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
+
 **Credenciales por defecto:**
-- **SuperAdmin:** `superadmin@lafiesta.com` / `admin123`
-- **Owner Demo:** `owner@demo.com` / `admin123`
+
+| Rol | Email | Contraseña |
+|:---|:---|:---|
+| Super Admin | `admin@gmail.com` | `Admin1234` |
+| Mario Dev | `mario@dev.com` | `mario123` |
+| Owner Demo | `owner@demo.com` | `admin123` |
+| Empleado | `empleado@demo.com` | `admin123` |
 
 ---
 
-## 🛠️ Desarrollo y Comandos Útiles
+## 🛠️ Comandos Útiles
 
-### URLs del Sistema
-- **Frontend:** [http://localhost:5173](http://localhost:5173)
-- **Backend API:** [http://localhost:3000/api](http://localhost:3000/api)
-- **Documentación Swagger:** [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
-
-### Comandos de Control (Docker)
 | Acción | Comando |
-| :--- | :--- |
+|:---|:---|
+| Levantar todo | `docker compose up -d --build` |
 | Detener sistema | `docker compose down` |
-| Ver Logs Backend | `docker compose logs -f backend` |
-| Reiniciar Base de Datos | `docker compose exec backend npm run db:reset` |
-| Ejecutar Pruebas (Smoke) | `docker compose exec backend npm run qa:smoke` |
+| Ver logs backend | `docker compose logs -f backend` |
+| Ver logs frontend | `docker compose logs -f frontend` |
+| Seed completo | `docker compose exec backend npm run seed:full` |
+| Reiniciar BD limpia | `docker compose down -v` luego `docker compose up -d --build` |
+| Ejecutar pruebas QA | `docker compose exec backend npm run qa:smoke` |
 
-### Desarrollo Local (Sin Docker)
-1. **Backend**: 
+---
+
+## 📁 Estructura del Proyecto
+
+```
+├── backend/           # API Node.js + Express + Sequelize
+│   ├── models/        # Modelos Sequelize (fuente de verdad del esquema)
+│   ├── src/modules/   # Módulos de negocio (folios, users, cash, etc.)
+│   ├── scripts/       # Scripts de utilidad (seeds, QA)
+│   └── server.js      # Entry point
+├── frontend/          # React + Vite + TailwindCSS
+│   ├── src/
+│   │   ├── features/  # Módulos por dominio (auth, folios, cash, etc.)
+│   │   ├── components/# Componentes reutilizables
+│   │   ├── context/   # React Context (Auth, Order)
+│   │   └── App.jsx    # Router principal
+│   └── vite.config.js # Configuración con proxy al backend
+├── docker-compose.yml # Orquestación de servicios
+├── .env.example       # Variables de entorno (copiar a .env)
+└── README.md
+```
+
+---
+
+## 🔧 Desarrollo Local (Sin Docker)
+
+Si prefieres desarrollar sin Docker:
+
+1. **Base de datos:** Tener MySQL 8 corriendo localmente.
+2. **Backend:**
    ```bash
-   cd backend && npm install && npm run dev
+   cd backend && npm install
+   # Ajustar DB_HOST=localhost en .env
+   node scripts/qa/sync_db.js    # Crear tablas
+   npm run seed:full              # Datos iniciales
+   npm run dev                    # Servidor en :3000
    ```
-2. **Frontend**: 
+3. **Frontend:**
    ```bash
-   cd frontend && npm install && npm run dev
+   cd frontend && npm install && npm run dev  # Servidor en :5173
    ```
 
 ---
 
 ## 🛡️ Calidad y Seguridad (QA)
 
-El sistema incluye una suite de pruebas de "Humo" (Smoke Tests) para validar la integridad:
-
-1. **Seguridad (RBAC)**: Valida que los roles (Admin/Empleado) estén aislados.
-   ```bash
-   docker compose exec backend node scripts/qa/error_handling.js
-   ```
-2. **Generación de PDFs**: Verifica que el motor de Puppeteer esté listo.
-   ```bash
-   docker compose exec backend node scripts/qa/test_api_pdf.js
-   ```
+- **Multi-tenancy**: Aislamiento estricto de datos por `tenantId`.
+- **RBAC**: Roles (SUPER_ADMIN, ADMIN, OWNER, EMPLOYEE) con guardias en rutas.
+- **Auditoría**: Registro de todas las acciones críticas en `AuditLogs`.
+- **Error Boundary**: Captura errores en frontend sin colapsar la app.
+- **Healthcheck**: El backend tiene `/api/v1/health` con verificación de BD.
 
 ---
 
 ## 🗝️ Archivos Importantes
-*   `.env`: Configuración maestra de secretos.
-*   `ARCHIVOS_LLAVE.md`: Registro de configuraciones críticas y recuperación de sesiones de WhatsApp.
-*   `docker-compose.yml`: Orquestación de contenedores.
+- `.env` — Configuración de secretos (NO se sube a Git).
+- `.env.example` — Template con todas las variables necesarias.
+- `docker-compose.yml` — Orquestación completa del stack.
 
 ---
 
-## 👨‍💻 Mejores Prácticas Aplicadas
-- **Multi-tenancy**: Aislamiento estricto de datos por `tenantId`.
-- **Zero-Config**: Listo para levantar en cualquier máquina con Docker.
-- **Auditoría**: Registro de todas las acciones críticas en `AuditLogs`.
-- **Escalabilidad**: Arquitectura preparada para múltiples sucursales y gran volumen de pedidos.
+## ⚠️ Notas
+- Las variables `OPENAI_API_KEY` y `EMAIL_*` son opcionales. Sin ellas, las funciones de IA y notificaciones por correo estarán deshabilitadas, pero el sistema funciona normalmente.
+- El frontend se sirve en modo desarrollo (HMR) vía Docker. Para producción, ejecutar `npm run build` dentro del contenedor frontend.

@@ -46,7 +46,7 @@ services:
     # 👇 ESTE COMANDO HACE TODO EL TRABAJO AUTOMÁTICO 👇
     command: >
       sh -c "npm install && 
-             npx sequelize-cli db:migrate && 
+             node scripts/qa/sync_db.js && 
              npx sequelize-cli db:seed:all && 
              npm run dev"
     environment:
