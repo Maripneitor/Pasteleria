@@ -34,7 +34,6 @@ import PendingUsersPage from './pages/PendingUsersPage';
 import CommissionsPage from './pages/CommissionsPage';
 import BrandingPage from './pages/admin/BrandingPage';
 import TenantsPage from './pages/admin/TenantsPage';
-import TenantDetailPage from './pages/admin/TenantDetailPage';
 
 import MainLayout from '@/components/MainLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -59,7 +58,11 @@ function App() {
           <Route element={<MainLayout />}>
             <Route index element={<DashboardPage />} />
             {/* 🛠 Wizard & Operatives (All Roles) */}
-            <Route path="pedidos/nuevo" element={<NewFolioWizard />} />
+            <Route path="pedidos/nuevo" element={
+              <OrderProvider>
+                <NewFolioWizard />
+              </OrderProvider>
+            } />
             <Route path="folios/new" element={<Navigate to="/pedidos/nuevo" replace />} />
 
             <Route path="pedidos" element={<FoliosPage />} />
@@ -106,11 +109,7 @@ function App() {
             <Route path="clients" element={<ClientsPage />} />
 
             {/* SuperAdmin Management */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
-              <Route path="admin/tenants" element={<TenantsPage />} />
-              <Route path="admin/tenants/:id" element={<TenantDetailPage />} />
-            </Route>
-
+            <Route path="admin/tenants" element={<TenantsPage />} />
             <Route path="admin/whatsapp" element={<WhatsAppPage />} />
           </Route>
         </Route>

@@ -24,7 +24,7 @@ const LoginPage = () => {
                 // Si es un 404, significa que el server responde (está vivo), aunque no tenga la ruta '/'.
                 // No alarmamos al usuario en este caso.
                 if (error.response && error.response.status === 404) {
-                    console.log("Health Check: Servidor online (respondió 404, ruta no encontrada).");
+                    // Server is reachable (even 404 means the server is online)
                     return;
                 }
 
@@ -46,7 +46,7 @@ const LoginPage = () => {
             const res = await axios.post('/auth/login', data);
 
             // 2. Si llegamos aquí, es éxito (200 OK)
-            console.log("Respuesta del servidor:", res.data);
+            // Login success
 
             // 3. Actualizamos el Contexto (Token + User State)
             if (res.data.token) {

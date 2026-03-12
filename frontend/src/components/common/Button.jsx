@@ -21,7 +21,6 @@ export default function Button({
     variant = 'primary',
     size = 'md',
     className,
-    fullWidth,
     loading,
     disabled,
     icon: Icon,
@@ -33,7 +32,6 @@ export default function Button({
                 "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95",
                 VARIANTS[variant],
                 SIZES[size],
-                fullWidth && "w-full flex",
                 className
             )}
             disabled={loading || disabled}

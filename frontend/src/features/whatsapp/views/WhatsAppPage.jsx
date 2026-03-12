@@ -2,7 +2,6 @@ import React from 'react';
 import usePollingQR from '@/hooks/usePollingQR';
 import { Smartphone, RefreshCw, CheckCircle, Power, LogOut, WifiOff, QrCode } from 'lucide-react';
 import { Loader } from 'lucide-react';
-import { getToken } from '@/utils/auth';
 
 
 const WhatsAppPage = () => {
@@ -52,14 +51,12 @@ const WhatsAppPage = () => {
                         </div>
                     )}
 
-                    {/* QR Display - Uses direct backend URL for robustness */}
-                    {status !== 'ready' && (
+                    {/* QR Display - Uses hook data, not direct URL */}
+                    {status !== 'ready' && status !== 'error' && status !== 'loading' && qr && (
                         <img
-                            src={`/api/v1/whatsapp/qr?format=image&t=${Date.now()}`}
+                            src={qr}
                             alt="WhatsApp QR"
-                            className={`w-full h-full object-contain scale-95 group-hover:scale-100 transition duration-500 ${status === 'loading' ? 'opacity-0' : 'opacity-100'}`}
-                            onError={(e) => { e.target.style.display = 'none'; }}
-                            onLoad={(e) => { e.target.style.display = 'block'; }}
+                            className="w-full h-full object-contain scale-95 group-hover:scale-100 transition duration-500"
                         />
                     )}
                 </div>

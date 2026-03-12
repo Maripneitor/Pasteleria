@@ -2,124 +2,85 @@ import { useState, useEffect, useRef } from 'react';
 import client from '@/config/axios';
 
 /**
- * usePollingQR - Hook para obtener estado y QR con backoff
+ * usePollingQRV2 - Hook para obtener estado y QR con backoff inteligente.
  * 
- * Estrategia de Backoff:
- * 1s -> 2s -> 3s -> 5s (max)
- * Si hay éxito (recibimos QR o status), reseteamos a 3s (refresh normal)
+ * - Silencia errores de consola y toasts para no contaminar la UI.
+ * - Implementa backoff exponencial con límite máximo de reintentos.
+ * - Para el polling cuando se conecta o tras muchos errores consecutivos.
  */
-export const usePollingQR = (endpoint = '/webhooks/qr') => {
-    const [data, setData] = useState({ qr: null, status: 'loading' });
-    const [delay, setDelay] = useState(1000); // Inicio rápido
-    const isMounted = useRef(true);
+const MAX_CONSECUTIVE_ERRORS = 5;
 
-    useEffect(() => {
-        isMounted.current = true;
-        let timeoutId;
-
-        const fetchStatus = async () => {
-            try {
-                const res = await client.get(endpoint);
-
-                if (isMounted.current) {
-                    setData(res.data);
-
-                    // Lógica de Backoff / Reset
-                    if (res.data.status === 'ready') {
-                        // Conectado: Dejar de pollear o pollear muy lento
-                        setDelay(null);
-                    } else if (res.data.qr) {
-                        // QR Recibido: Refrescar cada 3s por si caduca
-                        setDelay(3000);
-                    } else {
-                        // Aún cargando/generando: Mantener refresh
-                        setDelay(2000);
-                    }
-                }
-            } catch (error) {
-                console.error("Error polling QR", error);
-                if (isMounted.current) {
-                    // Error: Aumentar delay (Backoff)
-                    setDelay(prev => Math.min((prev || 1000) * 1.5, 5000));
-                    setData(prev => ({ ...prev, status: 'error' }));
-                }
-            }
-        };
-
-        if (delay !== null) {
-            timeoutId = setTimeout(() => {
-                fetchStatus().then(() => {
-                    // Si seguimos montados y hay delay, programar siguiente
-                    // fetchStatus ya se encarga de cambiar el delay si es necesario?
-                    // No, setTimeout es one-shot. El useEffect se dispara cuando 'delay' cambia.
-                    // Pero aquí queremos un loop.
-                    // Mejor estrategia: fetch -> wait(delay) -> fetch
-                });
-            }, delay);
-        }
-
-        // Simplemente ejecutar en loop dependiente de delay
-        // La implementación de arriba es estilo 'timeout recursivo' pero está dentro de un useEffect disparado por `delay`.
-        // Cuidado con infinite loops si delay no cambia. 
-        // Mejor usar setInterval simple o un useEffect que se re-ejecuta.
-
-        // Corrección: Usaremos función recursiva interna para control total
-        return () => { isMounted.current = false; clearTimeout(timeoutId); };
-    }, [delay, endpoint]); // Dependencia 'delay' reinicia el timer
-
-    return { ...data, isConnected: data.status === 'ready' };
-};
-
-// Implementación alternativa más robusta para polling variable
 export const usePollingQRV2 = () => {
     const [state, setState] = useState({ qr: null, status: 'loading' });
+    const mountedRef = useRef(true);
+    const errorCountRef = useRef(0);
 
-    // Expose a way to force reload
     const loadQR = async () => {
         try {
-            // Updated Endpoint: /api/whatsapp/qr
-            const res = await client.get('/whatsapp/qr');
-            setState(res.data);
+            const res = await client.get('/whatsapp/qr', { skipToast: true });
+            errorCountRef.current = 0; // Reset on success
+            if (mountedRef.current) {
+                setState(res.data);
+            }
             return res.data;
-        } catch (e) {
-            console.error("Poll Error", e);
-            setState(s => ({ ...s, status: 'error' }));
+        } catch {
+            errorCountRef.current++;
+            if (mountedRef.current) {
+                setState(s => ({ ...s, status: 'error' }));
+            }
+            return null;
         }
     };
 
     const restartSession = async () => {
         try {
-            // Updated Endpoint: /api/whatsapp/refresh
-            await client.post('/whatsapp/refresh');
+            await client.post('/whatsapp/refresh', null, { skipToast: true });
+            errorCountRef.current = 0;
             setState({ qr: null, status: 'loading' });
-            // Poll will pick it up
-        } catch (e) {
-            console.error(e);
+        } catch {
+            // silently fail — user can retry manually
         }
     };
 
     useEffect(() => {
+        mountedRef.current = true;
         let timeoutId;
-        let pDelay = 1000;
 
         const poll = async () => {
-            const data = await loadQR();
+            if (!mountedRef.current) return;
 
-            if (data?.status === 'ready') {
-                return; // Stop polling
+            // Stop polling after too many consecutive errors
+            if (errorCountRef.current >= MAX_CONSECUTIVE_ERRORS) {
+                setState(s => ({ ...s, status: 'error' }));
+                return;
             }
 
-            // Reset backoff on success (got response)
-            // If connected, no need to poll fast.
-            pDelay = data?.qr ? 3000 : 2000;
-            timeoutId = setTimeout(poll, pDelay);
+            const data = await loadQR();
+
+            if (!mountedRef.current) return;
+
+            // Connected — stop polling
+            if (data?.status === 'ready') return;
+
+            // Backoff: longer waits on errors, shorter on success
+            const delay = errorCountRef.current > 0
+                ? Math.min(2000 * Math.pow(1.5, errorCountRef.current), 15000)
+                : data?.qr ? 3000 : 2000;
+
+            timeoutId = setTimeout(poll, delay);
         };
 
         poll();
-        return () => clearTimeout(timeoutId);
+
+        return () => {
+            mountedRef.current = false;
+            clearTimeout(timeoutId);
+        };
     }, []);
 
     return { ...state, reload: loadQR, restart: restartSession };
 };
 
+// Legacy export for compatibility
+export const usePollingQR = usePollingQRV2;
 export default usePollingQRV2;

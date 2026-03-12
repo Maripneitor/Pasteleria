@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Edit2, Shield, ShieldOff, CheckCircle, XCircle } from 'lucide-react';
 import usersApi from '../services/usersApi';
-import branchesApi from '../services/branchesApi';
 import toast from 'react-hot-toast';
 
 const TeamPage = () => {
@@ -16,7 +15,6 @@ const TeamPage = () => {
         role: 'EMPLOYEE',
         status: 'ACTIVE'
     });
-    const [branches, setBranches] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState(null);
 
@@ -29,22 +27,10 @@ const TeamPage = () => {
         }
     };
 
-    const fetchBranches = async () => {
-        try {
-            const data = await branchesApi.getAll();
-            setBranches(data);
-        } catch (error) {
-            console.error("Error fetching branches:", error);
-        }
-    };
-
     useEffect(() => {
         let mounted = true;
         const load = async () => {
-            if (mounted) {
-                await fetchUsers();
-                await fetchBranches();
-            }
+            if (mounted) await fetchUsers();
         };
         load();
         return () => { mounted = false; };
@@ -125,7 +111,7 @@ const TeamPage = () => {
         const r = role || 'EMPLOYEE';
         return (
             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${styles[r] || styles.USER}`}>
-                {r.replace('_', ' ')}
+                {r}
             </span>
         );
     };

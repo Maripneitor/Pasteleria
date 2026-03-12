@@ -7,7 +7,6 @@ const ExpenseForm = () => {
     const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
     const onSubmit = (data) => {
-        console.log("💸 Retiro Registrado:", data);
         toast.success(`Retiro de $${data.amount} registrado para ${data.category}`);
         reset();
     };

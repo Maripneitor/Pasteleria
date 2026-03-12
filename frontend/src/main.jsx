@@ -8,14 +8,23 @@ import './index.css'
 
 import { AuthProvider } from './context/AuthContext'
 
-// Filtro para limpiar logs de React DevTools en desarrollo/pruebas
-const originalConsoleError = console.error;
-console.error = (...args) => {
-  if (args[0] && typeof args[0] === 'string' && args[0].includes('React DevTools')) {
-    return;
-  }
-  originalConsoleError(...args);
-};
+// Filtro para limpiar logs de React DevTools en desarrollo
+if (import.meta.env.DEV) {
+  const originalConsoleError = console.error;
+  const originalConsoleWarn = console.warn;
+  const devToolsFilter = (msg) =>
+    typeof msg === 'string' &&
+    (msg.includes('React DevTools') || msg.includes('react.dev/link/react-devtools') || msg.includes('Download the React DevTools'));
+
+  console.error = (...args) => {
+    if (devToolsFilter(args[0])) return;
+    originalConsoleError(...args);
+  };
+  console.warn = (...args) => {
+    if (devToolsFilter(args[0])) return;
+    originalConsoleWarn(...args);
+  };
+}
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 

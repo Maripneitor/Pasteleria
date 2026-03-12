@@ -13,13 +13,8 @@ const CashCountForm = () => {
             return;
         }
 
-        console.log(`[${type}] Acción Registrada:`, data);
-        console.group("📝 Log de Operación de Caja");
-        console.log("Tipo:", type);
-        console.log("Efectivo:", data.cashAmount);
-        console.log("Tarjeta:", data.cardAmount);
-        console.log("Notas:", data.notes);
-        console.groupEnd();
+
+
 
         toast.success(`Turno ${type === 'OPEN' ? 'Abierto' : 'Cerrado'} Correctamente`);
         reset();
