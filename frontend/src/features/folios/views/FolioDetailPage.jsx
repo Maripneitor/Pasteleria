@@ -28,7 +28,13 @@ const FolioDetailPage = () => {
                 
                 // Forzamos la actualización del estado
                 setFolio(data.folio || data);
-                setAudits(auditsData || []);
+                
+                // AJUSTE 1: Protegemos el setAudits para asegurar que siempre sea un Array
+                const auditsArray = Array.isArray(auditsData) 
+                    ? auditsData 
+                    : (auditsData?.audits || auditsData?.data || []);
+                setAudits(auditsArray);
+
             } catch (error) {
                 console.error("❌ Error fetchFolio:", error);
                 toast.error('No se pudo cargar la información del pedido');
@@ -216,7 +222,9 @@ const FolioDetailPage = () => {
                         <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2 uppercase text-xs tracking-wider">
                             <History size={18} /> Historial de Cambios
                         </h3>
-                        {audits.length === 0 ? (
+                        
+                        {/* AJUSTE 2: Protegemos el render con Array.isArray() */}
+                        {!Array.isArray(audits) || audits.length === 0 ? (
                             <p className="text-gray-400 text-sm text-center py-4">No hay cambios registrados.</p>
                         ) : (
                             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">

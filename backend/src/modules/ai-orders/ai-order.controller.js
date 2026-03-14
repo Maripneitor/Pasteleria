@@ -1,8 +1,11 @@
 const aiOrderParsingService = require('../../../services/aiOrderParsingService');
+const aiDraftService = require('../../../services/aiDraftService'); // IMPORTANTE: Servicio de IA
 const orderFlowService = require('../../../services/orderFlowService');
-const folioService = require('../folios/folio.service'); // Necesario para buscar
-const { buildTenantWhere } = require('../../../utils/tenantScope'); // El que faltaba
+const folioService = require('../folios/folio.service');
+const { buildTenantWhere } = require('../../../utils/tenantScope');
 const asyncHandler = require('../../core/asyncHandler');
+const Folio = require('../../../models/Folio'); // IMPORTANTE: Modelo para actualizar la BD
+const { Op, Sequelize } = require('sequelize');
 
 // 1. PARSE
 exports.parseOrder = asyncHandler(async (req, res) => {
@@ -43,95 +46,151 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
     if (!userMessage) return res.status(400).json({ message: 'El mensaje es requerido' });
 
-    // 1. Mandamos el texto al servicio de IA (pasa el texto y el ID de la sucursal/tenant)
-    const result = await aiOrderParsingService.parseOrder(userMessage, req.user.tenantId);
+    // Mandamos el texto al servicio de IA
+    const result = await aiDraftService.processDraft(userMessage);
 
-    // 2. Si la validación falla (ej. pidió sabor "fresa" pero no existe en la BD)
-    if (!result.valid) {
+    if (result.missing && result.missing.length > 0) {
         return res.json({
             isPartial: true,
-            message: "Entendí parte del pedido, pero tengo dudas: " + result.errors.join(', ') + ". ¿Me confirmas?",
-            extractedData: result.data // Le regresamos lo que sí entendió al borrador
+            message: result.nextQuestion || "Entendí parte del pedido, pero tengo dudas. ¿Me confirmas los datos faltantes?",
+            extractedData: result.draft
         });
     }
 
-    // 3. Si la IA entendió todo perfecto, armamos el paquete para la BD
     const payload = {
-        cliente_nombre: result.data.customerName || 'Cliente Mostrador',
-        cliente_telefono: result.data.phone || '0000000000',
-        fecha_entrega: result.data.deliveryDate || new Date().toISOString(),
-        sabores_pan: result.data.flavorId ? [result.data.flavorId] : [],
-        descripcion_diseno: result.data.specs || 'Generado por Asistente IA'
+        cliente_nombre: result.draft.clientName || 'Cliente Mostrador',
+        cliente_telefono: result.draft.clientPhone || '0000000000',
+        fecha_entrega: result.draft.deliveryDate || new Date().toISOString(),
+        sabores_pan: result.draft.products && result.draft.products.length > 0 ? [result.draft.products[0].flavor] : [],
+        descripcion_diseno: result.draft.products && result.draft.products.length > 0 ? result.draft.products[0].design : 'Generado por Asistente IA'
     };
 
-    // 4. Creamos el borrador real en la base de datos
-    // 4. Creamos el borrador real en la base de datos
     const draft = await orderFlowService.createDraft(payload, req.user);
 
     console.log("🚨 DRAFT RAW DEVUELTO POR BD:", JSON.stringify(draft, null, 2));
 
-    // BLINDAJE: Extraemos el ID venga como venga (como objeto, propiedad id, o folio_id)
     const folioId = draft.id || draft.folio_id || draft.folioId || draft;
 
-    // 5. Mandamos la respuesta con las variables EXACTAS que espera tu frontend (AiAssistantTray.jsx)
     res.json({
         ok: true,
         isPartial: false,
         aiConfirmation: `¡Listo! He registrado el pedido para ${payload.cliente_nombre}.`,
         folio: {
-            id: folioId, // Aquí aseguramos que el ID nunca sea undefined
+            id: folioId,
             cliente_nombre: payload.cliente_nombre,
             cliente_telefono: payload.cliente_telefono,
             fecha_entrega: payload.fecha_entrega,
             total: draft.total || 0,
-            ...draft // Esparcimos lo demás por si aca
+            ...draft
         },
         folioNumber: draft.folio || `FOLIO-${folioId}`, 
-        extractedData: result.data
+        extractedData: result.draft
     });
 });
 
-// 3. EDIT (Mock de prueba)
+// 3. EDIT (IA REAL CONECTADA Y ACTUALIZANDO BD)
 exports.editOrder = asyncHandler(async (req, res) => {
     const { orderId, editInstruction } = req.body;
     console.log(`=> ✏️ Hit en /edit IA. Orden: ${orderId} | Instrucción: ${editInstruction}`);
-    
+
+    if (!orderId || !editInstruction) {
+        return res.status(400).json({ message: 'ID de orden e instrucción son requeridos' });
+    }
+
+    // 1. Buscamos la orden real en la BD
+    const order = await Folio.findOne({ 
+        where: { id: orderId, tenantId: req.user.tenantId } 
+    });
+
+    if (!order) {
+        return res.status(404).json({ message: 'Pedido no encontrado o no tienes acceso a él.' });
+    }
+
+    // 2. Mandamos la orden actual y la instrucción a la IA
+    const iaResponse = await aiDraftService.processEdit(order.toJSON(), editInstruction);
+
+    // 3. Aplicamos los cambios que sugirió la IA a la BD
+    if (iaResponse.updates && Object.keys(iaResponse.updates).length > 0) {
+        await order.update(iaResponse.updates);
+    }
+
+    // 4. Respondemos al Frontend con lo que la IA cambió
     res.json({
         ok: true,
-        message: `La orden fue actualizada correctamente según tus instrucciones (Simulación).`,
-        updatedData: {
-            cambiosAplicados: ["fecha_entrega", "sabor_pan"],
-            nuevoTotal: 500.00
-        }
+        aiConfirmation: iaResponse.summary || `Pedido #${orderId} actualizado correctamente.`,
+        changes: iaResponse.updates,
+        changedFields: Object.keys(iaResponse.updates || {}),
+        order: order
     });
 });
 
-// 4. SEARCH (Búsqueda Real con IA)
+// 4. SEARCH (Búsqueda Real con IA Inteligente)
 exports.searchOrders = asyncHandler(async (req, res) => {
     const { query } = req.body; 
-    
-    // Ahora sí, buildTenantWhere ya existe aquí
     const tenantFilter = buildTenantWhere(req);
 
     console.log("=> 🔍 IA analizando búsqueda:", query);
 
     if (!query) return res.status(400).json({ message: 'La consulta es requerida' });
 
-    // Llamamos al servicio real
-    const results = await folioService.listFolios({ q: query }, tenantFilter);
+    // 1. La IA traduce el texto a filtros estructurados
+    const aiSearch = await aiDraftService.processSearch(query);
+    const { q, startDate, endDate, status } = aiSearch.filters;
 
+    console.log("🎯 Filtros detectados por IA:", aiSearch.filters);
+
+    // 2. Armamos la consulta dinámica para la BD
+    // 2. Armamos la consulta dinámica para la BD
+    const whereClause = { ...tenantFilter }; 
+    
+    // MEJORA: Convertimos los campos JSON a texto (CHAR) para que la búsqueda profunda funcione
+    if (q) {
+        whereClause[Op.or] = [
+            { cliente_nombre: { [Op.like]: `%${q}%` } },
+            { descripcion_diseno: { [Op.like]: `%${q}%` } },
+            Sequelize.where(Sequelize.cast(Sequelize.col('sabores_pan'), 'CHAR'), { [Op.like]: `%${q}%` }),
+            Sequelize.where(Sequelize.cast(Sequelize.col('rellenos'), 'CHAR'), { [Op.like]: `%${q}%` })
+        ];
+    }
+    
+    if (startDate && endDate) {
+        whereClause.fecha_entrega = { [Op.between]: [startDate, endDate] };
+    } else if (startDate) {
+        whereClause.fecha_entrega = { [Op.gte]: startDate }; 
+    }
+
+    if (status) {
+        whereClause.estatus_produccion = status;
+    }
+
+    // 3. Hacemos la búsqueda
+    const results = await Folio.findAll({
+        where: whereClause,
+        order: [['fecha_entrega', 'ASC']],
+        limit: 20
+    });
+
+    // MEJORA 2: Evaluamos si hay resultados para cambiar la respuesta de la IA
+    let finalMessage = aiSearch.summary;
+    if (results.length === 0) {
+        finalMessage = `¡Ups! No encontré ningún pedido que coincida con tu búsqueda.`;
+    } else {
+        finalMessage = `${aiSearch.summary} (Encontré ${results.length} resultado${results.length > 1 ? 's' : ''})`;
+    }
+
+    // 4. Respondemos al Frontend
     res.json({
         ok: true,
-        message: results.length > 0 
-            ? `Encontré ${results.length} pedido(s) para "${query}":` 
-            : `No encontré pedidos para "${query}".`,
+        aiSummary: finalMessage,
+        count: results.length,
         results: results.map(f => ({
             id: f.id,
-            folio: f.folioNumber,
+            folio: f.folio_numero || `FOLIO-${f.id}`,
             cliente: f.cliente_nombre,
             status: f.estatus_produccion || 'Pendiente',
             fecha: f.fecha_entrega
-        }))
+        })),
+        filters: aiSearch.filters
     });
 });
 
