@@ -39,38 +39,57 @@ exports.parseOrder = asyncHandler(async (req, res) => {
     });
 });
 
-// 2. CREATE (IA Real conectada)
+// 2. CREATE (IA Real conectada, Protegida y con Catálogo)
 exports.createOrder = asyncHandler(async (req, res) => {
     const { userMessage } = req.body;
     console.log("=> 🧠 Procesando pedido real con IA. Mensaje:", userMessage);
 
     if (!userMessage) return res.status(400).json({ message: 'El mensaje es requerido' });
 
-    // Mandamos el texto al servicio de IA
-    const result = await aiDraftService.processDraft(userMessage);
+    // 🌟 NUEVO: Consulta a tu Catálogo de Sabores (AJUSTA ESTO A TU MODELO REAL)
+    // Ej: const saboresDB = await Ingrediente.findAll({ where: { tipo: 'sabor' } });
+    // const saboresDisponibles = saboresDB.map(s => s.nombre);
+    
+    // Lista temporal (reemplázala por tu consulta a la BD)
+    const saboresDisponibles = ["chocolate", "vainilla", "fresa", "cajeta", "nuez", "tres leches", "moka"];
 
+    // 1. Mandamos el texto al servicio de IA y le pasamos el catálogo!
+    const result = await aiDraftService.processDraft(userMessage, saboresDisponibles);
+
+    // 🛡️ REGLA DE SEGURIDAD
+    if (result.isOrderIntent === false) {
+        return res.json({
+            isPartial: true,
+            message: "✋ Parece que quieres buscar o editar un pedido, pero estás en la pestaña de 'Crear'. Por favor, selecciona la pestaña de Buscar (Lupa) o Editar (Lápiz).",
+            extractedData: null
+        });
+    }
+
+    // 2. Validamos si faltan datos o si pidió un sabor que no existe
     if (result.missing && result.missing.length > 0) {
         return res.json({
             isPartial: true,
-            message: result.nextQuestion || "Entendí parte del pedido, pero tengo dudas. ¿Me confirmas los datos faltantes?",
+            message: result.nextQuestion || "Tengo una duda con tu pedido. ¿Me confirmas?",
             extractedData: result.draft
         });
     }
 
+    // 3. Armamos el paquete para la BD (¡AHORA SÍ INCLUYE RELLENO!)
     const payload = {
         cliente_nombre: result.draft.clientName || 'Cliente Mostrador',
         cliente_telefono: result.draft.clientPhone || '0000000000',
         fecha_entrega: result.draft.deliveryDate || new Date().toISOString(),
-        sabores_pan: result.draft.products && result.draft.products.length > 0 ? [result.draft.products[0].flavor] : [],
-        descripcion_diseno: result.draft.products && result.draft.products.length > 0 ? result.draft.products[0].design : 'Generado por Asistente IA'
+        sabores_pan: result.draft.products && result.draft.products[0].flavor ? [result.draft.products[0].flavor] : [],
+        // ✅ BUG ARREGLADO: Aquí extraemos el relleno
+        rellenos: result.draft.products && result.draft.products[0].filling ? [result.draft.products[0].filling] : [],
+        descripcion_diseno: result.draft.products && result.draft.products[0].design ? result.draft.products[0].design : 'Generado por Asistente IA'
     };
 
+    // 4. Creamos el borrador real
     const draft = await orderFlowService.createDraft(payload, req.user);
-
-    console.log("🚨 DRAFT RAW DEVUELTO POR BD:", JSON.stringify(draft, null, 2));
-
     const folioId = draft.id || draft.folio_id || draft.folioId || draft;
 
+    // 5. Mandamos la respuesta al frontend
     res.json({
         ok: true,
         isPartial: false,
@@ -140,10 +159,9 @@ exports.searchOrders = asyncHandler(async (req, res) => {
     console.log("🎯 Filtros detectados por IA:", aiSearch.filters);
 
     // 2. Armamos la consulta dinámica para la BD
-    // 2. Armamos la consulta dinámica para la BD
     const whereClause = { ...tenantFilter }; 
     
-    // MEJORA: Convertimos los campos JSON a texto (CHAR) para que la búsqueda profunda funcione
+    // MEJORA: Convertimos los campos JSON a texto (CHAR) para que la búsqueda profunda funcione en sabores y rellenos
     if (q) {
         whereClause[Op.or] = [
             { cliente_nombre: { [Op.like]: `%${q}%` } },
@@ -170,7 +188,7 @@ exports.searchOrders = asyncHandler(async (req, res) => {
         limit: 20
     });
 
-    // MEJORA 2: Evaluamos si hay resultados para cambiar la respuesta de la IA
+    // MEJORA: Evaluamos si hay resultados para cambiar la respuesta de la IA
     let finalMessage = aiSearch.summary;
     if (results.length === 0) {
         finalMessage = `¡Ups! No encontré ningún pedido que coincida con tu búsqueda.`;

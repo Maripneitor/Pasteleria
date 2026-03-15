@@ -2,44 +2,47 @@ const { OpenAI } = require('openai');
 const fs = require('fs');
 const path = require('path');
 
-// Initialize OpenAI client if key exists
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 }) : null;
 
-/**
- * Service to handle Draft Generation
- */
 const aiDraftService = {
 
-    async processDraft(prompt) {
+    // AHORA RECIBE LOS SABORES DISPONIBLES
+    async processDraft(prompt, saboresDisponibles = []) {
         if (!prompt) throw new Error("Prompt required");
 
-        // Strategy Pattern: Choose implementation
         if (openai) {
-            return await this._generateWithOpenAI(prompt);
+            return await this._generateWithOpenAI(prompt, saboresDisponibles);
         } else {
             return this._generateFallback(prompt);
         }
     },
 
-    async _generateWithOpenAI(prompt) {
+    async _generateWithOpenAI(prompt, saboresDisponibles) {
         try {
-            // Le damos la fecha actual a la IA para que asigne el año y mes correctos
             const hoy = new Date().toLocaleDateString('es-MX');
             
+            // Texto dinámico con tus sabores de la BD
+            const catalogoTexto = saboresDisponibles.length > 0 
+                ? `\n🚨 CATÁLOGO ESTRICTO: Solo vendemos estos sabores de pan y relleno: ${saboresDisponibles.join(', ')}. Si el cliente pide un sabor que NO está aquí, ignora el draft y usa "missing" y "nextQuestion" para decirle amablemente que no tenemos ese sabor y menciónale los que sí hay.` 
+                : '';
+
             const completion = await openai.chat.completions.create({
                 model: "gpt-3.5-turbo",
                 messages: [
                     {
                         role: "system",
                         content: `Eres un asistente de pastelería inteligente.
-                        Tu trabajo es extraer detalles de pedidos del texto del usuario y devolver ONLY JSON válido.
-                        No incluyas markdown.
-                        Hoy es ${hoy}. Usa el año actual o el próximo para las fechas si no se especifica el año exacto.
+                        Tu trabajo es extraer detalles de pedidos y devolver ONLY JSON válido.
+                        Hoy es ${hoy}. Usa el año actual o el próximo para las fechas.
+                        
+                        🚨 REGLA DE INTENCIÓN: Si el texto es para BUSCAR o EDITAR, "isOrderIntent" es false. Solo es true para crear pedidos nuevos.
+                        ${catalogoTexto}
                         
                         Schema esperado:
                         {
+                            "isOrderIntent": boolean,
                             "draft": {
                                 "clientName": string | "",
                                 "clientPhone": string | "",
@@ -48,8 +51,8 @@ const aiDraftService = {
                                 "products": [
                                     { "flavor": string, "filling": string, "design": string, "notes": string }
                                 ],
-                                "notesRaw": string, // El prompt original o notas adicionales
-                                "summary": string // Resumen de 1 linea
+                                "notesRaw": string,
+                                "summary": string
                             },
                             "missing": string[], 
                             "nextQuestion": string
@@ -70,7 +73,7 @@ const aiDraftService = {
             };
 
         } catch (error) {
-            console.error("OpenAI Service Error:", error);
+            console.error("OpenAI Service Error (Draft):", error);
             throw error;
         }
     },
@@ -103,7 +106,7 @@ const aiDraftService = {
                         content: `DATOS ACTUALES:\n${JSON.stringify(orderData)}\n\nINSTRUCCIÓN: ${instruction}`
                     }
                 ],
-                temperature: 0.1, // Baja temperatura porque queremos precisión, no creatividad
+                temperature: 0.1,
             });
 
             const content = completion.choices[0].message.content;
@@ -138,7 +141,7 @@ const aiDraftService = {
                         Schema esperado:
                         {
                             "filters": {
-                                "q": "string (Palabra clave ultra corta) o vacío si solo menciona fechas",
+                                "q": "string (Palabra clave corta) o vacío si solo menciona fechas",
                                 "startDate": "YYYY-MM-DD" | null,
                                 "endDate": "YYYY-MM-DD" | null,
                                 "status": "Pendiente" | "Entregado" | "Cancelado" | null
@@ -167,7 +170,6 @@ const aiDraftService = {
     async analyzeImage(imageUrl) {
         if (!openai) throw new Error("OpenAI API Key no configurada.");
         try {
-            // imageUrl llega como "/uploads/reference/xxxxx.jpg"
             const localPath = path.join(__dirname, '../../', imageUrl);
             
             if (!fs.existsSync(localPath)) {
@@ -184,7 +186,7 @@ const aiDraftService = {
                 messages: [
                     {
                         role: "system",
-                        content: "Eres un asistente experto en diseño de pasteles. Analiza la imagen y describe detalladamente: colores principales, la temática, la estructura (si es de pisos), adornos (fondant, texturas, perlas, personajes). Esta descripción servirá para que un pastelero pueda replicarlo."
+                        content: "Eres un asistente experto en diseño de pasteles. Analiza la imagen y describe detalladamente los elementos visuales para que un pastelero pueda replicarlo."
                     },
                     {
                         role: "user",
@@ -222,39 +224,23 @@ const aiDraftService = {
                 notes: ""
             }],
             notesRaw: prompt,
-            summary: "Borrador generado automáticamente (Sin IA)."
+            summary: "Borrador generado automáticamente (Modo Offline)."
         };
 
         const missing = ["Verificar fecha/hora", "Confirmar sabor/relleno"];
 
-        // --- 1. Extract Date (Simple Heuristics) ---
-        const dateMatch = prompt.match(/\d{4}-\d{2}-\d{2}/);
-        if (dateMatch) draft.deliveryDate = dateMatch[0];
-
-        // --- 2. Extract Time ---
-        const timeMatch = prompt.match(/(\d{1,2})(:(\d{2}))?\s*(am|pm|hrs)?/i);
-        if (timeMatch) {
-            draft.deliveryTime = timeMatch[0];
-        }
-
-        // --- 3. Extract Phone ---
         const phoneMatch = prompt.match(/\b\d{10}\b/);
         if (phoneMatch) draft.clientPhone = phoneMatch[0];
 
-        // --- 4. Guess Name ---
         const nameMatch = prompt.match(/(?:cliente|nombre|a nombre de)\s*[:.]?\s*([a-zA-Z\s]+)/i);
         if (nameMatch) draft.clientName = nameMatch[1].trim();
 
-        // --- 5. Summary / Notes ---
-        draft.products[0].notes = prompt; // Put everything in notes
-        draft.summary = `Pedido extraído de: "${prompt.substring(0, 30)}..." (Modo Offline)`;
-
         return {
+            isOrderIntent: true,
             draft,
             missing: missing,
             nextQuestion: "La IA no está disponible. He extraído lo que pude, por favor verifica los datos.",
-            mode: 'fallback',
-            warning: "IA no configurada. Usando analizador básico."
+            mode: 'fallback'
         };
     }
 };

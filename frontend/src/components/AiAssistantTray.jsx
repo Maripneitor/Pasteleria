@@ -19,6 +19,7 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
         updateOrder = orderContext?.updateOrder;
     } catch (e) {}
 
+    // ===== Mode Selector State =====
     const [mode, setMode] = useState('CREATE'); // CREATE | EDIT | SEARCH | INSIGHTS
 
     const [messages, setMessages] = useState([
@@ -255,13 +256,6 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                                     onClick={() => { navigate(`/pedidos/${msg.orderData.id}/editar`); onClose(); }}
                                     className="flex-1 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-[11px] font-medium transition"
                                 > Editar </button>
-                                <button
-                                    onClick={() => { 
-                                        setMode('EDIT'); 
-                                        setInput(`pedido ${msg.orderData.id} cambiar a entregado`); 
-                                    }}
-                                    className="flex-1 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 text-[11px] font-medium transition"
-                                > Entregar </button>
                             </div>
                         </div>
                     );
@@ -299,7 +293,6 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                                     <div 
                                         key={order.id} 
                                         onClick={() => { 
-                                            // 🚀 Aquí es donde sucede la magia del clic
                                             navigate(`/pedidos/${order.id}`); 
                                             onClose(); 
                                         }} 
@@ -307,7 +300,6 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                                     >
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                {/* Cambiamos order.folioNumber por order.folio */}
                                                 <p className="font-bold text-gray-900 text-sm">{order.folio}</p>
                                                 <p className="text-xs text-gray-500 font-medium">{order.cliente}</p>
                                             </div>
@@ -418,13 +410,13 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
             </AnimatePresence>
 
             {!isOpen && (
-    <motion.button 
-        onClick={() => window.dispatchEvent(new Event('open-ai-tray'))} 
-        className="fixed bottom-4 right-4 p-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full shadow-lg z-40 group"
-    >
-        <Bot size={24} className="group-hover:rotate-12 transition-transform" />
-    </motion.button>
-)}
+                <motion.button 
+                    onClick={() => window.dispatchEvent(new Event('open-ai-tray'))} 
+                    className="fixed bottom-4 right-4 p-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full shadow-lg z-40 group"
+                >
+                    <Bot size={24} className="group-hover:rotate-12 transition-transform" />
+                </motion.button>
+            )}
         </>
     );
 };
