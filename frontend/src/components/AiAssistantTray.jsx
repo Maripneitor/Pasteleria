@@ -177,12 +177,21 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
 
                 case 'INSIGHTS':
                     response = await aiService.getDashboardInsights(userMessage);
+                    
+                    const answerText = response.answer || response.aiSummary || response.insight || 'Análisis completado';
+                    
+                    const mappedDashboardData = response.metrics ? {
+                        // 👇 Cambiamos pedidosCompletados por totalPedidos
+                        totalOrders: response.metrics.totalPedidos, 
+                        monthRevenue: response.metrics.ventasTotales
+                    } : response.dashboardData;
+
                     setMessages(prev => [...prev, {
                         role: 'ai',
-                        text: response.insight || 'Análisis completado',
+                        text: answerText,
                         mode: 'INSIGHTS',
-                        dashboardData: response.dashboardData,
-                        question: response.question
+                        dashboardData: mappedDashboardData,
+                        question: userMessage
                     }]);
                     break;
             }
@@ -317,6 +326,7 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                     );
                 }
                 break;
+                
             case 'INSIGHTS':
                 if (msg.dashboardData) {
                     return (

@@ -1,10 +1,15 @@
 const aiOrderParsingService = require('../../../services/aiOrderParsingService');
-const aiDraftService = require('../../../services/aiDraftService'); // IMPORTANTE: Servicio de IA
+const aiDraftService = require('../../../services/aiDraftService'); 
 const orderFlowService = require('../../../services/orderFlowService');
 const folioService = require('../folios/folio.service');
 const { buildTenantWhere } = require('../../../utils/tenantScope');
 const asyncHandler = require('../../core/asyncHandler');
-const Folio = require('../../../models/Folio'); // IMPORTANTE: Modelo para actualizar la BD
+const Folio = require('../../../models/Folio'); 
+
+// ✅ NUEVO: Importamos los modelos CORRECTOS según tu catalog.controller.js
+const CakeFlavor = require('../../../models/CakeFlavor'); 
+const Filling = require('../../../models/Filling'); 
+
 const { Op, Sequelize } = require('sequelize');
 
 // 1. PARSE
@@ -46,15 +51,25 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
     if (!userMessage) return res.status(400).json({ message: 'El mensaje es requerido' });
 
-    // 🌟 NUEVO: Consulta a tu Catálogo de Sabores (AJUSTA ESTO A TU MODELO REAL)
-    // Ej: const saboresDB = await Ingrediente.findAll({ where: { tipo: 'sabor' } });
-    // const saboresDisponibles = saboresDB.map(s => s.nombre);
+    // ✅ CORRECCIÓN: Consultamos las tablas correctas (cake_flavors y fillings)
+    const saboresDB = await CakeFlavor.findAll({
+        where: { tenantId: req.user.tenantId, isActive: true },
+        attributes: ['name']
+    });
     
-    // Lista temporal (reemplázala por tu consulta a la BD)
-    const saboresDisponibles = ["chocolate", "vainilla", "fresa", "cajeta", "nuez", "tres leches", "moka"];
+    const rellenosDB = await Filling.findAll({
+        where: { tenantId: req.user.tenantId, isActive: true },
+        attributes: ['name']
+    });
 
-    // 1. Mandamos el texto al servicio de IA y le pasamos el catálogo!
-    const result = await aiDraftService.processDraft(userMessage, saboresDisponibles);
+    const saboresDisponibles = saboresDB.map(s => s.name);
+    const rellenosDisponibles = rellenosDB.map(r => r.name);
+
+    console.log("🛑 DEBUG BD - Sabores Reales:", saboresDisponibles);
+    console.log("🛑 DEBUG BD - Rellenos Reales:", rellenosDisponibles);
+
+    // 1. Mandamos el texto al servicio de IA y le pasamos los catálogos reales!
+    const result = await aiDraftService.processDraft(userMessage, saboresDisponibles, rellenosDisponibles);
 
     // 🛡️ REGLA DE SEGURIDAD
     if (result.isOrderIntent === false) {
@@ -65,7 +80,16 @@ exports.createOrder = asyncHandler(async (req, res) => {
         });
     }
 
-    // 2. Validamos si faltan datos o si pidió un sabor que no existe
+    // 🛡️ REGLA DE INVENTARIO
+    if (result.valid === false) {
+        return res.json({
+            isPartial: true,
+            message: result.aiResponse || "El sabor o relleno solicitado no está en nuestro menú actual.",
+            extractedData: result.draft || null
+        });
+    }
+
+    // 2. Validamos si faltan datos
     if (result.missing && result.missing.length > 0) {
         return res.json({
             isPartial: true,
@@ -74,13 +98,12 @@ exports.createOrder = asyncHandler(async (req, res) => {
         });
     }
 
-    // 3. Armamos el paquete para la BD (¡AHORA SÍ INCLUYE RELLENO!)
+    // 3. Armamos el paquete para la BD
     const payload = {
         cliente_nombre: result.draft.clientName || 'Cliente Mostrador',
         cliente_telefono: result.draft.clientPhone || '0000000000',
         fecha_entrega: result.draft.deliveryDate || new Date().toISOString(),
         sabores_pan: result.draft.products && result.draft.products[0].flavor ? [result.draft.products[0].flavor] : [],
-        // ✅ BUG ARREGLADO: Aquí extraemos el relleno
         rellenos: result.draft.products && result.draft.products[0].filling ? [result.draft.products[0].filling] : [],
         descripcion_diseno: result.draft.products && result.draft.products[0].design ? result.draft.products[0].design : 'Generado por Asistente IA'
     };
@@ -93,7 +116,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
     res.json({
         ok: true,
         isPartial: false,
-        aiConfirmation: `¡Listo! He registrado el pedido para ${payload.cliente_nombre}.`,
+        aiConfirmation: result.aiResponse || `¡Listo! He registrado el pedido para ${payload.cliente_nombre}.`,
         folio: {
             id: folioId,
             cliente_nombre: payload.cliente_nombre,
@@ -116,7 +139,6 @@ exports.editOrder = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: 'ID de orden e instrucción son requeridos' });
     }
 
-    // 1. Buscamos la orden real en la BD
     const order = await Folio.findOne({ 
         where: { id: orderId, tenantId: req.user.tenantId } 
     });
@@ -125,43 +147,58 @@ exports.editOrder = asyncHandler(async (req, res) => {
         return res.status(404).json({ message: 'Pedido no encontrado o no tienes acceso a él.' });
     }
 
-    // 2. Mandamos la orden actual y la instrucción a la IA
-    const iaResponse = await aiDraftService.processEdit(order.toJSON(), editInstruction);
+    // ✅ CORRECCIÓN: Consultamos las tablas correctas para la edición
+    const saboresDB = await CakeFlavor.findAll({
+        where: { tenantId: req.user.tenantId, isActive: true },
+        attributes: ['name']
+    });
+    
+    const rellenosDB = await Filling.findAll({
+        where: { tenantId: req.user.tenantId, isActive: true },
+        attributes: ['name']
+    });
 
-    // 3. Aplicamos los cambios que sugirió la IA a la BD
+    const saboresDisponibles = saboresDB.map(s => s.name);
+    const rellenosDisponibles = rellenosDB.map(r => r.name);
+
+    const iaResponse = await aiDraftService.processEdit(order.toJSON(), editInstruction, saboresDisponibles, rellenosDisponibles);
+
+    // 🛡️ REGLA DE INVENTARIO PARA EDICIÓN
+    if (iaResponse.valid === false) {
+        return res.json({
+            ok: false,
+            aiConfirmation: iaResponse.aiResponse || "El sabor o relleno solicitado no está en nuestro catálogo.",
+            changes: null,
+            changedFields: [],
+            order: order
+        });
+    }
+
     if (iaResponse.updates && Object.keys(iaResponse.updates).length > 0) {
         await order.update(iaResponse.updates);
     }
 
-    // 4. Respondemos al Frontend con lo que la IA cambió
     res.json({
         ok: true,
-        aiConfirmation: iaResponse.summary || `Pedido #${orderId} actualizado correctamente.`,
+        aiConfirmation: iaResponse.summary || iaResponse.aiResponse || `Pedido #${orderId} actualizado correctamente.`,
         changes: iaResponse.updates,
         changedFields: Object.keys(iaResponse.updates || {}),
         order: order
     });
 });
 
-// 4. SEARCH (Búsqueda Real con IA Inteligente)
+// 4. SEARCH
 exports.searchOrders = asyncHandler(async (req, res) => {
     const { query } = req.body; 
     const tenantFilter = buildTenantWhere(req);
 
-    console.log("=> 🔍 IA analizando búsqueda:", query);
-
     if (!query) return res.status(400).json({ message: 'La consulta es requerida' });
 
-    // 1. La IA traduce el texto a filtros estructurados
     const aiSearch = await aiDraftService.processSearch(query);
     const { q, startDate, endDate, status } = aiSearch.filters;
 
-    console.log("🎯 Filtros detectados por IA:", aiSearch.filters);
-
-    // 2. Armamos la consulta dinámica para la BD
     const whereClause = { ...tenantFilter }; 
     
-    // MEJORA: Convertimos los campos JSON a texto (CHAR) para que la búsqueda profunda funcione en sabores y rellenos
     if (q) {
         whereClause[Op.or] = [
             { cliente_nombre: { [Op.like]: `%${q}%` } },
@@ -181,14 +218,12 @@ exports.searchOrders = asyncHandler(async (req, res) => {
         whereClause.estatus_produccion = status;
     }
 
-    // 3. Hacemos la búsqueda
     const results = await Folio.findAll({
         where: whereClause,
         order: [['fecha_entrega', 'ASC']],
         limit: 20
     });
 
-    // MEJORA: Evaluamos si hay resultados para cambiar la respuesta de la IA
     let finalMessage = aiSearch.summary;
     if (results.length === 0) {
         finalMessage = `¡Ups! No encontré ningún pedido que coincida con tu búsqueda.`;
@@ -196,7 +231,6 @@ exports.searchOrders = asyncHandler(async (req, res) => {
         finalMessage = `${aiSearch.summary} (Encontré ${results.length} resultado${results.length > 1 ? 's' : ''})`;
     }
 
-    // 4. Respondemos al Frontend
     res.json({
         ok: true,
         aiSummary: finalMessage,
@@ -212,17 +246,55 @@ exports.searchOrders = asyncHandler(async (req, res) => {
     });
 });
 
-// 5. INSIGHTS (Mock de prueba)
+// 5. INSIGHTS (Análisis Real con IA)
 exports.getInsights = asyncHandler(async (req, res) => {
     const { question } = req.body;
-    console.log("=> 📊 Hit en /insights IA. Pregunta:", question);
+    console.log("=> 📊 IA Analizando Datos. Pregunta:", question);
     
+    if (!question) return res.status(400).json({ message: 'La pregunta es requerida' });
+
+    // 1. Obtenemos la fecha de hace 30 días para no saturar a la IA con años de datos
+    const haceUnMes = new Date();
+    haceUnMes.setDate(haceUnMes.getDate() - 30);
+
+    // 2. Traemos todos los pedidos reales de esta sucursal del último mes
+    const pedidos = await Folio.findAll({
+        where: {
+            tenantId: req.user.tenantId,
+            fecha_entrega: { [Op.gte]: haceUnMes }
+        },
+        // Solo sacamos las columnas que le sirven a la IA para analizar
+        attributes: ['id', 'cliente_nombre', 'total', 'sabores_pan', 'rellenos', 'estatus_produccion', 'fecha_entrega'],
+        raw: true // Trae datos puros de JS
+    });
+
+    // 3. Calculamos un par de métricas rápidas de ayuda
+    const ventasTotales = pedidos.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+    const pedidosCompletados = pedidos.filter(p => p.estatus_produccion === 'Entregado').length;
+
+    const dbStats = {
+        periodo: "Últimos 30 días",
+        totalPedidos: pedidos.length,
+        ventasTotales,
+        pedidosCompletados,
+        detallePedidos: pedidos // Pasamos la lista completa a la IA
+    };
+
+    console.log(`🛑 DEBUG INSIGHTS: Se enviaron ${pedidos.length} pedidos a OpenAI para analizar.`);
+
+    // 4. Mandamos los datos y la pregunta a OpenAI
+    const iaResponse = await aiDraftService.processInsights(question, dbStats);
+
+    // 5. Respondemos al Frontend
     res.json({
         ok: true,
-        answer: "Analizando los datos de la sucursal: El pastel más vendido esta semana es el de Tres Leches con fresa. Tus ventas han subido un 15% respecto al mes pasado. (Simulación de IA).",
+        answer: iaResponse.answer,
+        aiConfirmation: iaResponse.answer, 
+        aiSummary: iaResponse.answer,
         metrics: {
-            ventasTotales: 12500,
-            pedidosCompletados: 34
+            ventasTotales,
+            pedidosCompletados,
+            totalPedidos: pedidos.length // 👈 ¡AGREGA ESTA LÍNEA!
         }
     });
 });
