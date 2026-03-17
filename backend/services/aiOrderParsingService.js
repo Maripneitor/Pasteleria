@@ -48,6 +48,67 @@ class AiOrderParsingService {
     }
 
     /**
+     * Parse text to extract Order ID and the requested changes
+     * @param {string} text 
+     * @param {number} tenantId 
+     * @returns {Object} { valid: boolean, data: Object, errors: string[] }
+     */
+    async parseEditOrder(text, tenantId) {
+        // En QA Mode devolvemos un mock rápido
+        if (process.env.QA_MODE === '1') {
+            return {
+                valid: true,
+                data: { orderId: 26, changes: { cantidad: 2 } },
+                errors: []
+            };
+        }
+
+        if (!process.env.OPENAI_API_KEY) {
+            console.warn("⚠️ No OpenAI API Key.");
+            throw new Error("OpenAI Config Missing");
+        }
+
+        const systemPrompt = `
+You are an AI assistant for a bakery. Your task is to understand instructions to EDIT existing orders.
+The user will provide a natural language sentence asking to modify an order.
+You must accurately extract the EXACT Order ID (Folio ID) they refer to, and the specific fields they want to change.
+
+CRITICAL INSTRUCTIONS:
+1. Identify the Order ID (a number). Read carefully. The user might mention quantities before the Order ID (e.g., "Change the quantity to 2 in order 26" -> orderId is 26, cantidad is 2).
+2. Identify the fields to change. Map them to these possible keys: "fecha_entrega" (YYYY-MM-DD), "cantidad" (number), "sabor_pan" (string), "detalles" (string), "estatus" (string).
+3. If you cannot find a clear Order ID, return null for orderId.
+4. Output JSON only.
+
+Schema:
+{
+  "orderId": number or null,
+  "changes": {
+    // ONLY include the keys the user explicitly wants to change
+  },
+  "errors": [] // Array of strings if there is ambiguity
+}
+`;
+
+        const completion = await openai.chat.completions.create({
+            model: MODEL,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: text }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0
+        });
+
+        const aiResponse = JSON.parse(completion.choices[0].message.content);
+
+        return {
+            valid: aiResponse.orderId !== null && (!aiResponse.errors || aiResponse.errors.length === 0),
+            data: aiResponse,
+            errors: aiResponse.errors || []
+        };
+    }
+
+    /**
      * Internal method to call OpenAI - Monkey patch this for QA
      */
     async _callOpenAI(text, context) {

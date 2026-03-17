@@ -137,18 +137,30 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                     break;
 
                 case 'EDIT':
-                    const orderIdMatch = userMessage.match(/\b(\d+)\b/);
-                    const orderId = orderIdMatch ? parseInt(orderIdMatch[1]) : null;
+                    // Ya no buscamos el ID aquí, le enviamos null y todo el texto
+                    response = await aiService.editOrderWithAI(null, userMessage);
 
-                    if (!orderId) {
+                    // Ahora evaluamos si el backend (la IA) tuvo algún problema
+                    if (!response.ok) {
                         setMessages(prev => [...prev, {
                             role: 'ai',
-                            text: '❓ No detecté el ID del pedido. Por favor menciona el número de pedido (ej: "pedido 123 cambiar fecha al martes")',
+                            text: response.message || 'No pude procesar la edición.',
                             mode: 'EDIT',
                             isError: true
                         }]);
                         break;
                     }
+
+                    // Si todo salió bien, mostramos los cambios
+                    setMessages(prev => [...prev, {
+                        role: 'ai',
+                        text: response.message || response.aiConfirmation || 'Pedido actualizado',
+                        mode: 'EDIT',
+                        changes: response.updatedData?.cambiosAplicados || response.changes,
+                        changedFields: response.updatedData?.cambiosAplicados || response.changedFields,
+                        order: response.order
+                    }]);
+                    break;
 
                     response = await aiService.editOrderWithAI(orderId, userMessage);
 
@@ -180,6 +192,15 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                     
                     const answerText = response.answer || response.aiSummary || response.insight || 'Análisis completado';
                     
+                    // 1. Detectamos si la pregunta justifica mostrar la tarjeta del Dashboard
+                    const textLower = userMessage.toLowerCase();
+                    const isDashboardRequest = textLower.includes('resumen') || 
+                                               textLower.includes('dashboard') || 
+                                               textLower.includes('ingresos') || 
+                                               textLower.includes('total de pedidos') || 
+                                               textLower.includes('cuánto hemos vendido');
+                    
+                    // 2. Mapeamos la data como ya lo tenías
                     const mappedDashboardData = response.metrics ? {
                         // 👇 Cambiamos pedidosCompletados por totalPedidos
                         totalOrders: response.metrics.totalPedidos, 
@@ -190,7 +211,8 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                         role: 'ai',
                         text: answerText,
                         mode: 'INSIGHTS',
-                        dashboardData: mappedDashboardData,
+                        // 3. MAGIA: Solo pasamos la data si se solicitó explícitamente el dashboard
+                        dashboardData: isDashboardRequest ? mappedDashboardData : null,
                         question: userMessage
                     }]);
                     break;

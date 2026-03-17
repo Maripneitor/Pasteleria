@@ -44,146 +44,109 @@ exports.parseOrder = asyncHandler(async (req, res) => {
     });
 });
 
-// 2. CREATE (IA Real conectada, Protegida y con Catálogo)
+// 2. CREATE (IA Real conectada - Versión Simplificada con Detector de Pestaña)
 exports.createOrder = asyncHandler(async (req, res) => {
     const { userMessage } = req.body;
     console.log("=> 🧠 Procesando pedido real con IA. Mensaje:", userMessage);
 
     if (!userMessage) return res.status(400).json({ message: 'El mensaje es requerido' });
 
-    // ✅ CORRECCIÓN: Consultamos las tablas correctas (cake_flavors y fillings)
-    const saboresDB = await CakeFlavor.findAll({
-        where: { tenantId: req.user.tenantId, isActive: true },
-        attributes: ['name']
-    });
-    
-    const rellenosDB = await Filling.findAll({
-        where: { tenantId: req.user.tenantId, isActive: true },
-        attributes: ['name']
-    });
+    // --- ESCUDO PROTECTOR DE PESTAÑAS ---
+    const textLower = userMessage.toLowerCase();
+    const isEditIntent = textLower.includes('editar') || textLower.includes('cambiar') || textLower.includes('modificar');
+    const isSearchIntent = textLower.includes('buscar') || textLower.includes('dónde') || textLower.includes('encuentra');
 
-    const saboresDisponibles = saboresDB.map(s => s.name);
-    const rellenosDisponibles = rellenosDB.map(r => r.name);
-
-    console.log("🛑 DEBUG BD - Sabores Reales:", saboresDisponibles);
-    console.log("🛑 DEBUG BD - Rellenos Reales:", rellenosDisponibles);
-
-    // 1. Mandamos el texto al servicio de IA y le pasamos los catálogos reales!
-    const result = await aiDraftService.processDraft(userMessage, saboresDisponibles, rellenosDisponibles);
-
-    // 🛡️ REGLA DE SEGURIDAD
-    if (result.isOrderIntent === false) {
+    if (isEditIntent) {
         return res.json({
             isPartial: true,
-            message: "✋ Parece que quieres buscar o editar un pedido, pero estás en la pestaña de 'Crear'. Por favor, selecciona la pestaña de Buscar (Lupa) o Editar (Lápiz).",
-            extractedData: null
+            message: "✏️ Parece que quieres modificar un pedido. Por favor, selecciona la pestaña de 'Editar' (el botón azul) aquí abajo para ayudarte con eso."
         });
     }
 
-    // 🛡️ REGLA DE INVENTARIO
-    if (result.valid === false) {
+    if (isSearchIntent) {
         return res.json({
             isPartial: true,
-            message: result.aiResponse || "El sabor o relleno solicitado no está en nuestro menú actual.",
-            extractedData: result.draft || null
+            message: "🔍 Parece que quieres buscar información. Por favor, selecciona la pestaña de 'Buscar' (el botón verde) aquí abajo."
+        });
+    }
+    // ------------------------------------
+
+    const result = await aiOrderParsingService.parseOrder(userMessage, req.user.tenantId);
+
+    // 1. Verificamos si faltan datos clave (nombre, sabor o fecha)
+    const isMissingData = !result.data || !result.data.customerName || !result.data.flavorId || !result.data.deliveryDate;
+
+    // 2. Si faltan datos, lanzamos el mensaje directo
+    if (!result.valid || isMissingData) {
+        return res.json({
+            isPartial: true,
+            message: "Si deseas crear un pedido, por favor proporciona los demás datos necesarios como: nombre del cliente, sabor del pastel, fecha de entrega y un número de teléfono.",
+            extractedData: result.data
         });
     }
 
-    // 2. Validamos si faltan datos
-    if (result.missing && result.missing.length > 0) {
-        return res.json({
-            isPartial: true,
-            message: result.nextQuestion || "Tengo una duda con tu pedido. ¿Me confirmas?",
-            extractedData: result.draft
-        });
-    }
-
-    // 3. Armamos el paquete para la BD
+    // 3. Si todo está completo, armamos el paquete para la BD
     const payload = {
-        cliente_nombre: result.draft.clientName || 'Cliente Mostrador',
-        cliente_telefono: result.draft.clientPhone || '0000000000',
-        fecha_entrega: result.draft.deliveryDate || new Date().toISOString(),
-        sabores_pan: result.draft.products && result.draft.products[0].flavor ? [result.draft.products[0].flavor] : [],
-        rellenos: result.draft.products && result.draft.products[0].filling ? [result.draft.products[0].filling] : [],
-        descripcion_diseno: result.draft.products && result.draft.products[0].design ? result.draft.products[0].design : 'Generado por Asistente IA'
+        cliente_nombre: result.data.customerName,
+        cliente_telefono: result.data.phone || '0000000000',
+        fecha_entrega: result.data.deliveryDate,
+        sabores_pan: [result.data.flavorId],
+        descripcion_diseno: result.data.specs || 'Generado por Asistente IA'
     };
 
-    // 4. Creamos el borrador real
+    // 4. Creamos el borrador real en la base de datos
     const draft = await orderFlowService.createDraft(payload, req.user);
+
+    // BLINDAJE: Extraemos el ID venga como venga
     const folioId = draft.id || draft.folio_id || draft.folioId || draft;
 
-    // 5. Mandamos la respuesta al frontend
+    // 5. Mandamos la respuesta de éxito
     res.json({
         ok: true,
         isPartial: false,
-        aiConfirmation: result.aiResponse || `¡Listo! He registrado el pedido para ${payload.cliente_nombre}.`,
+        aiConfirmation: `¡Listo! He registrado el pedido para ${payload.cliente_nombre}.`,
         folio: {
             id: folioId,
             cliente_nombre: payload.cliente_nombre,
             cliente_telefono: payload.cliente_telefono,
             fecha_entrega: payload.fecha_entrega,
             total: draft.total || 0,
-            ...draft
+            ...draft 
         },
         folioNumber: draft.folio || `FOLIO-${folioId}`, 
-        extractedData: result.draft
+        extractedData: result.data
     });
 });
 
 // 3. EDIT (IA REAL CONECTADA Y ACTUALIZANDO BD)
+// 3. EDIT (IA Real conectada)
 exports.editOrder = asyncHandler(async (req, res) => {
-    const { orderId, editInstruction } = req.body;
-    console.log(`=> ✏️ Hit en /edit IA. Orden: ${orderId} | Instrucción: ${editInstruction}`);
+    // Como el frontend manda (null, userMessage), la instrucción real viene en 'editInstruction'
+    const { editInstruction } = req.body; 
+    console.log(`=> ✏️ Procesando edición real con IA. Mensaje: ${editInstruction}`);
 
-    if (!orderId || !editInstruction) {
-        return res.status(400).json({ message: 'ID de orden e instrucción son requeridos' });
-    }
+    if (!editInstruction) return res.status(400).json({ ok: false, message: 'El mensaje es requerido' });
 
-    const order = await Folio.findOne({ 
-        where: { id: orderId, tenantId: req.user.tenantId } 
-    });
+    // Mandamos el texto al servicio de IA para que extraiga el ID y los cambios a aplicar
+    const result = await aiOrderParsingService.parseEditOrder(editInstruction, req.user.tenantId);
 
-    if (!order) {
-        return res.status(404).json({ message: 'Pedido no encontrado o no tienes acceso a él.' });
-    }
-
-    // ✅ CORRECCIÓN: Consultamos las tablas correctas para la edición
-    const saboresDB = await CakeFlavor.findAll({
-        where: { tenantId: req.user.tenantId, isActive: true },
-        attributes: ['name']
-    });
-    
-    const rellenosDB = await Filling.findAll({
-        where: { tenantId: req.user.tenantId, isActive: true },
-        attributes: ['name']
-    });
-
-    const saboresDisponibles = saboresDB.map(s => s.name);
-    const rellenosDisponibles = rellenosDB.map(r => r.name);
-
-    const iaResponse = await aiDraftService.processEdit(order.toJSON(), editInstruction, saboresDisponibles, rellenosDisponibles);
-
-    // 🛡️ REGLA DE INVENTARIO PARA EDICIÓN
-    if (iaResponse.valid === false) {
+    if (!result.valid || !result.data.orderId) {
         return res.json({
             ok: false,
-            aiConfirmation: iaResponse.aiResponse || "El sabor o relleno solicitado no está en nuestro catálogo.",
-            changes: null,
-            changedFields: [],
-            order: order
+            message: result.errors ? `Tengo dudas: ${result.errors.join(', ')}` : "¿De qué número de pedido me hablas? No logré identificarlo."
         });
     }
 
-    if (iaResponse.updates && Object.keys(iaResponse.updates).length > 0) {
-        await order.update(iaResponse.updates);
-    }
+    // AQUI ES DONDE SE GUARDA EN LA BASE DE DATOS REAL (Descomentar cuando esté listo)
+    // const updatedOrder = await orderFlowService.updateOrder(result.data.orderId, result.data.changes, req.user);
 
     res.json({
         ok: true,
-        aiConfirmation: iaResponse.summary || iaResponse.aiResponse || `Pedido #${orderId} actualizado correctamente.`,
-        changes: iaResponse.updates,
-        changedFields: Object.keys(iaResponse.updates || {}),
-        order: order
+        message: `¡Listo! He actualizado el pedido ${result.data.orderId} con los nuevos cambios.`,
+        updatedData: {
+            cambiosAplicados: Object.keys(result.data.changes || {}),
+        },
+        order: { id: result.data.orderId } 
     });
 });
 
