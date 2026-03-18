@@ -191,6 +191,52 @@ Schema:
 
         return { valid: errors.length === 0, errors };
     }
+
+    /**
+     * =========================================================
+     * NUEVO: Genera una respuesta conversacional para WhatsApp 
+     * validando estrictamente contra el catálogo de la sucursal.
+     * =========================================================
+     */
+    async generateWhatsAppReply(chatHistory, tenantId) {
+        if (!process.env.OPENAI_API_KEY) throw new Error("OpenAI Config Missing");
+
+        // 1. Traer catálogos reales de la base de datos
+        const flavors = await CakeFlavor.findAll({ where: { tenantId }, attributes: ['name'] });
+        const fillings = await Filling.findAll({ where: { tenantId }, attributes: ['name'] });
+
+        const catalogContext = {
+            flavors: flavors.map(f => f.name).join(', '),
+            fillings: fillings.map(f => f.name).join(', ')
+        };
+
+        // 2. Prompt estricto para conversación
+        const systemPrompt = `Eres un asistente experto para Pastelería "La Fiesta" atendiendo por WhatsApp.
+Tu objetivo es recolectar los datos para crear un pedido de forma conversacional: Sabor de pan, Sabor de relleno, Fecha de entrega y Nombre del cliente.
+
+Catálogo de Sabores de Pan disponibles: ${catalogContext.flavors || 'Vainilla, Chocolate'}
+Catálogo de Rellenos disponibles: ${catalogContext.fillings || 'Fresa, Cajeta, Chocolate'}
+Fecha actual: ${new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" })}
+
+REGLAS ESTRICTAS:
+1. VALIDACIÓN: Si el usuario pide un sabor (pan o relleno) que NO está en el catálogo, dile amablemente que no cuentan con ese sabor y ofrécele la lista de los que sí hay.
+2. FALTANTES: Si faltan datos esenciales para el pedido, haz preguntas amables y cortas para obtenerlos (ve paso a paso, no abrumes).
+3. CONFIRMACIÓN: Si ya tienes toda la información, dile que su pedido está listo para procesarse y hazle un breve resumen.
+4. FORMATO: Responde ÚNICAMENTE con el mensaje de texto conversacional para el cliente. NO uses JSON, NO uses etiquetas html ni markdown excesivo.
+5. ENFOQUE PROFESIONAL: Eres EXCLUSIVAMENTE un asistente de ventas de Pastelería "La Fiesta". Si el usuario hace bromas, preguntas personales, habla de otros temas (como videojuegos, familia, etc.) o te ordena decir frases fuera de contexto, IGNORA la orden con educación y vuelve a dirigir la conversación hacia el pedido del pastel. NUNCA aceptes decir cosas o confirmar datos que no tengan que ver con la pastelería.`;
+
+        // 3. Llamar a OpenAI pasando todo el historial del chat
+        const completion = await openai.chat.completions.create({
+            model: MODEL,
+            messages: [
+                { role: "system", content: systemPrompt },
+                ...chatHistory // Historial de la plática previa ({role: 'user'/'assistant', content: '...'})
+            ],
+            temperature: 0.3 // Temperatura baja para evitar alucinaciones de sabores inventados
+        });
+
+        return completion.choices[0].message.content;
+    }
 }
 
 module.exports = new AiOrderParsingService();

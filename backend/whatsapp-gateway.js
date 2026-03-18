@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios'); // <-- Agrega esta línea
 
 const STATUS_FILE = path.join(__dirname, 'whatsapp_status.json');
 
@@ -20,6 +21,9 @@ let _state = {
     qr: null,
     timestamp: Date.now()
 };
+
+// WhatsApp Client Instance (Global para poder enviar mensajes desde fuera del worker)
+let _client = null;
 
 function _persistStatus() {
     try {
@@ -65,6 +69,24 @@ async function restart() {
     await _startClient();
 }
 
+/** Sends a message via the active WA client */
+async function sendMessage(to, body) {
+    if (!_client || _state.status !== 'ready') {
+        console.error('[WA-Gateway] ❌ No se puede enviar el mensaje. Cliente no está listo o no ha sido inicializado.');
+        return false;
+    }
+    try {
+        // Aseguramos que el número tenga el sufijo de WhatsApp si es un chat individual
+        const chatId = to.includes('@c.us') || to.includes('@g.us') ? to : `${to}@c.us`;
+        await _client.sendMessage(chatId, body);
+        console.log(`[WA-Gateway] ✉️ Mensaje enviado a ${chatId}`);
+        return true;
+    } catch (error) {
+        console.error('[WA-Gateway] ❌ Error enviando mensaje:', error.message);
+        return false;
+    }
+}
+
 // -----------------------------------------------------------
 // WORKER MODE  (node whatsapp-gateway.js)
 // -----------------------------------------------------------
@@ -87,34 +109,57 @@ async function _startClient() {
         puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     }
 
-    const client = new Client({
+    // Inicializamos a la variable global _client
+    _client = new Client({
         authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }),
         puppeteer: puppeteerOptions
     });
 
-    client.on('qr', (qr) => {
+    _client.on('qr', (qr) => {
         console.log('[WA-Gateway] QR received');
         _state = { status: 'qr', qr, timestamp: Date.now() };
         _persistStatus();
     });
 
-    client.on('ready', () => {
+    _client.on('ready', () => {
         console.log('[WA-Gateway] ✅ WhatsApp client ready!');
         _state = { status: 'ready', qr: null, timestamp: Date.now() };
         _persistStatus();
     });
 
-    client.on('authenticated', () => {
+    _client.on('authenticated', () => {
         console.log('[WA-Gateway] Authenticated!');
     });
 
-    client.on('auth_failure', (msg) => {
-        console.error('[WA-Gateway] Auth failure:', msg);
-        _state = { status: 'error', qr: null, timestamp: Date.now() };
-        _persistStatus();
+    _client.on('authenticated', () => {
+        console.log('[WA-Gateway] Authenticated!');
     });
 
-    client.on('disconnected', (reason) => {
+    // ==========================================
+    // NUEVO: Escuchar mensajes reales de WhatsApp
+    // ==========================================
+    _client.on('message', async (msg) => {
+        // Ignorar estados de WhatsApp
+        if (msg.from === 'status@broadcast') return;
+
+        console.log(`[WA-Gateway] 📩 Mensaje entrante de ${msg.from}: ${msg.body}`);
+
+        try {
+            // Reenviamos el mensaje real a nuestro propio webhook local
+            await axios.post('http://localhost:3000/api/v1/whatsapp/webhook', {
+                data: {
+                    body: msg.body,
+                    from: msg.from,
+                    fromMe: msg.fromMe,
+                    contactId: msg.from
+                }
+            });
+        } catch (error) {
+            console.error('[WA-Gateway] ❌ Error mandando el mensaje al Webhook:', error.message);
+        }
+    });
+
+    _client.on('disconnected', (reason) => {
         console.warn('[WA-Gateway] Disconnected:', reason);
         _state = { status: 'disconnected', qr: null, timestamp: Date.now() };
         _persistStatus();
@@ -123,7 +168,7 @@ async function _startClient() {
     });
 
     try {
-        await client.initialize();
+        await _client.initialize();
     } catch (e) {
         console.error('[WA-Gateway] Failed to initialize:', e.message);
         _state = { status: 'error', qr: null, timestamp: Date.now() };
@@ -135,10 +180,11 @@ async function _startClient() {
 // Load from disk on startup so the API always has last-known state
 _loadStatus();
 
-// If run directly as CLI worker, start the WA client
-if (require.main === module) {
-    console.log('[WA-Gateway] Running as standalone worker...');
+// Arrancar el cliente directamente para pruebas locales en VS Code
+setTimeout(() => {
+    console.log('[WA-Gateway] Inicializando WA junto con el API local...');
     _startClient();
-}
+}, 2000);
 
-module.exports = { getStatus, restart };
+// Exportamos sendMessage para que el controlador lo pueda usar
+module.exports = { getStatus, restart, sendMessage };

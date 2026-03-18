@@ -1,50 +1,32 @@
 const axios = require('axios');
-const { getInitialExtraction } = require('../../../services/aiExtractorService');
-const { AISession } = require('../../../models');
 const fs = require('fs');
 const path = require('path');
 const gateway = require('../../../whatsapp-gateway');
 const asyncHandler = require('../../core/asyncHandler');
+const { AISession } = require('../../../models');
+const aiOrderParsingService = require('../../../services/aiOrderParsingService'); // Ajusta la ruta a donde esté tu archivo
 
-const TRIGGER_COMMAND = 'generar folio';
+// IMPORTANTE: Aquí importas el servicio de IA que ya usas en la web para que evalúe la intención
+// Ajusta la ruta según dónde tengas tu servicio
+// const aiOrderParsingService = require('../ai-orders/aiOrderParsingService'); 
+const { getInitialExtraction } = require('../../../services/aiExtractorService'); 
 
 exports.handleWebhook = asyncHandler(async (req, res) => {
+    // 1. Responder rápido con 200 OK para evitar que Whaticket/WhatsApp nos marque timeout 
+    // mientras la IA piensa la respuesta.
+    res.status(200).send('EVENT_RECEIVED');
+
     const messageData = req.body.data || req.body;
     const bodyText = messageData.body || (messageData.message && messageData.message.body);
 
-    if (!bodyText || !bodyText.trim().toLowerCase().includes(TRIGGER_COMMAND)) {
-        return res.status(200).send('EVENT_RECEIVED_BUT_IGNORED');
-    }
+    // Ignorar si no hay texto o si el mensaje fue enviado por el propio bot/empleado
+    if (!bodyText || messageData.fromMe) return;
 
-    let conversationText = messageData.conversation;
+    const contactId = messageData.contactId || (messageData.key && messageData.key.remoteJid) || messageData.from;
+    if (!contactId) return;
 
-    if (!conversationText) {
-        const contactId = messageData.contactId || (messageData.key && messageData.key.remoteJid) || messageData.from;
-        if (contactId && process.env.WHATICKET_API_URL && process.env.WHATICKET_API_TOKEN) {
-            try {
-                const apiUrl = `${process.env.WHATICKET_API_URL}/messages`;
-                const response = await axios.get(apiUrl, {
-                    params: { contactId, limit: 20 },
-                    headers: { 'Authorization': `Bearer ${process.env.WHATICKET_API_TOKEN}` }
-                });
-                const messages = response.data.messages || response.data;
-                if (Array.isArray(messages)) {
-                    conversationText = messages.reverse().map(m => {
-                        const sender = m.fromMe ? "Empleado" : "Cliente";
-                        return `${sender}: ${m.body}`;
-                    }).join('\n');
-                }
-            } catch (apiError) {
-                console.error("❌ Error al consultar API de Whaticket:", apiError.message);
-            }
-        }
-    }
-
-    if (!conversationText) conversationText = `Empleado: ${bodyText}`;
-
-    const extractedData = await getInitialExtraction(conversationText);
+    // 2. Manejo de imágenes (Mantenemos tu lógica intacta)
     const imageUrls = [];
-
     if (messageData.media) {
         try {
             const media = messageData.media;
@@ -62,15 +44,87 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
         }
     }
 
-    const newSession = await AISession.create({
-        whatsappConversation: conversationText,
-        extractedData: extractedData,
-        imageUrls: imageUrls,
-        chatHistory: [],
-        status: 'active'
-    });
+    try {
+        // 3. Buscar una sesión activa para este cliente para mantener el contexto
+        // Asegúrate de que tu modelo AISession en BD acepte 'phoneNumber'
+        let session = await AISession.findOne({
+    where: { customerPhone: contactId, status: 'active' } // <-- Cambia a customerPhone
+});
 
-    res.status(200).send('AI_SESSION_CREATED');
+        let conversationText = messageData.conversation;
+
+        if (!session) {
+            // Si es sesión nueva y no viene historial en el payload, intentamos traerlo de Whaticket
+            if (!conversationText && process.env.WHATICKET_API_URL && process.env.WHATICKET_API_TOKEN) {
+                try {
+                    const apiUrl = `${process.env.WHATICKET_API_URL}/messages`;
+                    const response = await axios.get(apiUrl, {
+                        params: { contactId, limit: 10 },
+                        headers: { 'Authorization': `Bearer ${process.env.WHATICKET_API_TOKEN}` }
+                    });
+                    const messages = response.data.messages || response.data;
+                    if (Array.isArray(messages)) {
+                        conversationText = messages.reverse().map(m => {
+                            const sender = m.fromMe ? "Empleado" : "Cliente";
+                            return `${sender}: ${m.body}`;
+                        }).join('\n');
+                    }
+                } catch (apiError) {
+                    console.error("❌ Error al consultar API de Whaticket:", apiError.message);
+                }
+            }
+
+            if (!conversationText) conversationText = `Cliente: ${bodyText}`;
+            else conversationText += `\nCliente: ${bodyText}`;
+
+            // Crear la sesión nueva
+            session = await AISession.create({
+                customerPhone: contactId, 
+                whatsappConversation: conversationText,
+                imageUrls: imageUrls,
+                chatHistory: [{ role: 'user', content: bodyText }],
+                status: 'active'
+            });
+        } else {
+            // Si ya existe la sesión, agregamos el nuevo mensaje al contexto
+            session.whatsappConversation += `\nCliente: ${bodyText}`;
+            
+            const currentHistory = session.chatHistory || [];
+            session.chatHistory = [...currentHistory, { role: 'user', content: bodyText }];
+            
+            if (imageUrls.length > 0) {
+                session.imageUrls = [...(session.imageUrls || []), ...imageUrls];
+            }
+            await session.save();
+        }
+
+        // 4. Procesar con tu IA
+        // =========================================================================
+        // AQUI ES DONDE LA MAGIA SUCEDE:
+        // Deberás pasarle `session.chatHistory` a tu servicio OpenAI para que 
+        // valide si faltan sabores, fechas, etc., igual que en la web.
+        // Ej: const aiReplyText = await aiOrderParsingService.generateWhatsAppReply(session.chatHistory);
+        // =========================================================================
+
+        // CONEXIÓN REAL CON TU IA:
+const tenantId = 1; // Asumimos el ID 1 para tu sucursal principal
+const aiReplyText = await aiOrderParsingService.generateWhatsAppReply(session.chatHistory, tenantId);
+
+        // Extraer datos iniciales en background (tu lógica original, si la sigues necesitando)
+        const extractedData = await getInitialExtraction(session.whatsappConversation);
+        session.extractedData = extractedData;
+
+        // 5. Guardar la respuesta de la IA en la sesión
+        session.whatsappConversation += `\nAsistente: ${aiReplyText}`;
+        session.chatHistory = [...session.chatHistory, { role: 'assistant', content: aiReplyText }];
+        await session.save();
+
+        // 6. Enviar la respuesta real por WhatsApp
+        await gateway.sendMessage(contactId, aiReplyText);
+
+    } catch (error) {
+        console.error("❌ Error procesando el webhook de WhatsApp:", error);
+    }
 });
 
 exports.getQR = asyncHandler(async (req, res) => {

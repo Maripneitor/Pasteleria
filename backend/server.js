@@ -155,10 +155,9 @@ async function bootstrap() {
     console.log('✅ DB Conectada.');
 
     // 2. Sync / Migrations
-    await sequelize.sync({ alter: true }); // Esto creará las tablas si no existen
-    // Se ha desactivado la sincronización automática (sync) por seguridad.
-    // Utilizar exclusivamente Sequelize Migrations (CLI).
-    console.log('🛡️ Sincronización automática de BD desactivada. Usando migraciones.');
+    // CAMBIO APLICADO: Quitamos { alter: true } para evitar el bug de los 64 índices en MySQL
+    await sequelize.sync(); 
+    console.log('🛡️ Sincronización automática de BD ajustada (alter: false).');
 
     // 3. Iniciar CronJobs
     const initCronJobs = require('./cronJobs');
