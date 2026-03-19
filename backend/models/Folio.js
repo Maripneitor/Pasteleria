@@ -61,11 +61,16 @@ const Folio = sequelize.define('Folio', {
   rellenos: { type: DataTypes.JSON },
   complementos: { type: DataTypes.JSON }, // Legacy or simple items
   accesorios: { type: DataTypes.JSON },   // New simple items list
+  
+  // 🍰 NUEVOS CAMPOS PARA FLUJO AVANZADO
+  detallesPisos: { type: DataTypes.JSON, comment: 'Arreglo con los sabores y rellenos por piso' },
+  complementarios: { type: DataTypes.JSON, comment: 'Arreglo de pasteles extra independientes' },
 
   // Diseño
   descripcion_diseno: { type: DataTypes.TEXT },
   dedicatoria: { type: DataTypes.TEXT },
-  imagen_referencia_url: { type: DataTypes.STRING },
+  imagen_referencia_url: { type: DataTypes.STRING }, // Mantenemos por compatibilidad (legacy)
+  imagenes_referencia: { type: DataTypes.JSON, comment: 'Arreglo con hasta 5 URLs de imágenes' }, // NUEVO
   diseno_metadata: { type: DataTypes.JSON },
 
   // Económicos

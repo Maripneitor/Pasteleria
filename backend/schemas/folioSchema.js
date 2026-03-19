@@ -74,6 +74,28 @@ const createFolioSchema = z.object({
 
     forma: z.string().trim().optional(),
 
+    // 🍰 NUEVOS SCHEMAS PARA FLUJO AVANZADO
+    detallesPisos: z.array(
+        z.object({
+            piso: z.number().or(z.string()),
+            sabores_pan: z.array(z.string()).optional(),
+            rellenos: z.array(z.string()).optional()
+        })
+    ).optional(),
+
+    complementarios: z.array(
+        z.object({
+            numero_personas: z.number().or(z.string()).optional(),
+            forma: z.string().optional(),
+            sabores_pan: z.array(z.string()).optional(),
+            rellenos: z.array(z.string()).optional(),
+            descripcion: z.string().optional()
+        })
+    ).optional(),
+
+    imagenes_referencia: z.array(z.string().url()).max(5, 'Máximo 5 imágenes permitidas').optional(),
+    // ----------------------------------------
+
     sabores_pan: z
         .union([z.array(z.string()), z.string().transform((v) => [v])])
         .optional(),
@@ -84,7 +106,8 @@ const createFolioSchema = z.object({
 
     descripcion_diseno: z.string().trim().max(500).optional(),
 
-    tipo_folio: z.enum(['Normal', 'Express', 'Mayoreo']).default('Normal'),
+    // 🔥 AQUI ACTUALIZAMOS EL ENUM (Agregamos 'Base/Especial')
+    tipo_folio: z.enum(['Normal', 'Base/Especial', 'Express', 'Mayoreo']).default('Normal'),
 
     // — FINANCIERO —
     total: moneyField,
