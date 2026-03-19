@@ -170,7 +170,7 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
         }
 
         // ====================================================================
-        // INTERCEPCIÓN B: BUSCAR UN PEDIDO EXISTENTE
+        // INTERCEPCIÓN B: VER DETALLES DE UN PEDIDO EXISTENTE
         // ====================================================================
         const buscarFolioRegex = /\[BUSCAR_FOLIO:\s*(\d+)\]/;
         const folioMatch = aiReplyText.match(buscarFolioRegex);
@@ -180,34 +180,44 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
             aiReplyText = aiReplyText.replace(buscarFolioRegex, '').trim(); 
 
             try {
-                const folioEncontrado = await Folio.findByPk(folioBuscado);
+                const f = await Folio.findByPk(folioBuscado);
                 
-                if (folioEncontrado) {
-                    let panTxt = folioEncontrado.sabores_pan && folioEncontrado.sabores_pan.length > 0 ? folioEncontrado.sabores_pan.join(', ') : "No especificado";
-                    let rellenoTxt = folioEncontrado.rellenos && folioEncontrado.rellenos.length > 0 ? folioEncontrado.rellenos.join(', ') : "No especificado";
-
+                if (f) {
+                    // Limpiamos los datos para que no salgan nulos o feos
+                    const panTxt = f.sabores_pan && f.sabores_pan.length > 0 ? f.sabores_pan.join(', ') : "No especificado";
+                    const rellenoTxt = f.rellenos && f.rellenos.length > 0 ? f.rellenos.join(', ') : "No especificado";
+                    const disenoTxt = f.descripcion_diseno || "Ninguno / Estándar";
+                    const dedicatoriaTxt = f.dedicatoria || "Sin dedicatoria";
+                    const entregaTxt = f.ubicacion_entrega || "Recoger en Sucursal";
+                    
                     let precioTxt = "Por definir (El local te confirmará el total pronto)";
-                    if (folioEncontrado.total && parseFloat(folioEncontrado.total) > 0) {
-                        precioTxt = `$${parseFloat(folioEncontrado.total).toFixed(2)}`;
+                    if (f.total && parseFloat(f.total) > 0) {
+                        precioTxt = `$${parseFloat(f.total).toFixed(2)}`;
                     }
 
-                    aiReplyText += `\n\n📦 *Detalles de tu Folio #${folioBuscado}*\n` +
-                                   `👤 *A nombre de:* ${folioEncontrado.cliente_nombre}\n` +
-                                   `🎂 *Pastel:* Pan de ${panTxt} con relleno de ${rellenoTxt}\n` +
-                                   `📅 *Entrega:* ${folioEncontrado.fecha_entrega || 'Pendiente'}\n` +
+                    // --- FORMATO "ESPEJO" CON TODOS LOS DETALLES ---
+                    aiReplyText += `\n\n📦 *DETALLES DE TU PEDIDO #${folioBuscado}*\n` +
+                                   `👤 *Nombre:* ${f.cliente_nombre}\n` +
+                                   `📅 *Fecha de entrega:* ${f.fecha_entrega || 'Pendiente'}\n` +
+                                   `🍰 *Tamaño:* Para ${f.numero_personas || '??'} personas\n` +
+                                   `🍞 *Sabor de pan:* ${panTxt}\n` +
+                                   `🍓 *Sabor de relleno:* ${rellenoTxt}\n` +
+                                   `🎨 *Diseño:* ${disenoTxt}\n` +
+                                   `✍️ *Dedicatoria:* ${dedicatoriaTxt}\n` +
+                                   `📍 *Entrega:* ${entregaTxt}\n` +
+                                   `--------------------------\n` +
                                    `💵 *Precio Total:* ${precioTxt}\n` +
-                                   `💰 *Estado de Pago:* ${folioEncontrado.estatus_pago}\n` +
-                                   `\n_(🤖 El asistente se ha pausado. Si necesitas consultar otro folio o hacer un pedido nuevo, solo escríbeme "Hola" o "Qué onda" para iniciar otra plática)_`;
+                                   `💰 *Estado de Pago:* ${f.estatus_pago}\n` +
+                                   `\n_(🤖 El asistente se ha pausado. Si necesitas algo más, solo escríbeme "Hola" o "Qué onda" para iniciar otra plática)_`;
                 } else {
-                    aiReplyText += `\n\n⚠️ Lo siento, no encontré ningún pedido registrado con el folio *#${folioBuscado}*. Por favor asegúrate de que el número sea correcto e intenta de nuevo.`;
+                    aiReplyText += `\n\n⚠️ Lo siento, no encontré ningún pedido con el folio *#${folioBuscado}*. Revisa el número e intenta de nuevo.`;
                 }
                 
-                // --- NUEVO: Cerramos la sesión también al terminar de consultar ---
                 session.status = 'completed';
                 
             } catch (err) {
-                console.error("❌ Error al buscar folio en la BD:", err);
-                aiReplyText += `\n\n⚠️ Tuvimos un problema técnico al buscar tu pedido. Por favor intenta de nuevo en unos minutos.`;
+                console.error("❌ Error al buscar folio:", err);
+                aiReplyText += `\n\n⚠️ Tuvimos un problema técnico. Intenta de nuevo en unos minutos.`;
             }
         }
 
