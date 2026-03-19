@@ -127,22 +127,21 @@ const aiReplyText = await aiOrderParsingService.generateWhatsAppReply(session.ch
     }
 });
 
+// --- REEMPLAZA TU FUNCIÓN getQR POR ESTA ---
 exports.getQR = asyncHandler(async (req, res) => {
     const data = gateway.getStatus();
 
-    if (req.query.format === 'image') {
-        if (!data.qr) return res.status(404).send('QR Not Ready');
-        const qrcode = require('qrcode');
-        res.setHeader('Content-Type', 'image/png');
-        return qrcode.toFileStream(res, data.qr);
+    // 1. Si no hay QR todavía, avisamos
+    if (!data.qr) {
+        return res.status(404).send('<h1>QR no listo</h1><p>Espera unos segundos y recarga la página. Si el bot ya está conectado, no verás un QR.</p>');
     }
 
-    if (data.qr) {
-        const qrcode = require('qrcode');
-        data.qr = await qrcode.toDataURL(data.qr);
-    }
-
-    res.json(data);
+    // 2. Si hay QR, lo convertimos en imagen y lo enviamos directamente
+    const qrcode = require('qrcode');
+    res.setHeader('Content-Type', 'image/png');
+    
+    // Esto "dibuja" el QR y lo manda al navegador como una foto PNG
+    return qrcode.toFileStream(res, data.qr);
 });
 
 exports.refreshSession = asyncHandler(async (req, res) => {
