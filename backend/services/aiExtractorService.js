@@ -6,24 +6,24 @@ const { Flavor, Filling } = require('../models');
 let openai;
 
 // --- MOCK DATA (DATOS FALSOS PARA PRUEBAS SIN KEY) ---
-// Adaptado para coincidir con la estructura plana que espera el servicio actual
+// --- ARREGALDO: Ahora las llaves coinciden con las que espera whatsapp.controller.js ---
 const MOCK_EXTRACTION = {
     folioType: "Normal",
-    clientName: "Cliente de Prueba (Sin IA)",
-    deliveryDate: "2025-10-30",
-    deliveryTime: "14:00",
-    persons: 20,
-    cakeFlavor: ["Chocolate", "Vainilla"],
-    filling: ["Fresa"],
-    designDescription: "Pastel de prueba generado automáticamente porque no hay API Key.",
+    nombre: "Cliente de Prueba (Sin IA)",
+    fecha_entrega: "2025-10-30",
+    hora_entrega: "14:00",
+    numero_personas: 20,
+    sabor_pan: "Chocolate",
+    relleno: "Fresa",
+    diseno: "Pastel de prueba generado automáticamente porque no hay API Key.",
+    dedicatoria: null,
+    requiere_envio: false,
+    calle: null,
+    colonia: null,
+    referencias: null,
     tiers: [],
     complements: [],
-    additional: [],
-    dedication: null,
-    deliveryLocation: null,
-    deliveryCost: null,
-    total: null,
-    advancePayment: null
+    additional: []
 };
 
 
@@ -74,13 +74,13 @@ async function getInitialExtraction(conversationText) {
         // No lanzamos error fatal para que el servicio siga funcionando aunque falle la BD momentáneamente
     }
 
-    // ===== PROMPT ACTUALIZADO CON DATOS DINÁMICOS =====
+    // ===== PROMPT ACTUALIZADO CON DATOS DINÁMICOS Y NUEVAS LLAVES =====
     const prompt = `
         Eres un asistente experto para una pastelería llamada "La Fiesta". Tu tarea es analizar la siguiente conversación de WhatsApp
         y extraer la información clave para generar un folio de pedido en formato JSON. La fecha de hoy es ${today}.
 
         **CONTEXTO DEL MENÚ (IMPORTANTE):**
-        Para los campos de \`cakeFlavor\` (Sabor Pan) y \`filling\` (Relleno), intenta ajustar lo que dice el usuario a las siguientes listas oficiales. Si el usuario dice algo muy similar (ej. "Choco" en vez de "Chocolate"), usa el nombre oficial. Si pide algo totalmente diferente que no está en la lista, respeta el texto original del usuario.
+        Para los campos de \`sabor_pan\` (Sabor Pan) y \`relleno\` (Relleno), intenta ajustar lo que dice el usuario a las siguientes listas oficiales. Si el usuario dice algo muy similar (ej. "Choco" en vez de "Chocolate"), usa el nombre oficial. Si pide algo totalmente diferente que no está en la lista, respeta el texto original del usuario.
         
         * **LISTA DE SABORES DE PAN OFICIALES:** ${flavorsTxt}
         * **LISTA DE RELLENOS OFICIALES:** ${fillingsTxt}
@@ -96,11 +96,11 @@ async function getInitialExtraction(conversationText) {
             * En cualquier otro caso, establece \`folioType\` como \`"Normal"\`.
         2.  **Extrae Datos según el Tipo:**
             * **Si es "Normal":**
-                * Extrae los sabores generales en el array \`cakeFlavor\`. Pueden ser hasta 2.
-                * Extrae los rellenos generales en el array \`filling\`. Pueden ser hasta 2.
+                * Extrae el sabor general en \`sabor_pan\`.
+                * Extrae el relleno general en \`relleno\`.
                 * Deja el campo \`tiers\` como \`null\` o un array vacío \`[]\`.
             * **Si es "Base/Especial":**
-                * **Deja los campos \`cakeFlavor\` y \`filling\` como \`null\` o arrays vacíos \`[]\`**. La información irá en \`tiers\`.
+                * **Deja los campos \`sabor_pan\` y \`relleno\` como \`null\`**. La información irá en \`tiers\`.
                 * Analiza la descripción de cada piso **ESTRUCTURAL (APILADO)** y crea un array de objetos en el campo \`tiers\`. **NO incluyas planchas o pasteles de complemento aquí.**
                 * Cada objeto dentro de \`tiers\` DEBE tener la siguiente estructura exacta:
                     \`\`\`
@@ -111,31 +111,28 @@ async function getInitialExtraction(conversationText) {
                       "notas": string | null  // Notas adicionales o forma específica del piso (opcional)
                     }
                     \`\`\`
-                * Asegúrate de que \`persons\` en el nivel raíz del JSON siga siendo el número total de personas para todo el pedido (la suma de las personas de los pisos si está disponible, o el total mencionado).
+                * Asegúrate de que \`numero_personas\` en el nivel raíz del JSON siga siendo el número total de personas para todo el pedido (la suma de las personas de los pisos si está disponible, o el total mencionado).
 
         **Reglas Adicionales:**
-        * **Dedicatoria:** Si encuentras frases como "que diga '...'", "con el texto '...'", o una frase entre comillas que deba ir en el pastel, extrae ese texto EXCLUSIVAMENTE en el campo \`dedication\`. NO incluyas la dedicatoria en \`designDescription\`.
-        * **Dirección:** Intenta formatear como "Calle y Número, Colonia Nombre de la Colonia" en \`deliveryLocation\`. Si es "recoge en tienda", usa ese texto exacto. Si es "envía ubicación por Maps", usa "El cliente envía ubicación (Google Maps)".
-        * **Valores Numéricos:** Extrae solo el número para \`deliveryCost\`, \`total\`, \`advancePayment\`. Si no se mencionan, usa \`null\`.
+        * **Dedicatoria:** Si encuentras frases como "que diga '...'", "con el texto '...'", o una frase entre comillas que deba ir en el pastel, extrae ese texto EXCLUSIVAMENTE en el campo \`dedicatoria\`. NO incluyas la dedicatoria en \`diseno\`.
+        * **Dirección/Envío:** Si el cliente pide envío a domicilio, establece \`requiere_envio\` en true y llena \`calle\`, \`colonia\` y \`referencias\`. Si pasa a sucursal, pon \`requiere_envio\` en false.
 
         **Campos a extraer (adapta según el folioType detectado):**
         - \`folioType\`: (String) "Normal" o "Base/Especial". **Obligatorio**.
-        - \`clientName\`: (String | null) Nombre del cliente.
-        - \`clientPhone\`: (String | null) Teléfono (si se menciona).
-        - \`deliveryDate\`: (String | null) Fecha de entrega (YYYY-MM-DD).
-        - \`deliveryTime\`: (String | null) Hora de entrega (HH:MM:SS).
-        - \`persons\`: (Number | null) Número TOTAL de personas para el pedido completo. **Obligatorio**.
-        - \`shape\`: (String | null) Forma general del pastel (ej. "Redondo", "Rectangular").
-        - \`cakeFlavor\`: (Array of Strings | null) Sabores generales del pan (SOLO para tipo "Normal").
-        - \`filling\`: (Array of Strings | null) Rellenos generales (SOLO para tipo "Normal").
+        - \`nombre\`: (String | null) Nombre del cliente.
+        - \`fecha_entrega\`: (String | null) Fecha de entrega (YYYY-MM-DD).
+        - \`hora_entrega\`: (String | null) Hora de entrega (HH:MM:SS).
+        - \`numero_personas\`: (Number | null) Número TOTAL de personas para el pedido completo. **Obligatorio**.
+        - \`sabor_pan\`: (String | null) Sabor general del pan (SOLO para tipo "Normal").
+        - \`relleno\`: (String | null) Relleno general (SOLO para tipo "Normal").
         - \`tiers\`: (Array of Objects | null) Estructura por pisos **APILADOS** (SOLO para tipo "Base/Especial"). **NO incluir planchas aquí.** Sigue la estructura definida arriba.
-        - \`designDescription\`: (String | null) Descripción detallada de la decoración (SIN dedicatoria).
-        - \`dedication\`: (String | null) Texto de la dedicatoria.
-        - \`deliveryLocation\`: (String | null) Dirección de entrega o "recoge en tienda".
-        - \`deliveryCost\`: (Number | null) Costo del envío (solo número).
-        - \`total\`: (Number | null) Costo total o del pastel (solo número).
-        - \`advancePayment\`: (Number | null) Anticipo (solo número).
-        - \`complements\`: (Array of Objects | null) Array de pasteles ADICIONALES (planchas, quequitos) que complementan el pedido. **NO SON LOS PISOS DEL PASTEL PRINCIPAL.** Ejemplo: Si piden "pastel de 2 pisos Y dos planchas", aquí SÓLO van las dos planchas.
+        - \`diseno\`: (String | null) Descripción detallada de la decoración (SIN dedicatoria).
+        - \`dedicatoria\`: (String | null) Texto de la dedicatoria.
+        - \`requiere_envio\`: (Boolean) true si es a domicilio, false si recoge.
+        - \`calle\`: (String | null) Calle y número.
+        - \`colonia\`: (String | null) Colonia.
+        - \`referencias\`: (String | null) Referencias del domicilio.
+        - \`complements\`: (Array of Objects | null) Array de pasteles ADICIONALES (planchas, quequitos) que complementan el pedido. **NO SON LOS PISOS DEL PASTEL PRINCIPAL.**
             * \`\`\`
                 {
                   "persons": number | null,   // Personas para ESE complemento
@@ -145,9 +142,7 @@ async function getInitialExtraction(conversationText) {
                   "description": string | null // Decoración o notas
                 }
                 \`\`\`
-        - \`accessories\`: (String | null) Accesorios físicos (ej. "Oblea", "Figura de fondant", "Moño").
         - \`additional\`: (Array of Objects | null) Adicionales con costo (ej. velas, letreros). Estructura: \`[{ "name": "Cant x Producto", "price": number }]\`.
-        - \`hasExtraHeight\`: (Boolean) \`true\` si el pastel principal lleva altura extra.
 
         **Conversación a analizar:**
         ---
@@ -183,19 +178,17 @@ async function getInitialExtraction(conversationText) {
 
 
         // --- Validaciones y Aseguramiento de Tipos ---
-        const requiredKeys = ['folioType', 'persons', 'deliveryDate']; // Campos mínimos esperados
+        const requiredKeys = ['folioType', 'numero_personas', 'fecha_entrega']; // Campos mínimos esperados
         for (const key of requiredKeys) {
             if (!(key in extractedData) || extractedData[key] === null || extractedData[key] === undefined) {
                 console.warn(`Advertencia: La IA no extrajo el campo obligatorio '${key}'. Se intentará continuar, pero puede causar errores.`);
-                // Podrías establecer un valor por defecto o lanzar un error más estricto si lo prefieres
-                // extractedData[key] = null; // Ejemplo: asegurar que exista aunque sea nulo
             }
         }
 
-        // Asegurar que 'persons' sea un número
-        if (extractedData.persons && typeof extractedData.persons !== 'number') {
-            const parsedPersons = parseInt(extractedData.persons, 10);
-            extractedData.persons = !isNaN(parsedPersons) ? parsedPersons : null;
+        // Asegurar que 'numero_personas' sea un número
+        if (extractedData.numero_personas && typeof extractedData.numero_personas !== 'number') {
+            const parsedPersons = parseInt(extractedData.numero_personas, 10);
+            extractedData.numero_personas = !isNaN(parsedPersons) ? parsedPersons : null;
         }
 
         // Asegurar que folioType sea uno de los valores permitidos, si no, default a Normal
@@ -206,16 +199,17 @@ async function getInitialExtraction(conversationText) {
 
         // Limpieza condicional basada en folioType (asegurar consistencia)
         if (extractedData.folioType === 'Base/Especial') {
-            extractedData.cakeFlavor = null; // O []
-            extractedData.filling = null;    // O []
+            extractedData.sabor_pan = null;
+            extractedData.relleno = null;
             if (!Array.isArray(extractedData.tiers)) {
                 console.warn("folioType es Base/Especial pero 'tiers' no es un array. Se establecerá a [].");
                 extractedData.tiers = [];
             }
         } else { // Si es 'Normal'
             extractedData.tiers = null; // O []
-            if (!Array.isArray(extractedData.cakeFlavor)) extractedData.cakeFlavor = [];
-            if (!Array.isArray(extractedData.filling)) extractedData.filling = [];
+            // Aseguramos que sabor_pan y relleno vengan como string o null
+            if (typeof extractedData.sabor_pan !== 'string') extractedData.sabor_pan = null;
+            if (typeof extractedData.relleno !== 'string') extractedData.relleno = null;
         }
 
         // --- INICIO CORRECCIÓN: Asegurar que los arrays existan ---
@@ -223,23 +217,16 @@ async function getInitialExtraction(conversationText) {
         if (!Array.isArray(extractedData.additional)) extractedData.additional = [];
         // --- FIN CORRECCIÓN ---
 
-
-        // Convertir campos numéricos que puedan venir como string
-        ['deliveryCost', 'total', 'advancePayment'].forEach(key => {
-            if (extractedData[key] && typeof extractedData[key] === 'string') {
-                const num = parseFloat(extractedData[key]);
-                extractedData[key] = isNaN(num) ? null : num;
-            } else if (extractedData[key] === undefined) {
-                extractedData[key] = null;
-            }
-        });
+        // Validar booleano
+        if (typeof extractedData.requiere_envio !== 'boolean') {
+            extractedData.requiere_envio = extractedData.requiere_envio === 'true' || extractedData.requiere_envio === true;
+        }
 
         console.log("✅ Datos extraídos y procesados:", JSON.stringify(extractedData, null, 2));
         return extractedData;
 
     } catch (error) {
         console.error("❌ Error en getInitialExtraction:", error);
-        // Devolver un objeto de error estructurado podría ser útil para el controlador
         throw new Error(`Error durante la extracción inicial con IA: ${error.message}`);
     }
 }
