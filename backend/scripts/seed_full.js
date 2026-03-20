@@ -1,4 +1,5 @@
-const { sequelize, User, Tenant, Branch, Product, Flavor, CakeFlavor, Filling, Folio } = require('../models');
+const { sequelize, User, Tenant, Branch, Product, Flavor, CakeFlavor, Filling, Folio, CakeShape } = require('../models');
+
 const bcrypt = require('bcryptjs');
 
 async function seedFull() {
@@ -136,6 +137,25 @@ async function seedFull() {
             });
         }
         console.log("✅ Catalog Populated");
+
+        // 6. Shapes (Main and Complementary)
+        const mainShapes = ['Redondo', 'Cuadrado', 'Corazón'];
+        for (const s of mainShapes) {
+            await CakeShape.findOrCreate({
+                where: { name: s, tenantId: tenant.id, type: 'MAIN' },
+                defaults: { name: s, price: 0, type: 'MAIN', tenantId: tenant.id }
+            });
+        }
+
+        const compShapes = ['Plancha', 'Mini Redondo'];
+        for (const s of compShapes) {
+            await CakeShape.findOrCreate({
+                where: { name: s, tenantId: tenant.id, type: 'COMPLEMENTARY' },
+                defaults: { name: s, price: 0, type: 'COMPLEMENTARY', tenantId: tenant.id }
+            });
+        }
+        console.log("✅ Shapes Populated");
+
 
         console.log("🚀 PLUG & PLAY SETUP COMPLETE!");
         process.exit(0);

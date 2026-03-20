@@ -12,6 +12,8 @@ const Filling = require('./Filling');
 
 const Ingredient = require('./Ingredient');
 const CakeFlavor = require('./CakeFlavor');
+const CakeShape = require('./CakeShape');
+
 
 const AuditLog = require('./AuditLog');
 const { CashCut, CashMovement } = require('./CashModels');
@@ -137,5 +139,6 @@ module.exports = {
   Decoration,
   SaaSContract,
   SaaSCommissionLedger,
-  DailySalesStats
+  DailySalesStats,
+  CakeShape
 };

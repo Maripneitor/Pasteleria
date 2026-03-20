@@ -191,11 +191,13 @@ async function _startClient() {
 // Load from disk on startup so the API always has last-known state
 _loadStatus();
 
-// Arrancar el cliente directamente para pruebas locales en VS Code
-setTimeout(() => {
-    console.log('[WA-Gateway] Inicializando WA junto con el API local...');
-    _startClient();
-}, 2000);
+// Arrancar el cliente directamente SOLO cuando se ejecuta como worker autónomo
+if (require.main === module) {
+    setTimeout(() => {
+        console.log('[WA-Gateway] Iniciando worker de WhatsApp autónomo...');
+        _startClient();
+    }, 2000);
+}
 
 // Exportamos sendMessage para que el controlador lo pueda usar
 module.exports = { getStatus, restart, sendMessage };

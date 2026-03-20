@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Layers, Droplet, Star, Plus } from 'lucide-react';
+import { Package, Layers, Droplet, Star, Plus, Square, Circle } from 'lucide-react';
+
 import catalogApi from '@/features/catalogs/api/catalogs.api';
 import toast from 'react-hot-toast';
 
@@ -141,6 +142,8 @@ export default function CatalogsPage() {
             if (activeTab === 'flavors') res = await catalogApi.getFlavors(true);
             if (activeTab === 'fillings') res = await catalogApi.getFillings(true);
             if (activeTab === 'decorations') res = await catalogApi.getDecorations(true);
+            if (activeTab === 'shapes_main') res = await catalogApi.getShapes('MAIN', true);
+            if (activeTab === 'shapes_comp') res = await catalogApi.getShapes('COMPLEMENTARY', true);
             setData(res);
         } catch (error) {
             toast.error('Error cargando datos');
@@ -159,6 +162,8 @@ export default function CatalogsPage() {
             if (activeTab === 'flavors') await catalogApi.createFlavor(formData);
             if (activeTab === 'fillings') await catalogApi.createFilling(formData);
             if (activeTab === 'decorations') await catalogApi.createDecoration(formData);
+            if (activeTab === 'shapes_main') await catalogApi.createShape({ ...formData, type: 'MAIN' });
+            if (activeTab === 'shapes_comp') await catalogApi.createShape({ ...formData, type: 'COMPLEMENTARY' });
 
             toast.success('Elemento creado correctamente');
             setIsModalOpen(false);
@@ -174,6 +179,7 @@ export default function CatalogsPage() {
             if (activeTab === 'flavors') await catalogApi.toggleFlavor(id, isActive);
             if (activeTab === 'fillings') await catalogApi.toggleFilling(id, isActive);
             if (activeTab === 'decorations') await catalogApi.toggleDecoration(id, isActive);
+            if (activeTab === 'shapes_main' || activeTab === 'shapes_comp') await catalogApi.toggleShape(id, isActive);
 
             setData(prev => prev.map(item => item.id === id ? { ...item, isActive } : item));
             toast.success('Estado actualizado');
@@ -199,6 +205,12 @@ export default function CatalogsPage() {
                     { header: 'Decoración / Extra', key: 'name' },
                     { header: 'Precio', key: 'price', render: (i) => `$${Number(i.price).toFixed(2)}` }
                 ];
+            case 'shapes_main':
+            case 'shapes_comp':
+                return [
+                    { header: 'Forma', key: 'name' },
+                    { header: 'Precio Extra', key: 'price', render: (i) => `$${Number(i.price).toFixed(2)}` }
+                ];
             default: return [];
         }
     };
@@ -217,6 +229,12 @@ export default function CatalogsPage() {
                     ...common,
                     { name: 'price', label: 'Precio Unitario', type: 'number', required: true }
                 ];
+            case 'shapes_main':
+            case 'shapes_comp':
+                return [
+                    ...common,
+                    { name: 'price', label: 'Precio Extra', type: 'number', required: true }
+                ];
             default: return common;
         }
     };
@@ -226,6 +244,8 @@ export default function CatalogsPage() {
         if (activeTab === 'flavors') return 'Nuevo Sabor';
         if (activeTab === 'fillings') return 'Nuevo Relleno';
         if (activeTab === 'decorations') return 'Nueva Decoración/Extra';
+        if (activeTab === 'shapes_main') return 'Nueva Forma Principal';
+        if (activeTab === 'shapes_comp') return 'Nueva Forma Complementaria';
     };
 
     return (
@@ -248,6 +268,8 @@ export default function CatalogsPage() {
                 <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={Package} label="Productos" />
                 <TabButton active={activeTab === 'flavors'} onClick={() => setActiveTab('flavors')} icon={Layers} label="Sabores de Pan" />
                 <TabButton active={activeTab === 'fillings'} onClick={() => setActiveTab('fillings')} icon={Droplet} label="Rellenos" />
+                <TabButton active={activeTab === 'shapes_main'} onClick={() => setActiveTab('shapes_main')} icon={Square} label="Formas Principales" />
+                <TabButton active={activeTab === 'shapes_comp'} onClick={() => setActiveTab('shapes_comp')} icon={Circle} label="Formas Complementarias" />
                 <TabButton active={activeTab === 'decorations'} onClick={() => setActiveTab('decorations')} icon={Star} label="Decoraciones y Extras" />
             </div>
 

@@ -34,4 +34,10 @@ router.post('/ingredients', ingredientController.create);
 router.put('/ingredients/:id', ingredientController.update);
 router.delete('/ingredients/:id', ingredientController.remove);
 
+// --- SHAPES ---
+router.get('/shapes', catalogController.getShapes);
+router.post('/shapes', catalogController.createShape);
+router.put('/shapes/:id', catalogController.updateShape);
+router.patch('/shapes/:id/active', catalogController.toggleShapeActive);
+
 module.exports = router;

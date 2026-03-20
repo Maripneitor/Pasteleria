@@ -62,7 +62,26 @@ const catalogApi = {
     toggleDecoration: async (id, isActive) => {
         const res = await client.patch(`/catalogs/decorations/${id}/active`, { isActive });
         return res.data;
+    },
+
+    // SHAPES
+    getShapes: async (type, includeInactive = false) => {
+        const res = await client.get(`/catalogs/shapes?type=${type}&includeInactive=${includeInactive}`);
+        return res.data;
+    },
+    createShape: async (data) => {
+        const res = await client.post('/catalogs/shapes', data);
+        return res.data;
+    },
+    updateShape: async (id, data) => {
+        const res = await client.put(`/catalogs/shapes/${id}`, data);
+        return res.data;
+    },
+    toggleShape: async (id, isActive) => {
+        const res = await client.patch(`/catalogs/shapes/${id}/active`, { isActive });
+        return res.data;
     }
 };
+
 
 export default catalogApi;
