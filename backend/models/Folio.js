@@ -70,7 +70,6 @@ const Folio = sequelize.define('Folio', {
   descripcion_diseno: { type: DataTypes.TEXT },
   dedicatoria: { type: DataTypes.TEXT },
   imagen_referencia_url: { type: DataTypes.STRING }, // Mantenemos por compatibilidad (legacy)
-  imagenes_referencia: { type: DataTypes.JSON, comment: 'Arreglo con hasta 5 URLs de imágenes' }, // NUEVO
   diseno_metadata: { type: DataTypes.JSON },
 
   // Económicos

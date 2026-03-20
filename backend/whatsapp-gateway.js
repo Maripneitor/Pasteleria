@@ -142,16 +142,27 @@ async function _startClient() {
         // Ignorar estados de WhatsApp
         if (msg.from === 'status@broadcast') return;
 
-        console.log(`[WA-Gateway] 📩 Mensaje entrante de ${msg.from}: ${msg.body}`);
+        // Cero tolerancia a grupos: Si termina en @g.us, es grupo. Lo ignoramos.
+        if (msg.from.endsWith('@g.us')) {
+            console.log(`[WA-Gateway] 🚫 Mensaje de grupo ignorado de: ${msg.from}`);
+            return;
+        }
+
+        console.log(`[WA-Gateway] 📩 Mensaje entrante de ${msg.from}: ${msg.body || '[Multimedia/Vacio]'}`);
+
+        // YA NO DESCARGAMOS LA IMAGEN AQUÍ PARA AHORRAR ESPACIO EN MODO SAAS
+        // Solo avisamos al webhook que llegó un archivo adjunto
+        const tieneImagen = msg.hasMedia;
 
         try {
-            // Reenviamos el mensaje real a nuestro propio webhook local
+            // Reenviamos el mensaje a nuestro webhook local
             await axios.post('http://localhost:3000/api/v1/whatsapp/webhook', {
                 data: {
                     body: msg.body,
                     from: msg.from,
                     fromMe: msg.fromMe,
-                    contactId: msg.from
+                    contactId: msg.from,
+                    hasMedia: tieneImagen // Solo pasamos un booleano (true/false)
                 }
             });
         } catch (error) {

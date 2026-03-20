@@ -1,6 +1,4 @@
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 const gateway = require('../../../whatsapp-gateway');
 const asyncHandler = require('../../core/asyncHandler');
 const { AISession, Folio } = require('../../../models'); 
@@ -24,26 +22,14 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
         return; 
     }
 
-    // 📸 1. CAPTURA DE IMÁGENES
-    const imageUrls = [];
-    if (messageData.media) {
-        try {
-            const media = messageData.media;
-            const buffer = Buffer.from(media.data, 'base64');
-            const fileName = `whatsapp-${Date.now()}.${media.mimetype.split('/')[1]}`;
-            const uploadDir = path.join(__dirname, '../../../uploads');
-
-            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-            const filePath = path.join(uploadDir, fileName);
-            await fs.promises.writeFile(filePath, buffer);
-            imageUrls.push(`uploads/${fileName}`);
-            
-            // Si mandó solo imagen sin texto, le ponemos un placeholder
-            if (!bodyText) bodyText = "*(El cliente adjuntó una imagen)*";
-        } catch (imgError) {
-            console.error("❌ Error guardando imagen:", imgError.message);
-        }
+    // ========================================================
+    // 📸 DETECCIÓN DE IMAGEN (MODO SaaS: Sin guardar en disco)
+    // ========================================================
+    const tieneImagen = !!messageData.media || !!messageData.hasMedia;
+    
+    // Si mandó solo imagen sin texto, le ponemos un placeholder para que la IA sepa qué pasó
+    if (tieneImagen && !bodyText) {
+        bodyText = "*(El cliente adjuntó una imagen)*";
     }
 
     if (!bodyText) return;
@@ -51,14 +37,13 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
     try {
         const textoLimpio = bodyText.trim().toLowerCase();
         
+        // --- 🚦 MANEJO DE COMANDOS DE FLUJO ---
         if (textoLimpio === 'cancelar') {
             const sesionExistente = await AISession.findOne({ where: { customerPhone: contactId, status: 'active' } });
-            
             if (sesionExistente) {
                 sesionExistente.status = 'completed';
                 await sesionExistente.save();
-                
-                await gateway.sendMessage(contactId, "🚫 *Proceso cancelado.*\nNo te preocupes, no se generó ningún pedido en nuestro sistema.\n\nSi cambias de opinión, escribe 'Hola' para ver el menú principal de nuevo.");
+                await gateway.sendMessage(contactId, "🚫 *Proceso cancelado.*\nEscribe 'Hola' cuando gustes iniciar de nuevo.");
                 return; 
             }
         } 
@@ -68,30 +53,47 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                 sesionExistente.status = 'completed';
                 await sesionExistente.save();
             }
-            await gateway.sendMessage(contactId, "🔄 *Menú principal:*\n¡Hola! 😊 ¿En qué puedo ayudarte hoy?\n\n1️⃣ Hacer un nuevo pedido de pastel.\n2️⃣ Consultar el estado de un pedido existente.\n3️⃣ Información del local.");
-            return; 
+            // No hacemos return; dejamos que fluya para que la IA mande el Menú oficial
         }
 
-        // --- AUTO-REINICIO POR INACTIVIDAD (5 MINUTOS) ---
+        // --- ⏱️ AUTO-REINICIO POR INACTIVIDAD (5 MINUTOS) ---
         let session = await AISession.findOne({
             where: { customerPhone: contactId, status: 'active' }
         });
 
         if (session) {
             const tiempoInactivoMs = new Date() - new Date(session.updatedAt);
-            const minutosInactivo = tiempoInactivoMs / (1000 * 60);
-
-            if (minutosInactivo >= 5) { 
-                console.log(`⏱️ Sesión inactiva por ${Math.floor(minutosInactivo)} min. Cerrando sesión de ${contactId}`);
+            if (tiempoInactivoMs / (1000 * 60) >= 5) { 
                 session.status = 'completed';
                 await session.save();
                 session = null; 
             }
         }
 
+        // ========================================================
+        // 🚪 EL PORTERO: FILTRO DE INICIO (TRIGGERS)
+        // ========================================================
+        const triggersInicio = [
+            'hola', 'buenos dias', 'buenos días', 'buenas tardes', 'buenas noches', 
+            'pedido', 'hacer pedido', 'detalles', 'ver detalles', 'informacion', 
+            'información', 'menu', 'menú', 'reiniciar'
+        ];
+
+        // Verificamos si el mensaje es una "llave" para abrir la plática
+        const esTrigger = triggersInicio.some(t => textoLimpio.includes(t));
+
         let conversationText = messageData.conversation;
 
         if (!session) {
+            // SI NO HAY SESIÓN Y NO ES UN SALUDO/PEDIDO: Ignoramos (Silencio total)
+            if (!esTrigger) {
+                console.log(`[WA-Controller] 🤐 Mensaje de ${contactId} ignorado (No es trigger): "${bodyText}"`);
+                return; 
+            }
+
+            // SI ES TRIGGER: Intentamos recuperar contexto de Whaticket
+            console.log(`[WA-Controller] 🚀 Trigger detectado. Iniciando nueva sesión para ${contactId}`);
+            
             if (!conversationText && process.env.WHATICKET_API_URL && process.env.WHATICKET_API_TOKEN) {
                 try {
                     const apiUrl = `${process.env.WHATICKET_API_URL}/messages`;
@@ -114,24 +116,25 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
             if (!conversationText) conversationText = `Cliente: ${bodyText}`;
             else conversationText += `\nCliente: ${bodyText}`;
 
+            // CREACIÓN DE LA SESIÓN (Limpia, sin imageUrls para modo SaaS)
             session = await AISession.create({
                 customerPhone: contactId, 
                 whatsappConversation: conversationText,
-                imageUrls: imageUrls,
                 chatHistory: [{ role: 'user', content: bodyText }],
                 status: 'active'
             });
-        } else {
+        }
+        
+        else {
             session.whatsappConversation += `\nCliente: ${bodyText}`;
             
-            // 📸 2. INYECCIÓN DEL CONTADOR DE IMÁGENES A LA IA
-            if (imageUrls.length > 0) {
-                session.imageUrls = [...(session.imageUrls || []), ...imageUrls];
-                const infoImagen = { 
+            // NUEVO: Avisarle a la IA que el cliente mandó un archivo multimedia
+            if (messageData.hasMedia) {
+                const avisoImagen = { 
                     role: 'system', 
-                    content: `(SISTEMA: El cliente acaba de adjuntar una imagen. Llevan ${session.imageUrls.length} de 5 imágenes permitidas. Confírmale de recibido)` 
+                    content: `(SISTEMA: El cliente acaba de adjuntar una imagen. Agradécele y dile que el pastelero la revisará).` 
                 };
-                session.chatHistory = [...session.chatHistory, { role: 'user', content: bodyText }, infoImagen];
+                session.chatHistory = [...session.chatHistory, { role: 'user', content: bodyText || "(Imagen adjunta)" }, avisoImagen];
             } else {
                 session.chatHistory = [...session.chatHistory, { role: 'user', content: bodyText }];
             }
@@ -179,7 +182,6 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                     tipo_folio: orderData.tipo_folio || 'Normal',
                     detallesPisos: orderData.detallesPisos || null,
                     complementarios: orderData.complementarios || null,
-                    imagenes_referencia: session.imageUrls || [], // Guardamos las URLs capturadas
                     
                     sabores_pan: Array.isArray(orderData.sabores_pan) ? orderData.sabores_pan : (orderData.sabor_pan ? [orderData.sabor_pan] : []), 
                     rellenos: Array.isArray(orderData.rellenos) ? orderData.rellenos : (orderData.relleno ? [orderData.relleno] : []),       
@@ -206,7 +208,7 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
         // ====================================================================
         // INTERCEPCIÓN B: VER DETALLES DE UN PEDIDO EXISTENTE
         // ====================================================================
-        const buscarFolioRegex = /\[BUSCAR_FOLIO:\s*(\d+)\]/;
+        const buscarFolioRegex = /\[BUSCAR_FOLIO:\s*#?(\d+)\]/i; 
         const folioMatch = aiReplyText.match(buscarFolioRegex);
         
         if (folioMatch) {
@@ -240,7 +242,6 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                                    `🍞 *Pan principal:* ${panTxt}\n` +
                                    `🍓 *Relleno principal:* ${rellenoTxt}\n` +
                                    `🎨 *Diseño:* ${disenoTxt}\n` +
-                                   `📸 *Imágenes adjuntas:* ${f.imagenes_referencia ? f.imagenes_referencia.length : 0}\n` +
                                    `✍️ *Dedicatoria:* ${dedicatoriaTxt}\n` +
                                    `📍 *Entrega:* ${entregaTxt}\n` +
                                    `--------------------------\n` +

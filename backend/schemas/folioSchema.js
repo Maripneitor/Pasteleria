@@ -92,8 +92,6 @@ const createFolioSchema = z.object({
             descripcion: z.string().optional()
         })
     ).optional(),
-
-    imagenes_referencia: z.array(z.string().url()).max(5, 'Máximo 5 imágenes permitidas').optional(),
     // ----------------------------------------
 
     sabores_pan: z
