@@ -260,6 +260,17 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
             }
         }
 
+        // ====================================================================
+        // INTERCEPCIÓN C: CIERRE DE SESIÓN PARA INFORMACIÓN O DUDAS
+        // ========================================================
+        if (aiReplyText.includes('[FINALIZAR_SESION]')) {
+            aiReplyText = aiReplyText.replace('[FINALIZAR_SESION]', '').trim();
+            aiReplyText += `\n\n_(🤖 El asistente se ha pausado. Escribe "Hola" o "Menú" para iniciar otra plática)_`;
+            
+            session.status = 'completed';
+            console.log(`[WA-Controller] 🚪 Sesión finalizada por información general para ${contactId}`);
+        }
+
         session.whatsappConversation += `\nAsistente: ${aiReplyText}`;
         session.chatHistory = [...session.chatHistory, { role: 'assistant', content: aiReplyText }];
         await session.save();
