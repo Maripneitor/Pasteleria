@@ -5,6 +5,23 @@ const { AISession, Folio } = require('../../../models');
 const aiOrderParsingService = require('../../../services/aiOrderParsingService'); 
 const { getInitialExtraction } = require('../../../services/aiExtractorService'); 
 
+// =====================================================================
+// 🔥 NUEVO: UTILIDAD SALVAVIDAS PARA ARREGLOS (EVITA QUE SE PIERDAN DATOS)
+// =====================================================================
+const parseArraySafe = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === 'string') {
+        try { 
+            const parsed = JSON.parse(data); 
+            return Array.isArray(parsed) ? parsed : [parsed];
+        } catch(e) { 
+            return [data]; 
+        }
+    }
+    return [data];
+};
+
 exports.handleWebhook = asyncHandler(async (req, res) => {
     res.status(200).send('EVENT_RECEIVED');
 
@@ -149,19 +166,22 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
         // INTERCEPCIÓN A: CREAR UN NUEVO PEDIDO LEYENDO EL JSON DE LA IA
         // ====================================================================
         if (aiReplyText.includes('[CREAR_FOLIO_AHORA]')) {
-            // Extraemos todo lo que está después de la etiqueta (el JSON)
             const partes = aiReplyText.split('[CREAR_FOLIO_AHORA]');
-            const textoDespedida = partes[0]; // Por si la IA puso texto antes
+            const textoDespedida = partes[0]; 
             const posibleJson = partes[1].trim();
             
             let orderData = {};
             try {
-                // Limpiamos los backticks (```json) que a veces pone la IA
-                const cleanJson = posibleJson.replace(/```json/g, '').replace(/```/g, '').trim();
+                // Extractor inteligente de JSON por si la IA le añade basurita
+                let cleanJson = posibleJson.replace(/```json/gi, '').replace(/```/g, '').trim();
+                const startIndex = cleanJson.indexOf('{');
+                const endIndex = cleanJson.lastIndexOf('}');
+                if (startIndex !== -1 && endIndex !== -1) {
+                    cleanJson = cleanJson.substring(startIndex, endIndex + 1);
+                }
                 orderData = JSON.parse(cleanJson);
             } catch (jsonError) {
                 console.error("❌ Error parseando JSON de la IA:", jsonError);
-                // Fallback de seguridad usando tu extractor anterior si el JSON falla
                 orderData = await getInitialExtraction(session.whatsappConversation); 
             }
 
@@ -176,15 +196,16 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                     colonia: orderData.colonia || null,
                     ubicacion_entrega: orderData.ubicacion_entrega || orderData.calle || 'Sucursal',
                     
-                    // 🔥 NUEVOS CAMPOS DEL FLUJO AVANZADO
                     numero_personas: orderData.numero_personas || 10,
                     forma: orderData.forma || null,
                     tipo_folio: orderData.tipo_folio || 'Normal',
-                    detallesPisos: orderData.detallesPisos || null,
-                    complementarios: orderData.complementarios || null,
                     
-                    sabores_pan: Array.isArray(orderData.sabores_pan) ? orderData.sabores_pan : (orderData.sabor_pan ? [orderData.sabor_pan] : []), 
-                    rellenos: Array.isArray(orderData.rellenos) ? orderData.rellenos : (orderData.relleno ? [orderData.relleno] : []),       
+                    // 🔥 USAMOS PARSE ARRAY SAFE PARA QUE NUNCA SE GUARDE MAL EN MYSQL
+                    detallesPisos: parseArraySafe(orderData.detallesPisos),
+                    complementarios: parseArraySafe(orderData.complementarios),
+                    sabores_pan: parseArraySafe(orderData.sabores_pan || orderData.sabor_pan), 
+                    rellenos: parseArraySafe(orderData.rellenos || orderData.relleno),       
+                    
                     descripcion_diseno: orderData.descripcion_diseno || orderData.diseno || null,
                     dedicatoria: orderData.dedicatoria || null,
                     
@@ -219,35 +240,53 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                 const f = await Folio.findByPk(folioBuscado);
                 
                 if (f) {
-                    const panTxt = f.sabores_pan && f.sabores_pan.length > 0 ? f.sabores_pan.join(', ') : "No especificado";
-                    const rellenoTxt = f.rellenos && f.rellenos.length > 0 ? f.rellenos.join(', ') : "No especificado";
+                    // 🔥 USAMOS PARSE ARRAY SAFE PARA LEER DE MYSQL
+                    const panes = parseArraySafe(f.sabores_pan);
+                    const panTxt = panes.length > 0 ? panes.join(', ') : "No especificado";
+
+                    const rellenos = parseArraySafe(f.rellenos);
+                    const rellenoTxt = rellenos.length > 0 ? rellenos.join(', ') : "No especificado";
+                    
                     const disenoTxt = f.descripcion_diseno || "Ninguno / Estándar";
                     const dedicatoriaTxt = f.dedicatoria || "Sin dedicatoria";
                     const entregaTxt = f.ubicacion_entrega || "Recoger en Sucursal";
-                    const pisosTxt = f.detallesPisos ? `${f.detallesPisos.length} pisos` : f.tipo_folio;
-                    const extrasTxt = f.complementarios ? `${f.complementarios.length} pasteles extra` : 'Ninguno';
                     
-                    let precioTxt = "Por definir (El local te confirmará el total pronto)";
+                    const pisosArray = parseArraySafe(f.detallesPisos);
+                    const pisosTxt = pisosArray.length > 0 ? `${pisosArray.length} pisos` : f.tipo_folio;
+                    
+                    let precioTxt = "Por definir (El local te confirmará el total)";
                     if (f.total && parseFloat(f.total) > 0) {
                         precioTxt = `$${parseFloat(f.total).toFixed(2)}`;
                     }
 
-                    aiReplyText += `\n\n📦 *DETALLES DE TU PEDIDO #${folioBuscado}*\n` +
+                    // Armar la lista de complementarios si existen usando parseArraySafe
+                    const compArray = parseArraySafe(f.complementarios);
+                    let complementariosTxt = '';
+                    if (compArray.length > 0) {
+                        complementariosTxt = '\n\n➕ *PASTELES COMPLEMENTARIOS*\n' + compArray.map((comp, idx) => 
+                            `${idx + 1}️⃣ ${comp.forma || 'Extra'} - Pan: ${comp.pan || comp.sabor_pan || comp.flavor || comp.sabor || 'N/A'}, Relleno: ${comp.relleno || comp.filling || 'N/A'}`
+                        ).join('\n');
+                    }
+
+                    // APLICANDO EL NUEVO DISEÑO VISUAL
+                    aiReplyText += `\n\n📋 *DETALLES DE TU PEDIDO #${folioBuscado}*\n` +
                                    `👤 *Nombre:* ${f.cliente_nombre}\n` +
-                                   `📅 *Fecha de entrega:* ${f.fecha_entrega || 'Pendiente'}\n` +
-                                   `🍰 *Tamaño principal:* Para ${f.numero_personas || '??'} personas\n` +
+                                   `📅 *Fecha y Hora:* ${f.fecha_entrega || 'Pendiente'} a las ${f.hora_entrega || 'Pendiente'}\n` +
+                                   `📍 *Entrega:* ${entregaTxt}\n\n` +
+                                   `🎂 *PASTEL PRINCIPAL*\n` +
+                                   `🍰 *Tamaño:* Para ${f.numero_personas || '??'} personas\n` +
                                    `💠 *Forma:* ${f.forma || 'N/A'}\n` +
                                    `🏢 *Estructura:* ${pisosTxt}\n` +
-                                   `➕ *Complementarios:* ${extrasTxt}\n` +
                                    `🍞 *Pan principal:* ${panTxt}\n` +
                                    `🍓 *Relleno principal:* ${rellenoTxt}\n` +
                                    `🎨 *Diseño:* ${disenoTxt}\n` +
-                                   `✍️ *Dedicatoria:* ${dedicatoriaTxt}\n` +
-                                   `📍 *Entrega:* ${entregaTxt}\n` +
+                                   `✍️ *Dedicatoria:* ${dedicatoriaTxt}` +
+                                   `${complementariosTxt}\n\n` +
                                    `--------------------------\n` +
                                    `💵 *Precio Total:* ${precioTxt}\n` +
                                    `💰 *Estado de Pago:* ${f.estatus_pago}\n` +
-                                   `\n_(🤖 El asistente se ha pausado. Escribe "Hola" para iniciar otra plática)_`;
+                                   `\nAquí tienes la información de tu pedido. Si necesitas alguna modificación, por favor comunícate directamente a la sucursal.\n` +
+                                   `\n_(🤖 El asistente se ha pausado. Escribe "Hola" o "Menú" para iniciar otra plática)_`;
                 } else {
                     aiReplyText += `\n\n⚠️ Lo siento, no encontré ningún pedido con el folio *#${folioBuscado}*. Revisa el número e intenta de nuevo.`;
                 }
@@ -282,7 +321,6 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
     }
 });
 
-// ✅ AQUÍ ESTÁ LA MAGIA ARREGLADA
 exports.getQR = asyncHandler(async (req, res) => {
     // 1. Obtenemos el estado completo (con qr, status, etc.)
     const data = gateway.getStatus();
@@ -302,8 +340,7 @@ exports.getQR = asyncHandler(async (req, res) => {
         return qrcode.toFileStream(res, data.qr);
     }
 
-    // 4. Si el frontend (usePollingQR.js) pide el JSON para saber el estado general
-    // Si el frontend pide el JSON para saber el estado
+    // 4. Si el frontend pide el JSON para saber el estado
     if (!data.qr && data.status !== 'ready') {
         // Cambiamos el 404 por 202 (Accepted, pero no completado aún)
         return res.status(202).json({ message: 'QR Not Ready', status: data.status || 'initializing' });

@@ -27,56 +27,73 @@ const aiDraftService = {
             const catalogoTexto = (saboresDisponibles.length > 0 || rellenosDisponibles.length > 0) 
                 ? `\n🚨 CATÁLOGO ESTRICTO DE INVENTARIO:
                 - Sabores de pan permitidos: ${saboresDisponibles.length > 0 ? saboresDisponibles.join(', ') : 'Cualquiera'}
-                - Rellenos permitidos: ${rellenosDisponibles.length > 0 ? rellenosDisponibles.join(', ') : 'Cualquiera'}
-                
-                REGLA DE RECHAZO: Si el cliente pide un sabor o relleno que NO está en estas listas:
-                1. Pon "valid": false.
-                2. En "aiResponse", escribe un mensaje amable informando que no manejamos ese sabor/relleno y sugiérele 2 o 3 de los que sí hay.
-                3. Si todo está correcto y dentro del catálogo, pon "valid": true y "aiResponse": "".` 
-                : '"valid": true, "aiResponse": "",';
+                - Rellenos permitidos: ${rellenosDisponibles.length > 0 ? rellenosDisponibles.join(', ') : 'Cualquiera'}` 
+                : '';
 
             const completion = await openai.chat.completions.create({
-                model: "gpt-4o-mini",
+                model: "gpt-4o", // SUBIMOS A GPT-4O PARA QUE ENTIENDA TEXTOS GIGANTES
                 messages: [
                     {
                         role: "system",
-                        content: `Eres un asistente de pastelería inteligente.
-                        Tu trabajo es extraer detalles de pedidos y devolver ONLY JSON válido.
-                        Hoy es ${hoy}. Usa el año actual o el próximo para las fechas.
+                        content: `Eres un asistente de pastelería inteligente de "La Fiesta".
+                        Tu trabajo es extraer detalles MASIVOS de pedidos dictados por los empleados y devolver ONLY JSON válido.
+                        Hoy es ${hoy}. Usa el año actual (${new Date().getFullYear()}) o el próximo para las fechas.
                         
-                        🚨 REGLA DE INTENCIÓN: Si el texto es para BUSCAR o EDITAR, "isOrderIntent" es false. Solo es true para crear pedidos nuevos.
+                        🚨 REGLA CERO (EXTRACCIÓN SILENCIOSA): 
+                        El empleado enviará un texto muy largo con todos los datos. Tu obligación absoluta es extraer TODOS los campos posibles al objeto "draft". 
+                        ESTÁ PROHIBIDO decir que faltan datos si ya te dieron lo básico (Nombre y Fecha). Los campos "missing" y "nextQuestion" DEBEN IR SIEMPRE VACÍOS [].
                         ${catalogoTexto}
                         
                         Schema esperado:
                         {
-                            "isOrderIntent": boolean,
-                            "valid": boolean,
-                            "aiResponse": string,
+                            "isOrderIntent": true,
+                            "valid": true,
+                            "aiResponse": "¡Borrador generado con éxito! Revisa los datos.",
                             "draft": {
-                                "clientName": string | "",
-                                "clientPhone": string | "",
-                                "deliveryDate": "YYYY-MM-DD" | "",
-                                "deliveryTime": "HH:mm" | "",
-                                "products": [
-                                    { "flavor": string, "filling": string, "design": string, "notes": string }
+                                "clientName": "string | null",
+                                "clientPhone": "string | null",
+                                "clientPhone2": "string | null",
+                                "deliveryDate": "YYYY-MM-DD | null",
+                                "deliveryTime": "HH:mm | null",
+                                "persons": "number | null",
+                                "folioType": "Base/Especial | Normal | null",
+                                "hasExtraHeight": "boolean | false",
+                                "cakeFlavor": ["array de strings"] | [],
+                                "filling": ["array de strings"] | [],
+                                "tiers": [
+                                    { "persons": "number", "shape": "string", "panes": ["strings"], "rellenos": ["strings"], "notas": "string" }
                                 ],
-                                "notesRaw": string,
-                                "summary": string
+                                "complements": [
+                                    { "persons": "number", "shape": "string", "flavor": "string", "filling": "string", "description": "string" }
+                                ],
+                                "designDescription": "string | null",
+                                "dedication": "string | null",
+                                "accessories": "string | null",
+                                "additional": [
+                                    { "name": "string", "price": "number" }
+                                ],
+                                "isDelivery": "boolean",
+                                "deliveryLocation": "string | null",
+                                "deliveryCost": "number | null",
+                                "total": "number | null",
+                                "advancePayment": "number | null",
+                                "isPaid": "boolean | false",
+                                "notesRaw": "string",
+                                "summary": "Resumen de 1 linea."
                             },
-                            "missing": string[], 
-                            "nextQuestion": string
+                            "missing": [], 
+                            "nextQuestion": ""
                         }`
                     },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.1, // Bajamos a 0.1 para que sea más estricto con el inventario
+                temperature: 0.1, // Súper bajo para que sea estricto
             });
 
             const content = completion.choices[0].message.content;
-            const cleanJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            let cleanJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
             const parsedData = JSON.parse(cleanJson);
 
-            // Si el modelo no incluyó valid, lo forzamos a true por defecto
             if (parsedData.valid === undefined) parsedData.valid = true;
 
             return {
@@ -90,7 +107,6 @@ const aiDraftService = {
         }
     },
 
-    // AHORA RECIBE LOS SABORES Y RELLENOS DISPONIBLES TAMBIÉN PARA EDICIÓN
     async processEdit(orderData, instruction, saboresDisponibles = [], rellenosDisponibles = []) {
         if (!openai) throw new Error("OpenAI API Key no configurada.");
 
@@ -199,13 +215,12 @@ const aiDraftService = {
         }
     },
 
-    // AGREGA ESTA NUEVA FUNCIÓN JUSTO ANTES DE analyzeImage
     async processInsights(question, dbStats) {
         if (!openai) throw new Error("OpenAI API Key no configurada.");
 
         try {
             const completion = await openai.chat.completions.create({
-                model: "gpt-4o-mini", // Usamos el modelo inteligente para matemáticas
+                model: "gpt-4o-mini",
                 messages: [
                     {
                         role: "system",
@@ -229,7 +244,7 @@ const aiDraftService = {
                         content: `DATOS DE LA BD (Últimos 30 días):\n${JSON.stringify(dbStats)}\n\nPREGUNTA DEL DUEÑO: ${question}`
                     }
                 ],
-                temperature: 0.1, // Baja temperatura para que no invente números
+                temperature: 0.1, 
             });
 
             const content = completion.choices[0].message.content;
@@ -281,9 +296,6 @@ const aiDraftService = {
         }
     },
 
-    /**
-     * LOCAL FALLBACK PARSER (Regex/Heuristic)
-     */
     _generateFallback(prompt) {
         console.log("⚠️ Using Fallback Parser for Draft");
 
