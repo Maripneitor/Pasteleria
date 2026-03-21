@@ -282,17 +282,35 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
     }
 });
 
+// ✅ AQUÍ ESTÁ LA MAGIA ARREGLADA
 exports.getQR = asyncHandler(async (req, res) => {
+    // 1. Obtenemos el estado completo (con qr, status, etc.)
     const data = gateway.getStatus();
 
-    if (!data.qr) {
-        return res.status(404).send('<h1>QR no listo</h1><p>Espera unos segundos y recarga la página. Si el bot ya está conectado, no verás un QR.</p>');
+    // 2. LOG PARA DIAGNÓSTICO
+    console.log("--- DEBUG BACKEND ---");
+    console.log("Datos que el API va a enviar:", JSON.stringify(data).substring(0, 100) + '...');
+    console.log("---------------------");
+
+    // 3. Si el frontend pide la imagen directamente (con ?format=image en la URL)
+    if (req.query.format === 'image') {
+        if (!data.qr) {
+            return res.status(404).send('QR no listo');
+        }
+        const qrcode = require('qrcode');
+        res.setHeader('Content-Type', 'image/png');
+        return qrcode.toFileStream(res, data.qr);
     }
 
-    const qrcode = require('qrcode');
-    res.setHeader('Content-Type', 'image/png');
-    
-    return qrcode.toFileStream(res, data.qr);
+    // 4. Si el frontend (usePollingQR.js) pide el JSON para saber el estado general
+    // Si el frontend pide el JSON para saber el estado
+    if (!data.qr && data.status !== 'ready') {
+        // Cambiamos el 404 por 202 (Accepted, pero no completado aún)
+        return res.status(202).json({ message: 'QR Not Ready', status: data.status || 'initializing' });
+    }
+
+    // Devolvemos el JSON completo al Hook de React
+    return res.json(data);
 });
 
 exports.refreshSession = asyncHandler(async (req, res) => {

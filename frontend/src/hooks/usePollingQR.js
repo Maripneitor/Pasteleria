@@ -16,31 +16,46 @@ export const usePollingQRV2 = () => {
     const errorCountRef = useRef(0);
 
     const loadQR = async () => {
-        try {
-            const res = await client.get('/whatsapp/qr', { skipToast: true });
-            errorCountRef.current = 0; // Reset on success
-            if (mountedRef.current) {
-                setState(res.data);
+    try {
+        const res = await client.get('/whatsapp/qr', { 
+            skipToast: true,
+            // 👇 Esto le dice a Axios: "Un 404 es una respuesta aceptable, no lances un error rojo"
+            validateStatus: function (status) {
+                return status >= 200 && status < 300 || status === 404; 
             }
-            return res.data;
-        } catch {
-            errorCountRef.current++;
-            if (mountedRef.current) {
-                setState(s => ({ ...s, status: 'error' }));
-            }
+        });
+
+        // Si es 404, manejamos la espera sin lanzar excepción
+        if (res.status === 404) {
+            if (mountedRef.current) setState(s => ({ ...s, status: 'initializing' }));
             return null;
         }
-    };
+
+        // Si es 200, ¡tenemos el QR!
+        errorCountRef.current = 0;
+        if (mountedRef.current) {
+            setState(res.data);
+        }
+        return res.data;
+
+    } catch (err) {
+        // Aquí solo caerán errores reales (500, no hay internet, etc.)
+        errorCountRef.current++;
+        if (mountedRef.current) setState(s => ({ ...s, status: 'error' }));
+        return null;
+    }
+};
 
     const restartSession = async () => {
-        try {
-            await client.post('/whatsapp/refresh', null, { skipToast: true });
-            errorCountRef.current = 0;
-            setState({ qr: null, status: 'loading' });
-        } catch {
-            // silently fail — user can retry manually
-        }
-    };
+    try {
+        // ✅ Cambiamos null por {}
+        await client.post('/whatsapp/refresh', {}, { skipToast: true }); 
+        errorCountRef.current = 0;
+        setState({ qr: null, status: 'loading' });
+    } catch {
+        // silently fail — user can retry manually
+    }
+};
 
     useEffect(() => {
         mountedRef.current = true;

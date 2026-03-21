@@ -50,6 +50,8 @@ function _loadStatus() {
 
 /** Returns the current WA gateway status (safe copy) */
 function getStatus() {
+    // ✅ Esto obliga al servidor a leer el archivo de disco SIEMPRE
+    _loadStatus(); 
     return { ..._state };
 }
 
@@ -60,12 +62,8 @@ async function restart() {
     _state.timestamp = Date.now();
     _persistStatus();
 
-    // Only run the actual WA client when this file is launched directly as a worker.
-    // When imported as a module inside the API, only expose the status interface.
-    if (require.main !== module) {
-        console.log('[WA-Gateway] Restart requested, but running as module. Worker will handle reconnection.');
-        return;
-    }
+    // 🚀 LE QUITAMOS EL CANDADO: Ahora el servidor tiene permiso de encender WhatsApp
+    console.log('[WA-Gateway] Iniciando cliente de WhatsApp desde el servidor...');
     await _startClient();
 }
 

@@ -154,11 +154,20 @@ async function bootstrap() {
     await conectarDB();
     console.log('✅ DB Conectada.');
 
-    // 2. Sync / Migrations
-    // CAMBIO APLICADO: Quitamos { alter: true } para evitar el bug de los 64 índices en MySQL
     await sequelize.sync(); 
     console.log('🛡️ Sincronización automática de BD ajustada (alter: false).');
 
+    // 👇 LO NUEVO CORREGIDO
+    console.log('📱 Encendiendo motor de WhatsApp...');
+    const gateway = require('./whatsapp-gateway'); 
+    
+    // Usamos restart() porque así lo tienes en tu código original
+    if (gateway.restart) {
+        await gateway.restart(); 
+    }
+    console.log('✅ WWebJS vinculado al servidor.');
+    // 👆 FIN DE LO NUEVO
+    
     // 3. Iniciar CronJobs
     const initCronJobs = require('./cronJobs');
     initCronJobs();

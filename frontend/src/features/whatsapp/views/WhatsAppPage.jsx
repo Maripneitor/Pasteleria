@@ -1,22 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import usePollingQR from '@/hooks/usePollingQR';
-import { Smartphone, RefreshCw, CheckCircle, Power, LogOut, WifiOff, QrCode } from 'lucide-react';
-import { Loader } from 'lucide-react';
-
+import { Smartphone, RefreshCw, CheckCircle, Power, LogOut, WifiOff, QrCode, Loader } from 'lucide-react';
 
 const WhatsAppPage = () => {
-    // Determine which version of the hook is active. 
-    // The previous edit to hook added 'reload' and 'restart'.
-    const hookData = usePollingQR();
-    const { qr, status, reload, restart } = hookData;
-
-    // Fallback if hook update failed or old version loaded? 
-    // We assume hook update succeeded. 
-    // If not, reload/restart might be undefined.
-    // We'll safeguard just in case.
+    const { qr, status, reload, restart } = usePollingQR();
+    const [imgLoading, setImgLoading] = useState(true);
 
     const safeReload = reload || (() => window.location.reload());
-    const safeRestart = restart || (() => window.location.reload()); // Fallback to reload if not available
+    const safeRestart = restart || (() => window.location.reload());
+
+    const isInitialLoading = status === 'loading' || status === 'initializing';
+    const shouldShowQR = status === 'qr' || (qr && status !== 'ready' && status !== 'error');
 
     return (
         <div className="p-8 max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[80vh] fade-in">
@@ -26,41 +20,60 @@ const WhatsAppPage = () => {
             </p>
 
             <div className="p-8 flex flex-col items-center w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-xl rounded-2xl">
-                <div className="w-64 h-64 bg-gray-100 rounded-2xl flex items-center justify-center mb-6 overflow-hidden border-2 border-dashed border-gray-300 relative group">
-                    {status === 'loading' && (
-                        <div className="animate-pulse flex flex-col items-center text-gray-400">
+                
+                {/* CONTENEDOR DEL QR */}
+                <div className="w-64 h-64 bg-gray-100 rounded-2xl flex items-center justify-center mb-6 overflow-hidden border-2 border-dashed border-gray-300 relative bg-white">
+                    
+                    {/* 1. Loader Principal */}
+                    {(isInitialLoading || (shouldShowQR && imgLoading)) && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gray-50 text-gray-400 transition-opacity duration-300">
                             <Loader className="animate-spin mb-2" />
-                            <span className="text-xs font-bold uppercase tracking-wider">Cargando QR...</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">
+                                {status === 'initializing' ? 'Inicializando servicio...' : 'Obteniendo QR...'}
+                            </span>
                         </div>
                     )}
 
+                    {/* 2. Pantalla de Error */}
                     {status === 'error' && (
-                        <div className="text-red-500 flex flex-col items-center text-center p-4">
+                        <div className="absolute inset-0 z-40 bg-white flex flex-col items-center justify-center text-center p-4 text-red-500">
                             <WifiOff size={40} className="mb-2" />
-                            <span className="font-bold">Error de Conexión</span>
-                            <button onClick={safeReload} className="mt-4 text-xs bg-red-100 text-red-600 px-3 py-1 rounded-full font-bold hover:bg-red-200 transition">
+                            <span className="font-bold text-sm">Error de Conexión</span>
+                            <button onClick={safeReload} className="mt-4 text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-bold hover:bg-red-200 transition">
                                 Reintentar
                             </button>
                         </div>
                     )}
 
+                    {/* 3. Pantalla de Éxito (Conectado) */}
                     {status === 'ready' && (
-                        <div className="absolute inset-0 bg-green-500/10 flex flex-col items-center justify-center text-green-600 font-bold fade-in backdrop-blur-sm z-10">
+                        <div className="absolute inset-0 z-40 bg-green-500/10 flex flex-col items-center justify-center text-green-600 font-bold fade-in backdrop-blur-sm">
                             <CheckCircle size={64} className="mb-4 drop-shadow-md" />
                             <span className="text-xl">Conectado</span>
                         </div>
                     )}
 
-                    {/* QR Display - Uses hook data, not direct URL */}
-                    {status !== 'ready' && status !== 'error' && status !== 'loading' && qr && (
-                        <img
-                            src={qr}
-                            alt="WhatsApp QR"
-                            className="w-full h-full object-contain scale-95 group-hover:scale-100 transition duration-500"
-                        />
+                    {/* 4. EL QR - LIMPIO Y ELEGANTE */}
+                    {shouldShowQR && (
+                        <div className="absolute inset-0 z-20 bg-white flex items-center justify-center rounded-2xl overflow-hidden">
+                            <img
+                                src={`/api/v1/whatsapp/qr?format=image&t=${Date.now()}`}
+                                alt="WhatsApp QR"
+                                className="w-full h-full object-contain p-4 transition-opacity duration-500"
+                                style={{ opacity: imgLoading ? 0 : 1 }}
+                                onLoad={() => setImgLoading(false)}
+                                onError={(e) => {
+                                    if (qr && !qr.startsWith('http')) {
+                                        e.target.src = qr;
+                                    }
+                                    setImgLoading(false);
+                                }}
+                            />
+                        </div>
                     )}
                 </div>
 
+                {/* BOTONES */}
                 <div className="flex gap-4 w-full">
                     <button
                         onClick={safeReload}
@@ -69,25 +82,18 @@ const WhatsAppPage = () => {
                         <RefreshCw size={18} /> Recargar QR
                     </button>
 
-                    {status === 'ready' ? (
-                        <button
-                            onClick={() => {
-                                if (window.confirm("¿Cerrar sesión y desconectar?")) safeRestart();
-                            }}
-                            className="flex-1 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition flex items-center justify-center gap-2"
-                        >
-                            <LogOut size={18} /> Desconectar
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => {
-                                if (window.confirm("¿Reiniciar servicio de WhatsApp?")) safeRestart();
-                            }}
-                            className="flex-1 py-3 bg-blue-50 text-blue-600 font-bold rounded-xl hover:bg-blue-100 transition flex items-center justify-center gap-2"
-                        >
-                            <Power size={18} /> Reiniciar
-                        </button>
-                    )}
+                    <button
+                        onClick={() => {
+                            const msg = status === 'ready' ? "¿Cerrar sesión y desconectar WhatsApp?" : "¿Reiniciar el servicio de WhatsApp?";
+                            if (window.confirm(msg)) safeRestart();
+                        }}
+                        className={`flex-1 py-3 font-bold rounded-xl transition flex items-center justify-center gap-2 ${
+                            status === 'ready' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                        }`}
+                    >
+                        {status === 'ready' ? <LogOut size={18} /> : <Power size={18} />}
+                        {status === 'ready' ? 'Desconectar' : 'Reiniciar'}
+                    </button>
                 </div>
 
                 <div className="mt-6 flex flex-col gap-2 w-full">
@@ -97,7 +103,7 @@ const WhatsAppPage = () => {
                     </div>
                     <div className="flex items-center gap-3 p-3 bg-pink-50 text-pink-700 rounded-xl text-sm font-medium">
                         <QrCode size={18} />
-                        <span>Ve a Dispositivos Vinculados &gt; Vincular</span>
+                        <span>Dispositivos Vinculados &gt; Vincular</span>
                     </div>
                 </div>
             </div>
