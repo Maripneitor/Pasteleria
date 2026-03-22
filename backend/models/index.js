@@ -13,6 +13,7 @@ const Filling = require('./Filling');
 const Ingredient = require('./Ingredient');
 const CakeFlavor = require('./CakeFlavor');
 const CakeShape = require('./CakeShape');
+const CakeSize = require('./CakeSize');
 
 
 const AuditLog = require('./AuditLog');
@@ -140,5 +141,6 @@ module.exports = {
   SaaSContract,
   SaaSCommissionLedger,
   DailySalesStats,
-  CakeShape
+  CakeShape,
+  CakeSize
 };

@@ -72,14 +72,14 @@ const StepF_Payment = ({ prev }) => {
             sabores_pan: orderData.panes,
             rellenos: orderData.rellenos,
 
-            complementos: orderData.complements,
+            complementos: (orderData.complements || []).filter(c => c.sabor || (c.personas && parseInt(c.personas) > 0)),
             accesorios: orderData.extras,
 
             descripcion_diseno: orderData.descripcion_diseno,
             dedicatoria: orderData.dedicatoria,
             imagen_referencia_url: orderData.imagen_referencia_url,
             diseno_metadata: {
-                pisos: orderData.pisos,
+                pisos: (orderData.pisos || []).filter(p => p.personas && parseInt(p.personas) > 0),
                 allImages: orderData.referenceImages
             },
 

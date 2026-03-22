@@ -388,7 +388,7 @@ const AiAssistantTray = ({ isOpen, onClose }) => {
                             <button onClick={() => setMode('CREATE')} className={`flex-1 py-2 px-2 rounded text-xs font-medium flex items-center justify-center gap-1 ${mode === 'CREATE' ? 'bg-pink-500 text-white shadow' : 'bg-white text-gray-700'}`}><PlusCircle size={14} /> Crear</button>
                             <button onClick={() => setMode('EDIT')} className={`flex-1 py-2 px-2 rounded text-xs font-medium flex items-center justify-center gap-1 ${mode === 'EDIT' ? 'bg-blue-500 text-white shadow' : 'bg-white text-gray-700'}`}><Edit3 size={14} /> Editar</button>
                             <button onClick={() => setMode('SEARCH')} className={`flex-1 py-2 px-2 rounded text-xs font-medium flex items-center justify-center gap-1 ${mode === 'SEARCH' ? 'bg-green-500 text-white shadow' : 'bg-white text-gray-700'}`}><Search size={14} /> Buscar</button>
-                            <button onClick={() => setMode('INSIGHTS')} className={`flex-1 py-2 px-2 rounded text-xs font-medium flex items-center justify-center gap-1 ${mode === 'INSIGHTS' ? 'bg-purple-500 text-white shadow' : 'bg-white text-gray-700'}`}><BarChart3 size={14} /> Insights</button>
+                            <button onClick={() => setMode('INSIGHTS')} className={`flex-1 py-2 px-2 rounded text-xs font-medium flex items-center justify-center gap-1 ${mode === 'INSIGHTS' ? 'bg-purple-500 text-white shadow' : 'bg-white text-gray-700'}`}><BarChart3 size={14} /> Estadísticas</button>
                         </div>
 
                         <div className="flex-1 bg-gray-50 overflow-hidden relative flex">

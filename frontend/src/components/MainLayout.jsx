@@ -119,9 +119,9 @@ const MainLayout = () => {
                         <NavItem path="/admin/whatsapp" icon={MessageCircle} label="Conexión WhatsApp" isActive={checkActive('/admin/whatsapp')} onClick={handleNavClick} />
                     )}
 
-                    {/* 6. Gestión de Sabores y Rellenos */}
+                    {/* 6. Gestión de Sabores y Formas */}
                     {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
-                        <NavItem path="/admin/sabores" icon={Tags} label="Gestión de Sabores" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
+                        <NavItem path="/admin/sabores" icon={Tags} label="Gestión de Sabores y Formas" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
                     )}
 
                     {/* 7. Estadísticas */}

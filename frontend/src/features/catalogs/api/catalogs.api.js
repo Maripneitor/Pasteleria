@@ -18,6 +18,10 @@ const catalogApi = {
         const res = await client.patch(`/catalogs/flavors/${id}/active`, { isActive });
         return res.data;
     },
+    deleteFlavor: async (id) => {
+        const res = await client.delete(`/catalogs/flavors/${id}`);
+        return res.data;
+    },
 
     // FILLINGS
     getFillings: async (includeInactive = false) => {
@@ -36,6 +40,11 @@ const catalogApi = {
         const res = await client.patch(`/catalogs/fillings/${id}/active`, { isActive });
         return res.data;
     },
+    deleteFilling: async (id) => {
+        const res = await client.delete(`/catalogs/fillings/${id}`);
+        return res.data;
+    },
+
     // PRODUCTS
     getProducts: async (includeInactive = false) => {
         const res = await client.get(`/catalogs/products?includeInactive=${includeInactive}`);
@@ -80,8 +89,33 @@ const catalogApi = {
     toggleShape: async (id, isActive) => {
         const res = await client.patch(`/catalogs/shapes/${id}/active`, { isActive });
         return res.data;
+    },
+    deleteShape: async (id) => {
+        const res = await client.delete(`/catalogs/shapes/${id}`);
+        return res.data;
+    },
+
+    // SIZES
+    getSizes: async (type, includeInactive = false) => {
+        const res = await client.get(`/catalogs/sizes?type=${type}&includeInactive=${includeInactive}`);
+        return res.data;
+    },
+    createSize: async (data) => {
+        const res = await client.post('/catalogs/sizes', data);
+        return res.data;
+    },
+    updateSize: async (id, data) => {
+        const res = await client.put(`/catalogs/sizes/${id}`, data);
+        return res.data;
+    },
+    toggleSize: async (id, isActive) => {
+        const res = await client.patch(`/catalogs/sizes/${id}/active`, { isActive });
+        return res.data;
+    },
+    deleteSize: async (id) => {
+        const res = await client.delete(`/catalogs/sizes/${id}`);
+        return res.data;
     }
 };
-
 
 export default catalogApi;

@@ -13,9 +13,10 @@ export const OrderProvider = ({ children }) => {
         // Products (Pastel Principal)
         products: [], // { id, flavor, filling, design... } 
 
-        // New Arrays
-        complements: [], // Complex extra cakes: { personas, flavor, filling... }
+        // New Arrays (Fixed sizes for AI/Bot stability)
+        complements: Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })),
         extras: [],      // Simple items: { qty, name, price }
+        pisos: Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' })),
 
         // Delivery
         deliveryDate: '',
@@ -49,8 +50,9 @@ export const OrderProvider = ({ children }) => {
             clientName: '',
             clientPhone: '',
             products: [],
-            complements: [],
+            complements: Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })),
             extras: [],
+            pisos: Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' })),
             deliveryDate: '',
             deliveryTime: '',
             is_delivery: false,
@@ -86,7 +88,6 @@ export const OrderProvider = ({ children }) => {
             panes: Array.isArray(folio.sabores_pan) ? folio.sabores_pan : [],
             rellenos: Array.isArray(folio.rellenos) ? folio.rellenos : [],
             
-            complements: folio.complementos || [],
             extras: folio.accesorios || [],
             
             deliveryDate: folio.fecha_entrega || '',
@@ -109,7 +110,14 @@ export const OrderProvider = ({ children }) => {
             total: folio.total || 0,
             advance: folio.anticipo || 0,
             
-            pisos: folio.tipo_folio === 'Base' ? (folio.diseno_metadata?.pisos || []) : []
+            // Ensure fixed sizes during load
+            pisos: (folio.diseno_metadata?.pisos?.length === 8) 
+                ? folio.diseno_metadata.pisos 
+                : [...(folio.diseno_metadata?.pisos || []), ...Array.from({ length: Math.max(0, 8 - (folio.diseno_metadata?.pisos?.length || 0)) }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))].slice(0, 8),
+            
+            complements: (folio.complementos?.length === 3)
+                ? folio.complementos
+                : [...(folio.complementos || []), ...Array.from({ length: Math.max(0, 3 - (folio.complementos?.length || 0)) }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 }))].slice(0, 3)
         });
         setStep(1);
     };

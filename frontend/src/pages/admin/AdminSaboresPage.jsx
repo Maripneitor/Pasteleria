@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { Plus, Edit2, Trash2, CheckCircle, XCircle, Cake, Droplet, Square, Circle, Search, DollarSign } from 'lucide-react';
+import { Plus, Edit2, Trash2, CheckCircle, XCircle, Cake, Droplet, Square, Circle, Ruler, Search, DollarSign } from 'lucide-react';
 import catalogApi from '@/services/catalogApi';
 import toast from 'react-hot-toast';
 
 export default function AdminSaboresPage() {
-    const [activeTab, setActiveTab] = useState('flavors'); // flavors | fillings | shapes_main | shapes_comp
+    const [activeTab, setActiveTab] = useState('flavors'); // flavors | fillings | shapes_main | shapes_comp | sizes_main | sizes_comp
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -25,6 +25,8 @@ export default function AdminSaboresPage() {
             else if (activeTab === 'fillings') data = await catalogApi.getFillings(true);
             else if (activeTab === 'shapes_main') data = await catalogApi.getShapes('MAIN', true);
             else if (activeTab === 'shapes_comp') data = await catalogApi.getShapes('COMPLEMENTARY', true);
+            else if (activeTab === 'sizes_main') data = await catalogApi.getSizes('MAIN', true);
+            else if (activeTab === 'sizes_comp') data = await catalogApi.getSizes('COMPLEMENTARY', true);
             setItems(data);
         } catch {
             toast.error('Error al cargar catálogo');
@@ -51,12 +53,28 @@ export default function AdminSaboresPage() {
         setShowModal(true);
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este elemento? Esta acción no se puede deshacer.')) return;
+        try {
+            if (activeTab === 'flavors') await catalogApi.deleteFlavor(id);
+            else if (activeTab === 'fillings') await catalogApi.deleteFilling(id);
+            else if (activeTab === 'shapes_main' || activeTab === 'shapes_comp') await catalogApi.deleteShape(id);
+            else if (activeTab === 'sizes_main' || activeTab === 'sizes_comp') await catalogApi.deleteSize(id);
+
+            toast.success('Eliminado correctamente');
+            fetchData();
+        } catch {
+            toast.error('Error al eliminar');
+        }
+    };
+
     const handleToggle = async (item) => {
         try {
             const newVal = !item.isActive;
             if (activeTab === 'flavors') await catalogApi.toggleFlavor(item.id, newVal);
             else if (activeTab === 'fillings') await catalogApi.toggleFilling(item.id, newVal);
             else if (activeTab === 'shapes_main' || activeTab === 'shapes_comp') await catalogApi.toggleShape(item.id, newVal);
+            else if (activeTab === 'sizes_main' || activeTab === 'sizes_comp') await catalogApi.toggleSize(item.id, newVal);
 
             toast.success('Estado actualizado');
             fetchData();
@@ -76,12 +94,15 @@ export default function AdminSaboresPage() {
                 if (activeTab === 'flavors') await catalogApi.updateFlavor(editId, formData);
                 else if (activeTab === 'fillings') await catalogApi.updateFilling(editId, formData);
                 else if (activeTab === 'shapes_main' || activeTab === 'shapes_comp') await catalogApi.updateShape(editId, formData);
+                else if (activeTab === 'sizes_main' || activeTab === 'sizes_comp') await catalogApi.updateSize(editId, formData);
                 toast.success('Actualizado correctamente');
             } else {
                 if (activeTab === 'flavors') await catalogApi.createFlavor(formData);
                 else if (activeTab === 'fillings') await catalogApi.createFilling(formData);
                 else if (activeTab === 'shapes_main') await catalogApi.createShape({ ...formData, type: 'MAIN' });
                 else if (activeTab === 'shapes_comp') await catalogApi.createShape({ ...formData, type: 'COMPLEMENTARY' });
+                else if (activeTab === 'sizes_main') await catalogApi.createSize({ ...formData, type: 'MAIN' });
+                else if (activeTab === 'sizes_comp') await catalogApi.createSize({ ...formData, type: 'COMPLEMENTARY' });
                 toast.success('Creado correctamente');
             }
             setShowModal(false);
@@ -96,8 +117,9 @@ export default function AdminSaboresPage() {
     const getIcon = () => {
         if (activeTab === 'flavors') return <Cake className="text-pink-500" />;
         if (activeTab === 'fillings') return <Droplet className="text-blue-500" />;
-        if (activeTab === 'shapes_main') return <Square className="text-purple-500" />;
-        if (activeTab === 'shapes_comp') return <Circle className="text-indigo-500" />;
+        if (activeTab.includes('shapes')) return <Square className="text-purple-500" />;
+        if (activeTab.includes('sizes')) return <Ruler className="text-indigo-500" />;
+        return <Cake className="text-pink-500" />;
     };
 
     const getLabel = () => {
@@ -105,10 +127,13 @@ export default function AdminSaboresPage() {
         if (activeTab === 'fillings') return 'Rellenos';
         if (activeTab === 'shapes_main') return 'Formas Principales';
         if (activeTab === 'shapes_comp') return 'Formas Complementarias';
+        if (activeTab === 'sizes_main') return 'Tamaños (Principal)';
+        if (activeTab === 'sizes_comp') return 'Tamaños (Complementario)';
+        return 'Gestión';
     };
 
     return (
-        <div className="p-6 max-w-5xl mx-auto fade-in">
+        <div className="p-6 max-w-6xl mx-auto fade-in">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                 <div>
@@ -117,7 +142,7 @@ export default function AdminSaboresPage() {
                         {getLabel()}
                     </h1>
                     <p className="text-gray-500 mt-1">
-                        Gestiona las opciones disponibles para personalizar los pedidos.
+                        Gestiona las opciones disponibles para personalizar los pedidos de la pastelería.
                     </p>
                 </div>
                 <button
@@ -149,14 +174,28 @@ export default function AdminSaboresPage() {
                     className={`pb-4 px-4 font-bold text-sm sm:text-base transition border-b-2 whitespace-nowrap
                     ${activeTab === 'shapes_main' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
-                    ⏹️ Formas (Principal)
+                    ⏹️ Formas (Prin.)
                 </button>
                 <button
                     onClick={() => setActiveTab('shapes_comp')}
                     className={`pb-4 px-4 font-bold text-sm sm:text-base transition border-b-2 whitespace-nowrap
-                    ${activeTab === 'shapes_comp' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    ${activeTab === 'shapes_comp' ? 'border-purple-300 text-purple-500' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
                     ⭕ Formas (Comp.)
+                </button>
+                <button
+                    onClick={() => setActiveTab('sizes_main')}
+                    className={`pb-4 px-4 font-bold text-sm sm:text-base transition border-b-2 whitespace-nowrap
+                    ${activeTab === 'sizes_main' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                >
+                    📏 Tamaños (Prin.)
+                </button>
+                <button
+                    onClick={() => setActiveTab('sizes_comp')}
+                    className={`pb-4 px-4 font-bold text-sm sm:text-base transition border-b-2 whitespace-nowrap
+                    ${activeTab === 'sizes_comp' ? 'border-indigo-300 text-indigo-500' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                >
+                    📐 Tamaños (Comp.)
                 </button>
             </div>
 
@@ -198,12 +237,20 @@ export default function AdminSaboresPage() {
                                             {item.isActive ? 'Activo' : 'Inactivo'}
                                         </button>
                                     </td>
-                                    <td className="p-5 text-right">
+                                    <td className="p-5 text-right flex justify-end gap-2">
                                         <button
                                             onClick={() => handleEdit(item)}
                                             className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition"
+                                            title="Editar"
                                         >
                                             <Edit2 size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(item.id)}
+                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                                            title="Eliminar"
+                                        >
+                                            <Trash2 size={18} />
                                         </button>
                                     </td>
                                 </tr>
@@ -222,7 +269,7 @@ export default function AdminSaboresPage() {
                         className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md"
                     >
                         <h2 className="text-2xl font-bold mb-6 text-gray-800">
-                            {isEditing ? 'Editar' : 'Nuevo'} {activeTab.includes('flavors') ? 'Sabor' : activeTab.includes('fillings') ? 'Relleno' : 'Elemento'}
+                            {isEditing ? 'Editar' : 'Nuevo'} {activeTab.includes('flavors') ? 'Sabor' : activeTab.includes('fillings') ? 'Relleno' : activeTab.includes('sizes') ? 'Tamaño' : 'Elemento'}
                         </h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
@@ -231,7 +278,7 @@ export default function AdminSaboresPage() {
                                     autoFocus
                                     required
                                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none transition"
-                                    placeholder="Ej. Chocolate, Redondo, Fresa..."
+                                    placeholder="Ej. Chocolate, 20 cm, Redondo..."
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 />

@@ -72,20 +72,10 @@ const StepB_OrderDetails = ({ next, prev }) => {
     // 🔥 AGREGA ESTA LÍNEA QUE SE NOS BORRÓ:
     const isBase = orderData.tipo_folio === 'Base';
     
-    // Pisos Management
-    const handleAddPiso = () => {
-        const current = orderData.pisos || [];
-        updateOrder({ pisos: [...current, { personas: '', panes: [], rellenos: [], notas: '' }] });
-    };
-
-    const handleRemovePiso = (idx) => {
-        const current = [...(orderData.pisos || [])];
-        current.splice(idx, 1);
-        updateOrder({ pisos: current });
-    };
-
+    // Pisos Management (Fixed to 8 as requested)
     const handleUpdatePiso = (idx, field, val) => {
         const current = [...(orderData.pisos || [])];
+        if (!current[idx]) return;
         current[idx][field] = val;
         updateOrder({ pisos: current });
     };
@@ -146,8 +136,8 @@ const StepB_OrderDetails = ({ next, prev }) => {
         recognition.start();
     };
 
-    // Validation
-    const hasPisos = isBase && orderData.pisos?.length > 0;
+    // Validation (Check if at least one floor has people count)
+    const hasPisos = isBase && (orderData.pisos || []).some(p => p.personas && parseInt(p.personas) > 0);
     const hasSelections = orderData.panes?.length > 0 && orderData.rellenos?.length > 0;
     const isValid = orderData.deliveryDate && orderData.deliveryTime &&
         orderData.peopleCount &&
@@ -222,7 +212,8 @@ const StepB_OrderDetails = ({ next, prev }) => {
                             onClick={() => {
                                 updateOrder({ tipo_folio: 'Base' });
                                 if (!orderData.pisos || orderData.pisos.length === 0) {
-                                    updateOrder({ pisos: [{ personas: '', panes: [], rellenos: [], notas: '' }] });
+                                    const fixedPisos = Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }));
+                                    updateOrder({ pisos: fixedPisos });
                                 }
                             }}
                         >
@@ -347,18 +338,16 @@ const StepB_OrderDetails = ({ next, prev }) => {
             ) : (
                 <div className="bg-purple-50/50 p-6 rounded-2xl border border-purple-100">
                     <h3 className="text-lg font-bold text-purple-800 border-b border-purple-200 pb-2 mb-4 flex items-center gap-2">
-                        <Layers size={20} className="text-purple-600" /> Estructura por Pisos
+                        <Layers size={20} className="text-purple-600" /> Estructura por Pisos (Máximo 8)
                     </h3>
+                    <p className="text-[10px] text-purple-400 mb-4 italic">El bot llenará solo los pisos necesarios. Los campos vacíos serán ignorados.</p>
                     
                     <div className="space-y-4">
-                        {(orderData.pisos || []).map((piso, idx) => (
+                        {(orderData.pisos || []).slice(0, 8).map((piso, idx) => (
                             <div key={idx} className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm relative group">
-                                <button 
-                                    onClick={() => handleRemovePiso(idx)} 
-                                    className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition shadow-sm hover:bg-red-200"
-                                >
-                                    <X size={14} />
-                                </button>
+                                <span className="absolute -top-2 -left-2 bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                    PISO {idx + 1}
+                                </span>
                                 <div className="grid md:grid-cols-4 gap-4">
                                     <div>
                                         <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Personas</label>
@@ -436,13 +425,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
                             </div>
                         ))}
                     </div>
-
-                    <button 
-                        onClick={handleAddPiso} 
-                        className="mt-4 px-4 py-2 bg-purple-100 text-purple-700 font-bold text-sm rounded-lg hover:bg-purple-200 transition flex items-center gap-2"
-                    >
-                        <Plus size={16} /> Añadir Piso
-                    </button>
                 </div>
             )}
 

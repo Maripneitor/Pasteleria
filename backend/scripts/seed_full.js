@@ -1,4 +1,4 @@
-const { sequelize, User, Tenant, Branch, Product, Flavor, CakeFlavor, Filling, Folio, CakeShape } = require('../models');
+const { sequelize, User, Tenant, Branch, Product, Flavor, CakeFlavor, Filling, Folio, CakeShape, CakeSize } = require('../models');
 
 const bcrypt = require('bcryptjs');
 
@@ -21,6 +21,15 @@ async function seedFull() {
             where: { email: 'admin@gmail.com' },
             defaults: {
                 name: 'Super Admin 1',
+                password: superAdminHash,
+                role: 'SUPER_ADMIN',
+                tenantId: null
+            }
+        });
+        await User.findOrCreate({
+            where: { email: 'superadmin@lafiesta.com' },
+            defaults: {
+                name: 'SuperAdmin Fiesta',
                 password: superAdminHash,
                 role: 'SUPER_ADMIN',
                 tenantId: null
@@ -155,6 +164,24 @@ async function seedFull() {
             });
         }
         console.log("✅ Shapes Populated");
+        
+        // 7. Sizes (Main and Complementary)
+        const mainSizes = ['10 Personas', '15 Personas', '20 Personas', '30 Personas', '40 Personas'];
+        for (const s of mainSizes) {
+            await CakeSize.findOrCreate({
+                where: { name: s, tenantId: tenant.id, type: 'MAIN' },
+                defaults: { name: s, price: 0, type: 'MAIN', tenantId: tenant.id }
+            });
+        }
+
+        const compSizes = ['1/2 Plancha', 'Plancha Completa', 'Plancha Doble'];
+        for (const s of compSizes) {
+            await CakeSize.findOrCreate({
+                where: { name: s, tenantId: tenant.id, type: 'COMPLEMENTARY' },
+                defaults: { name: s, price: 0, type: 'COMPLEMENTARY', tenantId: tenant.id }
+            });
+        }
+        console.log("✅ Sizes Populated");
 
 
         console.log("🚀 PLUG & PLAY SETUP COMPLETE!");

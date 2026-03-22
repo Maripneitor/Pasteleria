@@ -11,12 +11,14 @@ router.get('/flavors', catalogController.getFlavors);
 router.post('/flavors', catalogController.createFlavor);
 router.put('/flavors/:id', catalogController.updateFlavor);
 router.patch('/flavors/:id/active', catalogController.toggleFlavorActive);
+router.delete('/flavors/:id', catalogController.deleteFlavor);
 
 // --- FILLINGS ---
 router.get('/fillings', catalogController.getFillings);
 router.post('/fillings', catalogController.createFilling);
 router.put('/fillings/:id', catalogController.updateFilling);
 router.patch('/fillings/:id/active', catalogController.toggleFillingActive);
+router.delete('/fillings/:id', catalogController.deleteFilling);
 
 // --- PRODUCTS ---
 router.get('/products', catalogController.getProducts);
@@ -39,5 +41,13 @@ router.get('/shapes', catalogController.getShapes);
 router.post('/shapes', catalogController.createShape);
 router.put('/shapes/:id', catalogController.updateShape);
 router.patch('/shapes/:id/active', catalogController.toggleShapeActive);
+router.delete('/shapes/:id', catalogController.deleteShape);
+
+// --- SIZES ---
+router.get('/sizes', catalogController.getSizes);
+router.post('/sizes', catalogController.createSize);
+router.put('/sizes/:id', catalogController.updateSize);
+router.patch('/sizes/:id/active', catalogController.toggleSizeActive);
+router.delete('/sizes/:id', catalogController.deleteSize);
 
 module.exports = router;

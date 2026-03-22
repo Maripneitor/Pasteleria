@@ -20,27 +20,14 @@ const StepC_Complements = ({ next, prev }) => {
         load();
     }, []);
 
-    const addComplement = () => {
-        const newComps = [...(orderData.complements || []), {
-            personas: 10,
-            forma: 'Redondo',
-            sabor: '',
-            relleno: '',
-            descripcion: '',
-            precio: 0
-        }];
-        updateOrder({ complements: newComps });
-    };
-
-    const removeComplement = (index) => {
-        const newComps = orderData.complements.filter((_, i) => i !== index);
-        updateOrder({ complements: newComps });
-    };
-
+    // Fixed to 3 complements as requested
     const updateComplement = (index, field, value) => {
-        const newComps = [...orderData.complements];
-        newComps[index][field] = value;
-        updateOrder({ complements: newComps });
+        const current = [...(orderData.complements || [])];
+        // Ensure we have 3 slots
+        const fixedComps = current.length === 3 ? current : Array.from({ length: 3 }, (_, i) => current[i] || { personas: 10, forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 });
+        
+        fixedComps[index][field] = value;
+        updateOrder({ complements: fixedComps });
     };
 
     return (
@@ -49,16 +36,14 @@ const StepC_Complements = ({ next, prev }) => {
                 <span className="bg-pink-100 text-pink-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">C</span>
                 Pasteles Complementarios (Opcional)
             </h2>
-            <p className="text-gray-500 text-sm">Agrega pasteles adicionales si el pedido incluye más de una pieza.</p>
+            <p className="text-gray-500 text-sm">El bot puede llenar hasta 3 pasteles complementarios automáticamente. Los vacíos se ignorarán.</p>
 
-            {(orderData.complements || []).map((comp, idx) => (
+            {/* Ensure 3 slots are shown */}
+            {(orderData.complements?.length === 3 ? orderData.complements : Array.from({ length: 3 }, (_, i) => (orderData.complements && orderData.complements[i]) || { personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })).map((comp, idx) => (
                 <div key={idx} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm relative animate-in fade-in slide-in-from-bottom-2">
-                    <button
-                        onClick={() => removeComplement(idx)}
-                        className="absolute top-3 right-3 text-gray-400 hover:text-red-500 p-1 transition"
-                    >
-                        <Trash2 size={18} />
-                    </button>
+                    <span className="absolute -top-2 -left-2 bg-pink-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                        COMPLEMENTO {idx + 1}
+                    </span>
 
                     <div className="grid md:grid-cols-4 gap-4 mb-3">
                         <div>
@@ -67,7 +52,8 @@ const StepC_Complements = ({ next, prev }) => {
                                 type="number"
                                 value={comp.personas}
                                 onChange={(e) => updateComplement(idx, 'personas', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-pink-500"
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-pink-500 text-sm"
+                                placeholder="0"
                             />
                         </div>
                         <div>
@@ -75,11 +61,12 @@ const StepC_Complements = ({ next, prev }) => {
                             <select
                                 value={comp.forma}
                                 onChange={(e) => updateComplement(idx, 'forma', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white"
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
                             >
                                 <option>Redondo</option>
                                 <option>Cuadrado</option>
                                 <option>Rectangular</option>
+                                <option>Corazón</option>
                             </select>
                         </div>
                         <div>
@@ -87,9 +74,9 @@ const StepC_Complements = ({ next, prev }) => {
                             <select
                                 value={comp.sabor}
                                 onChange={(e) => updateComplement(idx, 'sabor', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white"
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
                             >
-                                <option value="">Original</option>
+                                <option value="">Original / Vacio</option>
                                 {flavors.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
                             </select>
                         </div>
@@ -98,9 +85,9 @@ const StepC_Complements = ({ next, prev }) => {
                             <select
                                 value={comp.relleno}
                                 onChange={(e) => updateComplement(idx, 'relleno', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white"
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
                             >
-                                <option value="">Original</option>
+                                <option value="">Original / Vacio</option>
                                 {fillings.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
                             </select>
                         </div>
@@ -113,20 +100,13 @@ const StepC_Complements = ({ next, prev }) => {
                                 type="text"
                                 value={comp.descripcion}
                                 onChange={(e) => updateComplement(idx, 'descripcion', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg"
+                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
                                 placeholder="Ej. Encima del principal, mismo color..."
                             />
                         </div>
                     </div>
                 </div>
             ))}
-
-            <button
-                onClick={addComplement}
-                className="w-full py-4 border-2 border-dashed border-pink-200 rounded-2xl text-pink-600 font-bold hover:bg-pink-50 hover:border-pink-300 transition flex items-center justify-center gap-2"
-            >
-                <PlusCircle size={20} /> Añadir Pastel Complementario
-            </button>
 
             <div className="flex justify-between pt-6">
                 <button

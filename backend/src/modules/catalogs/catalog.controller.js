@@ -3,6 +3,7 @@ const Filling = require('../../../models/Filling');
 const Product = require('../../../models/Product');
 const Decoration = require('../../../models/Decoration');
 const CakeShape = require('../../../models/CakeShape');
+const CakeSize = require('../../../models/CakeSize');
 
 const asyncHandler = require('../../core/asyncHandler');
 const { buildTenantWhere } = require('../../../utils/tenantScope');
@@ -60,6 +61,17 @@ exports.toggleFlavorActive = asyncHandler(async (req, res) => {
     res.json(row);
 });
 
+exports.deleteFlavor = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const tenantFilter = buildTenantWhere(req);
+    const row = await CakeFlavor.findOne({ where: { id, ...tenantFilter } });
+    if (!row) return res.status(404).json({ message: "No encontrado" });
+
+    await row.destroy();
+    catalogCache.flushAll();
+    res.json({ message: "Eliminado con éxito" });
+});
+
 // --- FILLINGS ---
 exports.getFillings = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
@@ -100,6 +112,16 @@ exports.toggleFillingActive = asyncHandler(async (req, res) => {
 
     await row.update({ isActive: Boolean(isActive) });
     res.json(row);
+});
+
+exports.deleteFilling = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const tenantFilter = buildTenantWhere(req);
+    const row = await Filling.findOne({ where: { id, ...tenantFilter } });
+    if (!row) return res.status(404).json({ message: "No encontrado" });
+
+    await row.destroy();
+    res.json({ message: "Eliminado con éxito" });
 });
 
 // --- PRODUCTS ---
@@ -212,3 +234,67 @@ exports.toggleShapeActive = asyncHandler(async (req, res) => {
     res.json(row);
 });
 
+exports.deleteShape = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const tenantFilter = buildTenantWhere(req);
+    const row = await CakeShape.findOne({ where: { id, ...tenantFilter } });
+    if (!row) return res.status(404).json({ message: "No encontrado" });
+
+    await row.destroy();
+    res.json({ message: "Eliminado con éxito" });
+});
+
+// --- SIZES ---
+exports.getSizes = asyncHandler(async (req, res) => {
+    const tenantFilter = buildTenantWhere(req);
+    const { type, includeInactive } = req.query;
+    const where = { ...tenantFilter };
+    
+    if (type) where.type = type; // MAIN or COMPLEMENTARY
+    if (includeInactive !== '1' && includeInactive !== 'true') where.isActive = true;
+
+    const rows = await CakeSize.findAll({ where, order: [['name', 'ASC']] });
+    res.json(rows);
+});
+
+exports.createSize = asyncHandler(async (req, res) => {
+    const tenantId = req.user?.tenantId || 1;
+    const { name, price, type } = req.body;
+    if (!name || (type !== 'MAIN' && type !== 'COMPLEMENTARY')) {
+        return res.status(400).json({ message: "Nombre y tipo (MAIN/COMPLEMENTARY) requeridos" });
+    }
+
+    const newItem = await CakeSize.create({ name, price: price || 0, type, tenantId, isActive: true });
+    res.status(201).json(newItem);
+});
+
+exports.updateSize = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const tenantFilter = buildTenantWhere(req);
+    const row = await CakeSize.findOne({ where: { id, ...tenantFilter } });
+    if (!row) return res.status(404).json({ message: "No encontrado" });
+
+    await row.update(req.body);
+    res.json(row);
+});
+
+exports.toggleSizeActive = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { isActive } = req.body;
+    const tenantFilter = buildTenantWhere(req);
+    const row = await CakeSize.findOne({ where: { id, ...tenantFilter } });
+    if (!row) return res.status(404).json({ message: "No encontrado" });
+
+    await row.update({ isActive: Boolean(isActive) });
+    res.json(row);
+});
+
+exports.deleteSize = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const tenantFilter = buildTenantWhere(req);
+    const row = await CakeSize.findOne({ where: { id, ...tenantFilter } });
+    if (!row) return res.status(404).json({ message: "No encontrado" });
+
+    await row.destroy();
+    res.json({ message: "Eliminado con éxito" });
+});
