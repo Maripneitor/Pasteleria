@@ -33,46 +33,43 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const minutes = ['00', '15', '30', '45'];
     const periods = ['AM', 'PM'];
 
-    const [selectedTime, setSelectedTime] = useState({
-        hour: '12',
-        minute: '00',
-        period: 'PM'
-    });
+    // 🔥 SOLUCIÓN: Calculamos la hora al vuelo para matar el "Efecto Ping-Pong"
+    const getParsedTime = () => {
+        if (!orderData.deliveryTime) return { hour: '12', minute: '00', period: 'PM' };
+        
+        // Limpiamos la hora por si la IA le metió texto por error
+        const timeClean = orderData.deliveryTime.replace(/[^0-9:]/g, ''); 
+        if (!timeClean.includes(':')) return { hour: '12', minute: '00', period: 'PM' };
 
-    // Populate selectedTime from orderData on load
-    useEffect(() => {
-        if (orderData.deliveryTime) {
-            const [h24, m] = orderData.deliveryTime.split(':');
-            let h = parseInt(h24);
-            let p = 'AM';
-            if (h >= 12) {
-                p = 'PM';
-                if (h > 12) h -= 12;
-            }
-            if (h === 0) h = 12;
-            
-            setSelectedTime({
-                hour: h.toString(),
-                minute: m || '00',
-                period: p
-            });
+        const [h24, m] = timeClean.split(':');
+        let h = parseInt(h24, 10) || 12;
+        let p = 'AM';
+
+        if (h >= 12) {
+            p = 'PM';
+            if (h > 12) h -= 12;
         }
-    }, [orderData.deliveryTime]);
+        if (h === 0) h = 12;
 
-    useEffect(() => {
-        const { hour, minute, period } = selectedTime;
-        let h = parseInt(hour);
-        if (period === 'PM' && h !== 12) h += 12;
-        if (period === 'AM' && h === 12) h = 0;
+        return { hour: h.toString(), minute: m || '00', period: p };
+    };
+
+    const handleTimeChange = (field, value) => {
+        const current = getParsedTime();
+        const newTime = { ...current, [field]: value };
+        
+        let h = parseInt(newTime.hour, 10);
+        if (newTime.period === 'PM' && h !== 12) h += 12;
+        if (newTime.period === 'AM' && h === 12) h = 0;
 
         const hStr = h.toString().padStart(2, '0');
-        const timeStr = `${hStr}:${minute}`; // 24h format
+        // Mandamos el formato 24h directo al contexto global sin estados intermedios
+        updateOrder({ deliveryTime: `${hStr}:${newTime.minute}` }); 
+    };
 
-        if (timeStr !== orderData.deliveryTime) {
-            updateOrder({ deliveryTime: timeStr });
-        }
-    }, [selectedTime]);
+    const parsedTime = getParsedTime();
 
+    // 🔥 AGREGA ESTA LÍNEA QUE SE NOS BORRÓ:
     const isBase = orderData.tipo_folio === 'Base';
     
     // Pisos Management
@@ -185,23 +182,23 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     <div className="flex gap-2">
                         <select
                             className="bg-white p-3 border border-gray-300 rounded-xl flex-1"
-                            value={selectedTime.hour}
-                            onChange={(e) => setSelectedTime({ ...selectedTime, hour: e.target.value })}
+                            value={parsedTime.hour}
+                            onChange={(e) => handleTimeChange('hour', e.target.value)}
                         >
                             {hours.map(h => <option key={h} value={h}>{h}</option>)}
                         </select>
                         <span className="self-center font-bold">:</span>
                         <select
                             className="bg-white p-3 border border-gray-300 rounded-xl flex-1"
-                            value={selectedTime.minute}
-                            onChange={(e) => setSelectedTime({ ...selectedTime, minute: e.target.value })}
+                            value={parsedTime.minute}
+                            onChange={(e) => handleTimeChange('minute', e.target.value)}
                         >
                             {minutes.map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                         <select
                             className="bg-white p-3 border border-gray-300 rounded-xl w-20"
-                            value={selectedTime.period}
-                            onChange={(e) => setSelectedTime({ ...selectedTime, period: e.target.value })}
+                            value={parsedTime.period}
+                            onChange={(e) => handleTimeChange('period', e.target.value)}
                         >
                             {periods.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>

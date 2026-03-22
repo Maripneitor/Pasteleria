@@ -252,7 +252,16 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                     const entregaTxt = f.ubicacion_entrega || "Recoger en Sucursal";
                     
                     const pisosArray = parseArraySafe(f.detallesPisos);
-                    const pisosTxt = pisosArray.length > 0 ? `${pisosArray.length} pisos` : f.tipo_folio;
+                    let pisosTxt = '';
+                    if (pisosArray.length > 0) {
+                        pisosTxt = '\n' + pisosArray.map((p, i) => {
+                            const panStr = Array.isArray(p.panes) ? p.panes.join(', ') : (p.panes || 'N/A');
+                            const rellStr = Array.isArray(p.rellenos) ? p.rellenos.join(', ') : (p.rellenos || 'N/A');
+                            return `   - Piso ${i + 1}: Para ${p.personas || '??'} pax | Notas: ${p.notas || 'Ninguna'} | Pan: ${panStr} | Relleno: ${rellStr}`;
+                        }).join('\n');
+                    } else {
+                        pisosTxt = f.tipo_folio || "Normal";
+                    }
                     
                     let precioTxt = "Por definir (El local te confirmará el total)";
                     if (f.total && parseFloat(f.total) > 0) {
@@ -280,7 +289,8 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                                    `🍞 *Pan principal:* ${panTxt}\n` +
                                    `🍓 *Relleno principal:* ${rellenoTxt}\n` +
                                    `🎨 *Diseño:* ${disenoTxt}\n` +
-                                   `✍️ *Dedicatoria:* ${dedicatoriaTxt}` +
+                                   `✍️ *Dedicatoria:* ${dedicatoriaTxt}\n` +
+                                   `📸 *Imágenes:* Revisar fotos adjuntas en el chat (si aplica)` +
                                    `${complementariosTxt}\n\n` +
                                    `--------------------------\n` +
                                    `💵 *Precio Total:* ${precioTxt}\n` +
