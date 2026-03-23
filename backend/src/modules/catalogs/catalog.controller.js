@@ -28,12 +28,14 @@ exports.getFlavors = asyncHandler(async (req, res) => {
     res.json(rows);
 });
 
+// CÓDIGO CORREGIDO
 exports.createFlavor = asyncHandler(async (req, res) => {
     const tenantId = req.user?.tenantId || 1;
-    const { name } = req.body;
+    const { name, price } = req.body; // <-- Agregamos price aquí
     if (!name) return res.status(400).json({ message: "Nombre requerido" });
 
-    const newItem = await CakeFlavor.create({ name, tenantId, isActive: true });
+    // <-- Pasamos el price a la base de datos
+    const newItem = await CakeFlavor.create({ name, price: price || 0, tenantId, isActive: true }); 
     catalogCache.flushAll();
     res.status(201).json(newItem);
 });
@@ -86,10 +88,13 @@ exports.getFillings = asyncHandler(async (req, res) => {
 
 exports.createFilling = asyncHandler(async (req, res) => {
     const tenantId = req.user?.tenantId || 1;
-    const { name } = req.body;
+    const { name, price } = req.body; // <-- Agregamos price aquí
+    
     if (!name) return res.status(400).json({ message: "Nombre requerido" });
 
-    const newItem = await Filling.create({ name, tenantId, isActive: true });
+    // <-- Pasamos el price a la base de datos (si no viene, le pone 0 por defecto)
+    const newItem = await Filling.create({ name, price: price || 0, tenantId, isActive: true });
+    
     res.status(201).json(newItem);
 });
 

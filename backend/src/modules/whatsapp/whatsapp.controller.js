@@ -282,9 +282,10 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                                    `👤 *Nombre:* ${f.cliente_nombre}\n` +
                                    `📅 *Fecha y Hora:* ${f.fecha_entrega || 'Pendiente'} a las ${f.hora_entrega || 'Pendiente'}\n` +
                                    `📍 *Entrega:* ${entregaTxt}\n\n` +
-                                   `🎂 *PASTEL PRINCIPAL*\n` +
-                                   `🍰 *Tamaño:* Para ${f.numero_personas || '??'} personas\n` +
-                                   `💠 *Forma:* ${f.forma || 'N/A'}\n` +
+                                   // CÓDIGO CORREGIDO:
+                                    `🎂 *PASTEL PRINCIPAL*\n` +
+                                    `🍰 *Tamaño:* ${f.numero_personas ? f.numero_personas + ' Personas' : 'Especificado en la Forma/Estructura'}\n` +
+                                    `💠 *Forma / Estilo:* ${f.forma || 'N/A'}\n` +
                                    `🏢 *Estructura:* ${pisosTxt}\n` +
                                    `🍞 *Pan principal:* ${panTxt}\n` +
                                    `🍓 *Relleno principal:* ${rellenoTxt}\n` +
