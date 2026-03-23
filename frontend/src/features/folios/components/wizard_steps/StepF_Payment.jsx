@@ -58,6 +58,10 @@ const StepF_Payment = ({ prev }) => {
     });
 
     const handleFinish = () => {
+        // Filtramos para enviar solo los pisos y complementos que realmente tengan datos
+        const pisosValidos = (orderData.pisos || []).filter(p => p.personas && parseInt(p.personas) > 0);
+        const complementosValidos = (orderData.complements || []).filter(c => c.sabor || (c.personas && parseInt(c.personas) > 0));
+
         const payload = {
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
@@ -72,14 +76,20 @@ const StepF_Payment = ({ prev }) => {
             sabores_pan: orderData.panes,
             rellenos: orderData.rellenos,
 
-            complementos: (orderData.complements || []).filter(c => c.sabor || (c.personas && parseInt(c.personas) > 0)),
+            // 🔥 NUEVOS CAMPOS (Alineados con el esquema de OpenAI y BD):
+            detallesPisos: pisosValidos,
+            complementarios: complementosValidos,
+
+            // 🔥 LEGACY Y RELACIONES (Se mantienen para asegurar compatibilidad con tu folio.service.js)
+            complementos: complementosValidos, 
+            complementsList: complementosValidos, // El backend usa esto para bulkCreate en FolioComplemento
             accesorios: orderData.extras,
 
             descripcion_diseno: orderData.descripcion_diseno,
             dedicatoria: orderData.dedicatoria,
             imagen_referencia_url: orderData.imagen_referencia_url,
             diseno_metadata: {
-                pisos: (orderData.pisos || []).filter(p => p.personas && parseInt(p.personas) > 0),
+                pisos: pisosValidos, // Mantenemos copia en metadata por retrocompatibilidad
                 allImages: orderData.referenceImages
             },
 
@@ -90,11 +100,12 @@ const StepF_Payment = ({ prev }) => {
             costo_envio: shipping,
 
             costo_base: baseCost,
-            totalValue: total, // Use totalValue to avoid confusion with total virtual? Backend handles total usually
+            totalValue: total,
             total: total,
             anticipo: advance,
             estatus_pago: (remaining <= 0) ? 'Pagado' : 'Pendiente',
-            status: 'CONFIRMED'
+            // Si el pedido ya existe y estaba en DRAFT, al actualizarlo lo pasamos a CONFIRMED
+            status: orderData.status === 'DRAFT' ? 'CONFIRMED' : (orderData.status || 'CONFIRMED')
         };
 
         if (orderData.id) {

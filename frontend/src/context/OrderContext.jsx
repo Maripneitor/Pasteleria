@@ -75,6 +75,43 @@ export const OrderProvider = ({ children }) => {
     };
 
     const loadOrder = (folio) => {
+        // --- FUNCIÓN DE NORMALIZACIÓN (Cura el Spanglish y Strings de OpenAI) ---
+        const normalizeArray = (val) => {
+            if (!val) return [];
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'string') return val.split(',').map(s => s.trim());
+            return [val];
+        };
+
+        // 1. HIDRATACIÓN SÚPER ROBUSTA DE PISOS
+        let rawPisos = folio.detallesPisos || folio.diseno_metadata?.pisos || [];
+        
+        // Si viene doblemente stringificado desde parseArraySafe/MySQL
+        try { if (typeof rawPisos === 'string') rawPisos = JSON.parse(rawPisos); } catch(e) {}
+        try { if (typeof rawPisos === 'string') rawPisos = JSON.parse(rawPisos); } catch(e) {}
+        
+        // Si OpenAI devolvió un Objeto en vez de un Array, lo envolvemos
+        let parsedPisos = Array.isArray(rawPisos) ? rawPisos : (rawPisos && typeof rawPisos === 'object' ? [rawPisos] : []);
+
+        // 2. HIDRATACIÓN SÚPER ROBUSTA DE COMPLEMENTARIOS
+        let rawComps = folio.complementarios || folio.complementos || [];
+        
+        try { if (typeof rawComps === 'string') rawComps = JSON.parse(rawComps); } catch(e) {}
+        try { if (typeof rawComps === 'string') rawComps = JSON.parse(rawComps); } catch(e) {}
+        
+        let parsedComplements = Array.isArray(rawComps) ? rawComps : (rawComps && typeof rawComps === 'object' ? [rawComps] : []);
+
+        // 3. AUTO-DETECCIÓN INTELIGENTE DEL TIPO DE PASTEL
+        const hasValidPisos = parsedPisos.some(p => p && (parseInt(p.personas || p.persons || 0) > 0 || (p.panes && p.panes.length > 0) || p.notas || p.description));
+        
+        let tipoFolioCalculado = 'Normal';
+        const tfStr = String(folio.tipo_folio || '').toLowerCase();
+        
+        // Curamos el "Base/Especial" de OpenAI para que React entienda que es "Base"
+        if (tfStr.includes('base') || tfStr.includes('especial') || hasValidPisos) {
+            tipoFolioCalculado = 'Base';
+        }
+
         setOrderData({
             id: folio.id, 
             clientName: folio.cliente_nombre || '',
@@ -82,11 +119,12 @@ export const OrderProvider = ({ children }) => {
             clientId: folio.clientId,
             selectedClient: folio.clientId ? { id: folio.clientId, name: folio.cliente_nombre, phone: folio.cliente_telefono } : null,
             
-            tipo_folio: folio.tipo_folio || 'Normal',
+            // Inyectamos el tipo curado
+            tipo_folio: tipoFolioCalculado,
             peopleCount: folio.numero_personas || '',
             shape: folio.forma || 'Redondo',
-            panes: Array.isArray(folio.sabores_pan) ? folio.sabores_pan : [],
-            rellenos: Array.isArray(folio.rellenos) ? folio.rellenos : [],
+            panes: normalizeArray(folio.sabores_pan),
+            rellenos: normalizeArray(folio.rellenos),
             
             extras: folio.accesorios || [],
             
@@ -99,27 +137,42 @@ export const OrderProvider = ({ children }) => {
             colonia: folio.colonia || '',
             referencias: folio.referencias || '',
             ubicacion_maps: folio.ubicacion_maps || '',
-            costo_envio: folio.costo_envio || 0,
-            costo_base: folio.costo_base || 0,
+            shippingCost: Number(folio.costo_envio) || 0,
+            costo_base: Number(folio.costo_base) || 0,
             
             descripcion_diseno: folio.descripcion_diseno || '',
             dedicatoria: folio.dedicatoria || '',
             extraHeight: folio.altura_extra === 'Si',
             referenceImages: folio.diseno_metadata?.allImages || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : []),
             
-            total: folio.total || 0,
-            advance: folio.anticipo || 0,
+            total: Number(folio.total) || 0,
+            advance: Number(folio.anticipo) || 0,
+            applyCommission: false,
             
-            // Ensure fixed sizes during load
-            pisos: (folio.diseno_metadata?.pisos?.length === 8) 
-                ? folio.diseno_metadata.pisos 
-                : [...(folio.diseno_metadata?.pisos || []), ...Array.from({ length: Math.max(0, 8 - (folio.diseno_metadata?.pisos?.length || 0)) }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))].slice(0, 8),
+            // 4. MAPEO DE PISOS (Traduce llaves en inglés si OpenAI falló, y normaliza strings a arrays)
+            pisos: [...parsedPisos, ...Array.from({ length: 8 }, () => ({}))]
+                   .map(p => ({
+                       personas: p.personas || p.persons || '',
+                       panes: normalizeArray(p.panes || p.flavor),
+                       rellenos: normalizeArray(p.rellenos || p.filling),
+                       notas: p.notas || p.description || ''
+                   }))
+                   .slice(0, 8),
             
-            complements: (folio.complementos?.length === 3)
-                ? folio.complementos
-                : [...(folio.complementos || []), ...Array.from({ length: Math.max(0, 3 - (folio.complementos?.length || 0)) }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 }))].slice(0, 3)
+            // 5. MAPEO DE COMPLEMENTARIOS (Traduce estrictamente de "persons", "shape", etc. al español)
+            complements: [...parsedComplements, ...Array.from({ length: 3 }, () => ({}))]
+                   .map(c => ({
+                       personas: c.personas || c.persons || '',
+                       forma: c.forma || c.shape || 'Redondo',
+                       sabor: c.sabor || c.flavor || '',
+                       relleno: c.relleno || c.filling || '',
+                       descripcion: c.descripcion || c.description || '',
+                       precio: Number(c.precio || c.price || 0)
+                   }))
+                   .slice(0, 3)
         });
-        setStep(1);
+        
+        setStep(1); 
     };
 
     return (

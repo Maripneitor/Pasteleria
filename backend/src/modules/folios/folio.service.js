@@ -159,7 +159,7 @@ class FolioService {
                 folioId: row.id,
                 personas: safeNum(c.personas),
                 forma: c.forma,
-                sabor: c.sabor,
+                sabor_pan: c.sabor || c.sabor_pan, // ✅ CORRECCIÓN: mapeado a sabor_pan
                 relleno: c.relleno,
                 precio: safeNum(c.precio),
                 descripcion: c.descripcion
@@ -188,7 +188,30 @@ class FolioService {
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
 
         const before = row.toJSON();
+        
+        // 1. Actualizamos los datos principales del Folio
         await row.update(data, { transaction: t });
+
+        // 2. 🔥 ACTUALIZAR COMPLEMENTOS (Borrar y recrear para evitar duplicados/desajustes)
+        const complementsList = Array.isArray(data.complementsList) ? data.complementsList : [];
+        if (complementsList.length > 0 || before.complementos?.length > 0) {
+            // Borramos los viejos asociados a este folio
+            await FolioComplemento.destroy({ where: { folioId: id }, transaction: t });
+            
+            // Creamos los nuevos (aplicando tu corrección de sabor_pan)
+            if (complementsList.length > 0) {
+                const complementsToCreate = complementsList.map(c => ({
+                    folioId: id,
+                    personas: safeNum(c.personas),
+                    forma: c.forma,
+                    sabor_pan: c.sabor || c.sabor_pan, // ✅ La corrección también aquí
+                    relleno: c.relleno,
+                    precio: safeNum(c.precio),
+                    descripcion: c.descripcion
+                }));
+                await FolioComplemento.bulkCreate(complementsToCreate, { transaction: t });
+            }
+        }
 
         const changed = {};
         Object.keys(data).forEach((k) => {

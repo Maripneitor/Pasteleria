@@ -148,29 +148,92 @@ const FolioDetailPage = () => {
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                             <Package size={20} className="text-pink-500" />
-                            Detalles del Pedido
+                            Detalles del Pedido Principal
                         </h2>
                         <div className="space-y-4">
                             <div className="p-4 bg-gray-50 rounded-xl">
-                                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Descripción de Diseño</p>
+                                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Descripción y Detalles</p>
                                 <p className="text-gray-800 text-lg">{folio.descripcion_diseno || 'Sin descripción detallada'}</p>
+                                {folio.dedicatoria && (
+                                    <div className="mt-3 border-t border-gray-200 pt-3">
+                                        <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Dedicatoria Escrita</p>
+                                        <p className="text-gray-800 italic">"{folio.dedicatoria}"</p>
+                                    </div>
+                                )}
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-500 font-semibold uppercase">Sabores de Pan</p>
-                                    <p className="font-medium text-gray-800">
-                                        {Array.isArray(folio.sabores_pan) ? folio.sabores_pan.join(', ') : folio.sabores_pan || 'N/A'}
-                                    </p>
+                            
+                            {/* Mostrar Sabores Generales SOLO si es un pastel Normal (1 piso) */}
+                            {folio.tipo_folio !== 'Base' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-500 font-semibold uppercase">Sabores de Pan</p>
+                                        <p className="font-medium text-gray-800">
+                                            {Array.isArray(folio.sabores_pan) ? folio.sabores_pan.join(', ') : folio.sabores_pan || 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 font-semibold uppercase">Rellenos</p>
+                                        <p className="font-medium text-gray-800">
+                                            {Array.isArray(folio.rellenos) ? folio.rellenos.join(', ') : folio.rellenos || 'N/A'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-500 font-semibold uppercase">Rellenos</p>
-                                    <p className="font-medium text-gray-800">
-                                        {Array.isArray(folio.rellenos) ? folio.rellenos.join(', ') : folio.rellenos || 'N/A'}
-                                    </p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </div>
+
+                    {/* SECCIÓN DINÁMICA: PISOS (Solo si el tipo es Base o si hay detallesPisos) */}
+                    {(folio.tipo_folio === 'Base' || (folio.detallesPisos && folio.detallesPisos.length > 0)) && (
+                        <div className="bg-purple-50 rounded-2xl shadow-sm border border-purple-100 p-6">
+                            <h2 className="text-lg font-bold text-purple-900 mb-4">Estructura por Pisos</h2>
+                            <div className="space-y-3">
+                                {(typeof folio.detallesPisos === 'string' ? JSON.parse(folio.detallesPisos) : (folio.detallesPisos || folio.diseno_metadata?.pisos || [])).map((piso, index) => (
+                                    <div key={index} className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
+                                        <div className="flex justify-between items-center mb-2 border-b border-purple-50 pb-2">
+                                            <span className="font-bold text-purple-800">Piso {index + 1}</span>
+                                            <span className="text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded-md font-medium">
+                                                {piso.personas || piso.persons} pax
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 text-sm">
+                                            <div><span className="text-gray-500">Pan:</span> <span className="font-medium">{Array.isArray(piso.panes || piso.flavor) ? (piso.panes || piso.flavor).join(', ') : (piso.panes || piso.flavor)}</span></div>
+                                            <div><span className="text-gray-500">Relleno:</span> <span className="font-medium">{Array.isArray(piso.rellenos || piso.filling) ? (piso.rellenos || piso.filling).join(', ') : (piso.rellenos || piso.filling)}</span></div>
+                                            {piso.notas && <div className="col-span-2 mt-1"><span className="text-gray-500">Notas:</span> <span className="italic text-gray-700">{piso.notas}</span></div>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SECCIÓN DINÁMICA: COMPLEMENTARIOS */}
+                    {folio.complementosList && folio.complementosList.length > 0 && (
+                        <div className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-6">
+                            <h2 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
+                                Pasteles Complementarios
+                                <span className="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full">{folio.complementosList.length}</span>
+                            </h2>
+                            <div className="space-y-3">
+                                {folio.complementosList.map((comp, index) => (
+                                    <div key={index} className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex flex-col md:flex-row gap-4 justify-between">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-bold text-gray-800">{comp.forma}</span>
+                                                <span className="text-xs text-gray-500 border border-gray-200 px-2 rounded-full">{comp.personas} pax</span>
+                                            </div>
+                                            <p className="text-sm text-gray-600">
+                                                <span className="font-semibold">Pan:</span> {comp.sabor_pan} | <span className="font-semibold">Relleno:</span> {comp.relleno}
+                                            </p>
+                                            {comp.descripcion && <p className="text-sm text-gray-500 italic mt-1">"{comp.descripcion}"</p>}
+                                        </div>
+                                        <div className="text-right font-bold text-blue-700 bg-blue-50 px-3 py-2 rounded-lg self-start">
+                                            ${parseFloat(comp.precio || 0).toFixed(2)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar Info */}
