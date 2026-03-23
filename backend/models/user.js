@@ -35,7 +35,7 @@ const User = sequelize.define('User', {
     comment: 'ID de la sucursal física asignada'
   },
   role: {
-    // 👇 Solo los 3 roles permitidos en el sistema
+    // 🔥 Ahora sí, solo 3 roles:
     type: DataTypes.ENUM('SUPER_ADMIN', 'OWNER', 'EMPLOYEE'),
     allowNull: false,
     defaultValue: 'EMPLOYEE'
@@ -60,23 +60,17 @@ const User = sequelize.define('User', {
   tableName: 'users' // Asegura que el nombre de la tabla sea 'users'
 });
 
-// Métodos de instancia para verificación de roles
 User.prototype.isSuperAdmin = function () {
   return this.role === 'SUPER_ADMIN';
 };
 
-// Se deja como alias de SUPER_ADMIN por si alguna ruta antigua de Express aún usa .isAdmin()
-User.prototype.isAdmin = function () {
-  return this.role === 'SUPER_ADMIN';
-};
-
 User.prototype.isOwner = function () {
-  // Eliminamos 'ADMIN' de la validación
   return ['SUPER_ADMIN', 'OWNER'].includes(this.role);
 };
 
 User.prototype.isEmployee = function () {
   return this.role === 'EMPLOYEE';
 };
+// Borra el de isAdmin()
 
 module.exports = User;

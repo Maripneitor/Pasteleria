@@ -18,13 +18,21 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import Badge from '@/components/common/Badge';
 import EmptyState from '@/components/common/EmptyState';
 
+// 🔐 IMPORTAMOS EL CONTEXTO DE AUTENTICACIÓN
+import { useAuth } from '@/context/AuthContext';
+
 // Helper for currency
 const formatMoney = (amount) => `$${Number(amount || 0).toLocaleString()}`;
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  // 👑 SACAMOS AL USUARIO DEL CONTEXTO
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // 💡 Variable de ayuda para no repetir código
+  const isAdminOrOwner = ['SUPER_ADMIN', 'OWNER'].includes(user?.role);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -72,18 +80,27 @@ const DashboardPage = () => {
     }
   };
 
+  // 🔥 Filtramos las acciones rápidas (Ocultar Reportes a Empleados)
   const actions = [
     { title: 'Nuevo Folio', icon: PlusCircle, bg: 'bg-pink-600', onClick: () => navigate('/pedidos/nuevo') },
     { title: 'Dictar Pedido', icon: Mic, bg: 'bg-violet-600', onClick: () => window.dispatchEvent(new Event('open-ai-tray')) },
     { title: 'Ver Calendario', icon: Calendar, bg: 'bg-blue-500', onClick: () => navigate('/calendario') },
-    { title: 'Reportes y Cortes', icon: FileText, bg: 'bg-emerald-600', onClick: () => navigate('/admin/reports') },
+    ...(isAdminOrOwner ? [{ title: 'Reportes y Cortes', icon: FileText, bg: 'bg-emerald-600', onClick: () => navigate('/admin/reports') }] : []),
   ];
 
+  // 🔥 Filtramos los módulos de administración según el rol exacto
   const adminModules = [
-    { title: 'Usuarios', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', path: '/usuarios' },
+    // ⛔ Usuarios: Solo SUPER_ADMIN
+    ...(user?.role === 'SUPER_ADMIN' ? [{ title: 'Usuarios', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', path: '/usuarios' }] : []),
+    
+    // ✅ Sabores: SUPER_ADMIN y OWNER
     { title: 'Sabores', icon: ChefHat, color: 'text-pink-600', bg: 'bg-pink-50', path: '/admin/sabores' },
+    
+    // ✅ Reportes: SUPER_ADMIN y OWNER
     { title: 'Reportes', icon: PieChart, color: 'text-purple-600', bg: 'bg-purple-50', path: '/admin/stats' },
-    { title: 'Comisiones', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50', path: '/admin/comisiones' },
+    
+    // ⛔ Comisiones: Solo SUPER_ADMIN
+    ...(user?.role === 'SUPER_ADMIN' ? [{ title: 'Comisiones', icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50', path: '/admin/comisiones' }] : []),
   ];
 
   if (loading) {
@@ -112,11 +129,17 @@ const DashboardPage = () => {
       />
 
       {/* 2. KPI Cards */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="flex flex-col gap-1 border-l-4 border-l-pink-500">
-          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span>
-          <span className="text-xl font-bold text-gray-900">{formatMoney(stats?.metrics?.totalSales)}</span>
-        </Card>
+      {/* 🛠️ Ajuste de columnas si se oculta una tarjeta */}
+      <section className={`grid gap-4 ${isAdminOrOwner ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'}`}>
+        
+        {/* 💰 Tarjeta Ventas Totales: SOLO ADMIN Y OWNER */}
+        {isAdminOrOwner && (
+            <Card className="flex flex-col gap-1 border-l-4 border-l-pink-500">
+            <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Ventas Totales</span>
+            <span className="text-xl font-bold text-gray-900">{formatMoney(stats?.metrics?.totalSales)}</span>
+            </Card>
+        )}
+
         <Card className="flex flex-col gap-1 border-l-4 border-l-purple-500">
           <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Pedidos Hoy</span>
           <span className="text-xl font-bold text-gray-900">{stats?.metrics?.todayOrders || 0}</span>
@@ -133,10 +156,12 @@ const DashboardPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEFT COLUMN: Actions & Recents */}
-        <div className="lg:col-span-2 space-y-8">
+        {/* 🛠️ Si no es Admin/Owner, expande esta columna para ocupar todo el ancho */}
+        <div className={`space-y-8 ${isAdminOrOwner ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
 
           {/* Quick Actions */}
-          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          {/* 🛠️ Ajuste de las tarjetas rápidas según cantidad */}
+          <section className={`grid gap-3 md:gap-4 ${isAdminOrOwner ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'}`}>
             {actions.map((action, idx) => (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={idx}>
                 <div
@@ -194,47 +219,50 @@ const DashboardPage = () => {
         </div>
 
         {/* RIGHT COLUMN: Admin & Chats */}
-        <div className="space-y-8">
-          {/* Admin Grid */}
-          <Card title="Administración">
-            <div className="grid grid-cols-2 gap-3">
-              {adminModules.map((mod, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => navigate(mod.path)}
-                  className={`${mod.bg} p-4 rounded-xl cursor-pointer hover:shadow-md transition flex flex-col items-center gap-2 text-center`}
-                >
-                  <mod.icon className={mod.color} size={24} />
-                  <span className={`text-xs font-bold ${mod.color.replace('text-', 'text-opacity-80-')}`}>{mod.title}</span>
+        {/* ⛔ BLOQUE OCULTO PARA EL EMPLEADO COMPLETO */}
+        {isAdminOrOwner && (
+            <div className="space-y-8">
+            {/* Admin Grid */}
+            <Card title="Administración">
+                <div className="grid grid-cols-2 gap-3">
+                {adminModules.map((mod, idx) => (
+                    <div
+                    key={idx}
+                    onClick={() => navigate(mod.path)}
+                    className={`${mod.bg} p-4 rounded-xl cursor-pointer hover:shadow-md transition flex flex-col items-center gap-2 text-center`}
+                    >
+                    <mod.icon className={mod.color} size={24} />
+                    <span className={`text-xs font-bold ${mod.color.replace('text-', 'text-opacity-80-')}`}>{mod.title}</span>
+                    </div>
+                ))}
                 </div>
-              ))}
-            </div>
-          </Card>
+            </Card>
 
-          {/* Popular Chart */}
-          <Card title="Sabores Top">
-            <div className="h-[200px] w-full items-center justify-center flex">
-              <RechartsPieChart width={200} height={200}>
-                <Pie
-                  data={stats?.populares || []}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={70}
-                  paddingAngle={5}
-                >
-                  {(stats?.populares || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={["#ec4899", "#8b5cf6", "#f59e0b", "#10b981"][index % 4]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </RechartsPieChart>
+            {/* Popular Chart */}
+            <Card title="Sabores Top">
+                <div className="h-[200px] w-full items-center justify-center flex">
+                <RechartsPieChart width={200} height={200}>
+                    <Pie
+                    data={stats?.populares || []}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={70}
+                    paddingAngle={5}
+                    >
+                    {(stats?.populares || []).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={["#ec4899", "#8b5cf6", "#f59e0b", "#10b981"][index % 4]} />
+                    ))}
+                    </Pie>
+                    <Tooltip />
+                </RechartsPieChart>
+                </div>
+                <div className="text-center text-xs text-gray-400 mt-2">Basado en últimos pedidos</div>
+            </Card>
             </div>
-            <div className="text-center text-xs text-gray-400 mt-2">Basado en últimos pedidos</div>
-          </Card>
-        </div>
+        )}
       </div>
     </div>
   );

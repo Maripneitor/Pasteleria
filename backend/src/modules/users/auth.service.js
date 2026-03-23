@@ -8,21 +8,23 @@ const SESSION_TTL_MIN = Number(process.env.SESSION_TTL_MIN || 20);
 
 // Helper: Determine Effective Role
 function getEffectiveRole(user) {
-    // Cambiamos user.globalRole por user.role
-    const globalRole = (user.role || '').toUpperCase();
+    const role = (user.role || '').toUpperCase();
 
-    if (globalRole === 'SUPER_ADMIN') return 'SUPER_ADMIN';
-    if (globalRole === 'ADMIN') return 'ADMIN';
+    // 1. Si el rol es uno de los 3 oficiales nuevos, lo pasamos directo
+    if (['SUPER_ADMIN', 'OWNER', 'EMPLOYEE'].includes(role)) {
+        return role;
+    }
 
-    // Logic for USER base role
-    if (globalRole === 'USER') {
-        // If they have an ownerId, they belong to someone -> EMPLOYEE
+    // 2. Lógica Legacy (Soporte para datos viejos que no se hayan actualizado)
+    if (role === 'ADMIN') return 'SUPER_ADMIN'; // Los viejos admins ahora son Super Admins
+    if (role === 'USER') {
+        // Si tienen un jefe asignado, son empleados. Si no, son dueños.
         if (user.ownerId) return 'EMPLOYEE';
-        // If they don't have an ownerId (and are not pending activation without logic), they are the OWNER
         return 'OWNER';
     }
 
-    return 'USER'; // Fallback
+    // Fallback más seguro a nivel operativo
+    return 'EMPLOYEE'; 
 }
 
 // Helper: Session Cleanup

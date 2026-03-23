@@ -72,13 +72,16 @@ const MainLayout = () => {
 
                 {/* Nav Links */}
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-                    {/* 1. Bandeja de Entrada */}
-                    <NavItem path="/" icon={LayoutDashboard} label="Bandeja de Entrada" isActive={checkActive('/')} onClick={handleNavClick} />
+                    
+                    {/* 1. Bandeja de Entrada - Oculta para EMPLOYEE */}
+                    {['SUPER_ADMIN', 'OWNER'].includes(user?.role) && (
+                        <NavItem path="/" icon={LayoutDashboard} label="Bandeja de Entrada" isActive={checkActive('/')} onClick={handleNavClick} />
+                    )}
 
-                    {/* 2. Ver Calendario */}
+                    {/* 2. Ver Calendario - Visible para TODOS */}
                     <NavItem path="/calendario" icon={Calendar} label="Ver Calendario" isActive={checkActive('/calendario')} onClick={handleNavClick} />
 
-                    {/* 3. + Nuevo Folio (Primary Action) */}
+                    {/* 3. + Nuevo Folio - Visible para TODOS */}
                     <div className="my-4">
                         <Link
                             to="/pedidos/nuevo"
@@ -93,7 +96,7 @@ const MainLayout = () => {
                         </Link>
                     </div>
 
-                    {/* 4. Dictar Pedido (AI) */}
+                    {/* 4. Dictar Pedido (AI) - Visible para TODOS */}
                     <button
                         onClick={() => { setIsAiOpen(true); handleNavClick(); }}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-l-xl transition-all duration-200 text-gray-600 hover:bg-purple-50 hover:text-purple-700 font-medium text-left"
@@ -102,36 +105,35 @@ const MainLayout = () => {
                         <span>Dictar Pedido</span>
                     </button>
 
-                    <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
-
-                    {/* 5. Admin Usuarios */}
-                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
-                        <NavItem path="/usuarios" icon={Users} label="Admin Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
-                    )}
-
-                    {/* Gestion de Dueños (SuperAdmin) */}
-                    {['SUPER_ADMIN'].includes(user?.role) && (
-                        <NavItem path="/admin/tenants" icon={Building} label="Gestión de Dueños" isActive={checkActive('/admin/tenants')} onClick={handleNavClick} />
-                    )}
-
-                    {/* WhatsApp Conexión */}
+                    {/* SECCIÓN ADMINISTRACIÓN Y REPORTES - Oculta completamente para EMPLOYEE */}
                     {['SUPER_ADMIN', 'OWNER'].includes(user?.role) && (
-                        <NavItem path="/admin/whatsapp" icon={MessageCircle} label="Conexión WhatsApp" isActive={checkActive('/admin/whatsapp')} onClick={handleNavClick} />
-                    )}
+                        <>
+                            <div className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 mt-6">Administración</div>
 
-                    {/* 6. Gestión de Sabores y Formas */}
-                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
-                        <NavItem path="/admin/sabores" icon={Tags} label="Gestión de Sabores y Formas" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
-                    )}
+                            {/* Admin Usuarios - Solo SUPER_ADMIN */}
+                            {['SUPER_ADMIN'].includes(user?.role) && (
+                                <NavItem path="/usuarios" icon={Users} label="Admin Usuarios" isActive={checkActive('/usuarios')} onClick={handleNavClick} />
+                            )}
 
-                    {/* 7. Estadísticas */}
-                    {['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(user?.role) && (
-                        <NavItem path="/admin/stats" icon={BarChart} label="Estadísticas" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
-                    )}
+                            {/* Gestión de Dueños / Tenants - Solo SUPER_ADMIN */}
+                            {['SUPER_ADMIN'].includes(user?.role) && (
+                                <NavItem path="/admin/tenants" icon={Building} label="Gestión de Dueños" isActive={checkActive('/admin/tenants')} onClick={handleNavClick} />
+                            )}
 
-                    {/* 8. Reporte de Comisiones */}
-                    {['SUPER_ADMIN', 'ADMIN'].includes(user?.role) && (
-                        <NavItem path="/admin/comisiones" icon={PieChart} label="Reporte de Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
+                            {/* WhatsApp Conexión - SUPER_ADMIN y OWNER */}
+                            <NavItem path="/admin/whatsapp" icon={MessageCircle} label="Conexión WhatsApp" isActive={checkActive('/admin/whatsapp')} onClick={handleNavClick} />
+
+                            {/* Catálogo de Productos (Sabores) - SUPER_ADMIN y OWNER. ¡PROHIBIDO PARA EMPLEADOS! */}
+                            <NavItem path="/admin/sabores" icon={Tags} label="Catálogo de Productos" isActive={checkActive('/admin/sabores')} onClick={handleNavClick} />
+
+                            {/* Estadísticas - SUPER_ADMIN y OWNER */}
+                            <NavItem path="/admin/stats" icon={BarChart} label="Estadísticas" isActive={checkActive('/admin/stats')} onClick={handleNavClick} />
+
+                            {/* Reporte de Comisiones - Solo SUPER_ADMIN */}
+                            {['SUPER_ADMIN'].includes(user?.role) && (
+                                <NavItem path="/admin/comisiones" icon={PieChart} label="Reporte de Comisiones" isActive={checkActive('/admin/comisiones')} onClick={handleNavClick} />
+                            )}
+                        </>
                     )}
                 </nav>
 
