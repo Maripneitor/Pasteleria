@@ -94,8 +94,8 @@ export const OrderProvider = ({ children }) => {
         let parsedPisos = Array.isArray(rawPisos) ? rawPisos : (rawPisos && typeof rawPisos === 'object' ? [rawPisos] : []);
 
         // 2. HIDRATACIÓN SÚPER ROBUSTA DE COMPLEMENTARIOS
-        let rawComps = folio.complementarios || folio.complementos || [];
-        
+        let rawComps = folio.complementosList || folio.complementarios || folio.complementos || [];
+
         try { if (typeof rawComps === 'string') rawComps = JSON.parse(rawComps); } catch(e) {}
         try { if (typeof rawComps === 'string') rawComps = JSON.parse(rawComps); } catch(e) {}
         

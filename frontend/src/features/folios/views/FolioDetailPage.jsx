@@ -207,33 +207,44 @@ const FolioDetailPage = () => {
                     )}
 
                     {/* SECCIÓN DINÁMICA: COMPLEMENTARIOS */}
-                    {folio.complementosList && folio.complementosList.length > 0 && (
-                        <div className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-6">
-                            <h2 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
-                                Pasteles Complementarios
-                                <span className="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full">{folio.complementosList.length}</span>
-                            </h2>
-                            <div className="space-y-3">
-                                {folio.complementosList.map((comp, index) => (
-                                    <div key={index} className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex flex-col md:flex-row gap-4 justify-between">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-bold text-gray-800">{comp.forma}</span>
-                                                <span className="text-xs text-gray-500 border border-gray-200 px-2 rounded-full">{comp.personas} pax</span>
+                    {(() => {
+                        // Unificamos las fuentes posibles igual que en el Context
+                        let rawComps = folio.complementosList || folio.complementarios || folio.complementos || [];
+                        try { if (typeof rawComps === 'string') rawComps = JSON.parse(rawComps); } catch(e) {}
+                        const compsArray = Array.isArray(rawComps) ? rawComps : [];
+
+                        if (compsArray.length === 0) return null;
+
+                        return (
+                            <div className="bg-blue-50 rounded-2xl shadow-sm border border-blue-100 p-6">
+                                <h2 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
+                                    Pasteles Complementarios
+                                    <span className="bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full">{compsArray.length}</span>
+                                </h2>
+                                <div className="space-y-3">
+                                    {compsArray.map((comp, index) => (
+                                        <div key={index} className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex flex-col md:flex-row gap-4 justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="font-bold text-gray-800">{comp.forma || comp.shape || 'N/A'}</span>
+                                                    <span className="text-xs text-gray-500 border border-gray-200 px-2 rounded-full">{comp.personas || comp.persons || 0} pax</span>
+                                                </div>
+                                                <p className="text-sm text-gray-600">
+                                                    <span className="font-semibold">Pan:</span> {comp.sabor || comp.sabor_pan || comp.flavor || 'N/A'} | <span className="font-semibold">Relleno:</span> {comp.relleno || comp.filling || 'N/A'}
+                                                </p>
+                                                {(comp.descripcion || comp.description) && (
+                                                    <p className="text-sm text-gray-500 italic mt-1">"{comp.descripcion || comp.description}"</p>
+                                                )}
                                             </div>
-                                            <p className="text-sm text-gray-600">
-                                                <span className="font-semibold">Pan:</span> {comp.sabor_pan} | <span className="font-semibold">Relleno:</span> {comp.relleno}
-                                            </p>
-                                            {comp.descripcion && <p className="text-sm text-gray-500 italic mt-1">"{comp.descripcion}"</p>}
+                                            <div className="text-right font-bold text-blue-700 bg-blue-50 px-3 py-2 rounded-lg self-start">
+                                                ${parseFloat(comp.precio || comp.price || 0).toFixed(2)}
+                                            </div>
                                         </div>
-                                        <div className="text-right font-bold text-blue-700 bg-blue-50 px-3 py-2 rounded-lg self-start">
-                                            ${parseFloat(comp.precio || 0).toFixed(2)}
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 {/* Sidebar Info */}

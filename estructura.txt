@@ -1,0 +1,303 @@
+
+/home/pasteleria
+├── README.md
+├── backend
+|  ├── Dockerfile
+|  ├── FOLIOS_GENERADOS
+|  ├── config
+|  |  ├── config.js
+|  |  └── database.js
+|  ├── cronJobs.js
+|  ├── docs
+|  |  ├── SECURITY_STANDARDS.md
+|  |  ├── expected_contract.json
+|  |  └── swagger.js
+|  ├── ecosystem.config.js
+|  ├── fly.toml
+|  ├── logs
+|  |  ├── combined.log
+|  |  └── error.log
+|  ├── middleware
+|  |  ├── authMiddleware.js
+|  |  ├── checkRole.js
+|  |  ├── requestLogger.js
+|  |  ├── requireBranch.js
+|  |  ├── roleMiddleware.js
+|  |  ├── tenantScope.js
+|  |  ├── uploadReference.js
+|  |  └── validate.js
+|  ├── migrations
+|  ├── models
+|  |  ├── AISession.js
+|  |  ├── ActivationCode.js
+|  |  ├── AuditLog.js
+|  |  ├── Branch.js
+|  |  ├── CakeFlavor.js
+|  |  ├── CakeShape.js
+|  |  ├── CakeSize.js
+|  |  ├── CashModels.js
+|  |  ├── Commission.js
+|  |  ├── DailySalesStats.js
+|  |  ├── Decoration.js
+|  |  ├── EmailQueue.js
+|  |  ├── Filling.js
+|  |  ├── Flavor.js
+|  |  ├── Folio.js
+|  |  ├── FolioComplemento.js
+|  |  ├── FolioEditHistory.js
+|  |  ├── Ingredient.js
+|  |  ├── PdfTemplate.js
+|  |  ├── Product.js
+|  |  ├── SaaSCommissionLedger.js
+|  |  ├── SaaSContract.js
+|  |  ├── Tenant.js
+|  |  ├── TenantConfig.js
+|  |  ├── UserSession.js
+|  |  ├── client.js
+|  |  ├── index.js
+|  |  └── user.js
+|  ├── nodemon.json
+|  ├── package-lock.json
+|  ├── package.json
+|  ├── qa
+|  |  ├── branches_smoke_http.js
+|  |  ├── email_queue_smoke.js
+|  |  ├── frontend_folios_smoke.js
+|  |  ├── pdf_db_smoke.js
+|  |  ├── pdf_smoke_local.js
+|  |  ├── rbac_smoke_http.js
+|  |  ├── tenant_config_smoke_http.js
+|  |  └── test_api_pdf.js
+|  ├── schemas
+|  |  └── folioSchema.js
+|  ├── scripts
+|  |  ├── migrations
+|  |  |  ├── fix_unique_folio_index.js
+|  |  |  └── unify_branch_ids.js
+|  |  ├── qa
+|  |  |  ├── _auth.js
+|  |  |  ├── _common.js
+|  |  |  ├── _http.js
+|  |  |  ├── _report.js
+|  |  |  ├── activation_smoke.js
+|  |  |  ├── ai_smoke.js
+|  |  |  ├── audit_smoke.js
+|  |  |  ├── calendar_smoke.js
+|  |  |  ├── cash_smoke.js
+|  |  |  ├── dashboard_smoke.js
+|  |  |  ├── db_fix_schema.js
+|  |  |  ├── db_sync_force.js
+|  |  |  ├── demo_folio.pdf
+|  |  |  ├── error_handling.js
+|  |  |  ├── final_walkthrough.js
+|  |  |  ├── folios_create_smoke.js
+|  |  |  ├── full_smoke.js
+|  |  |  ├── module_05_order_atomicity.js
+|  |  |  ├── module_06_ai_parse_order.js
+|  |  |  ├── module_07_saas_ledger.js
+|  |  |  ├── module_08_daily_stats.js
+|  |  |  ├── module_09_admin_branch_context.js
+|  |  |  ├── pdf_smoke.js
+|  |  |  ├── production_smoke.js
+|  |  |  ├── qa-utils.js
+|  |  |  ├── role_smoke.js
+|  |  |  ├── run_all.js
+|  |  |  ├── scan_security.sh
+|  |  |  ├── seed_contract_data.js
+|  |  |  ├── session_smoke.js
+|  |  |  ├── simulate_report.js
+|  |  |  ├── strict_checks.js
+|  |  |  ├── sync_db.js
+|  |  |  ├── test_api_pdf.js
+|  |  |  ├── verify_activation.js
+|  |  |  ├── verify_auth_scope.js
+|  |  |  ├── verify_contract.js
+|  |  |  └── verify_dynamic_pdf.js
+|  |  └── seed_full.js
+|  ├── seeders
+|  |  └── 20260220081946-01-init-saas-core.js
+|  ├── server.js
+|  ├── services
+|  |  ├── aiConversationService.js
+|  |  ├── aiDraftService.js
+|  |  ├── aiExtractorService.js
+|  |  ├── aiImageAnalysisService.js
+|  |  ├── aiOrderParsingService.js
+|  |  ├── aiValidationService.js
+|  |  ├── auditService.js
+|  |  ├── commissionService.js
+|  |  ├── dailyCutEmailService.js
+|  |  ├── dailyStatsService.js
+|  |  ├── emailOutboxService.js
+|  |  ├── emailService.js
+|  |  ├── emailTransport.js
+|  |  ├── openaiResponsesClient.js
+|  |  ├── orderFlowService.js
+|  |  ├── pdfRenderer.js
+|  |  ├── pdfService.js
+|  |  └── saasCommissionService.js
+|  ├── src
+|  |  ├── core
+|  |  |  └── asyncHandler.js
+|  |  ├── middlewares
+|  |  |  └── errorHandler.js
+|  |  └── modules
+|  |     ├── activation
+|  |     ├── ai-draft
+|  |     ├── ai-orders
+|  |     ├── ai-sessions
+|  |     ├── audit
+|  |     ├── branches
+|  |     ├── cash
+|  |     ├── catalogs
+|  |     ├── clients
+|  |     ├── commissions
+|  |     ├── dictation
+|  |     ├── folios
+|  |     ├── pdf-templates
+|  |     ├── production
+|  |     ├── reports
+|  |     ├── superadmin
+|  |     ├── tenant
+|  |     ├── upload
+|  |     ├── users
+|  |     ├── webhooks
+|  |     └── whatsapp
+|  ├── templates
+|  |  ├── comanda.ejs
+|  |  ├── commissionReport.ejs
+|  |  ├── commissionReportTemplate.ejs
+|  |  ├── daily-cut.ejs
+|  |  ├── folio-pdf.ejs
+|  |  ├── folioTemplate.ejs
+|  |  ├── labelsTemplate.ejs
+|  |  ├── nota-venta.ejs
+|  |  ├── ordersTemplate.ejs
+|  |  └── partials
+|  |     ├── footer.ejs
+|  |     ├── header.ejs
+|  |     └── styles.ejs
+|  ├── tests
+|  |  └── order_flow.test.js
+|  ├── uploads
+|  ├── utils
+|  |  ├── auditLogger.js
+|  |  ├── logger.js
+|  |  ├── parseMaybeJson.js
+|  |  └── tenantScope.js
+|  ├── versionparagemini.md
+|  ├── whatsapp-gateway.js
+|  ├── whatsapp_status.json
+|  └── workers
+|     └── emailWorker.js
+├── docker-compose.override.example.yml
+├── docker-compose.yml
+├── estructura.txt
+├── frontend
+|  ├── Dockerfile
+|  ├── README.md
+|  ├── eslint.config.js
+|  ├── index.html
+|  ├── jsconfig.json
+|  ├── package-lock.json
+|  ├── package.json
+|  ├── postcss.config.js
+|  ├── public
+|  |  └── vite.svg
+|  ├── src
+|  |  ├── App.css
+|  |  ├── App.jsx
+|  |  ├── assets
+|  |  |  └── react.svg
+|  |  ├── components
+|  |  |  ├── AiAssistantTray.jsx
+|  |  |  ├── AnimatedText.jsx
+|  |  |  ├── ErrorBoundary.jsx
+|  |  |  ├── InputGroup.jsx
+|  |  |  ├── MainLayout.jsx
+|  |  |  ├── OrderCard.jsx
+|  |  |  ├── OrderCard.module.css
+|  |  |  ├── OrderWizardLayout.jsx
+|  |  |  ├── ProtectedRoute.jsx
+|  |  |  ├── VoiceModal.jsx
+|  |  |  ├── calendar
+|  |  |  ├── common
+|  |  |  ├── operations
+|  |  |  ├── orders
+|  |  |  └── ui
+|  |  ├── config
+|  |  |  └── axios.js
+|  |  ├── context
+|  |  |  ├── AuthContext.jsx
+|  |  |  ├── OrderContext.jsx
+|  |  |  └── ThemeContext.jsx
+|  |  ├── features
+|  |  |  ├── auth
+|  |  |  ├── cash
+|  |  |  ├── catalogs
+|  |  |  ├── clients
+|  |  |  ├── dashboard
+|  |  |  ├── folios
+|  |  |  ├── reports
+|  |  |  └── whatsapp
+|  |  ├── hooks
+|  |  |  ├── useDictation.js
+|  |  |  └── usePollingQR.js
+|  |  ├── index.css
+|  |  ├── main.jsx
+|  |  ├── pages
+|  |  |  ├── ActivationLockPage.jsx
+|  |  |  ├── AuditPage.jsx
+|  |  |  ├── CalendarPage.jsx
+|  |  |  ├── CashRegister.module.css
+|  |  |  ├── CommissionsPage.jsx
+|  |  |  ├── Dashboard.jsx
+|  |  |  ├── DashboardHome.jsx
+|  |  |  ├── DashboardHome.module.css
+|  |  |  ├── EditOrderPage.jsx
+|  |  |  ├── InboxPage.jsx
+|  |  |  ├── InsumosPage.jsx
+|  |  |  ├── LocalSettings.jsx
+|  |  |  ├── Login.jsx
+|  |  |  ├── NewOrderPage.jsx
+|  |  |  ├── NotFound.jsx
+|  |  |  ├── OrderDetailsProduction.jsx
+|  |  |  ├── OrdersPage.jsx
+|  |  |  ├── OrdersPage.module.css
+|  |  |  ├── PendingUsersPage.jsx
+|  |  |  ├── ProductionCalendar.jsx
+|  |  |  ├── ProductionPage.jsx
+|  |  |  ├── TeamPage.jsx
+|  |  |  ├── UserManagement.jsx
+|  |  |  ├── UserManagement.module.css
+|  |  |  ├── admin
+|  |  |  ├── branches
+|  |  |  └── folios
+|  |  ├── services
+|  |  |  ├── accountingApi.js
+|  |  |  ├── activationApi.js
+|  |  |  ├── aiService.js
+|  |  |  ├── api.js
+|  |  |  ├── authService.js
+|  |  |  ├── branchesApi.js
+|  |  |  ├── catalogApi.js
+|  |  |  ├── clients.js
+|  |  |  ├── commissionsApi.js
+|  |  |  ├── folios.js
+|  |  |  └── usersApi.js
+|  |  └── utils
+|  |     ├── auth.js
+|  |     ├── cn.js
+|  |     ├── pdfHelper.js
+|  |     └── uiMessages.js
+|  ├── tailwind.config.js
+|  └── vite.config.js
+├── package-lock.json
+└── pdf
+
+directory: 1334 file: 6407
+
+ignored: directory (170)
+
+
+[2K[1G

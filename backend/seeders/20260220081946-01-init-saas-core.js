@@ -31,7 +31,7 @@ module.exports = {
       {
         id: 1,
         tenantId: 1,
-        branchId: 1, // Super Admin puede no tener sucursal, pero es seguro ponérsela
+        branchId: 1, 
         name: 'Soporte Root',
         email: 'superadmin@lafiesta.com',
         password: hashPassword,
@@ -48,6 +48,19 @@ module.exports = {
         email: 'owner@lafiesta.com',
         password: hashPassword,
         role: 'OWNER',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      // 👇 AQUÍ AGREGAMOS AL EMPLEADO BASE
+      {
+        id: 3,
+        tenantId: 1,
+        branchId: 1,
+        name: 'Empleado Mostrador',
+        email: 'empleado@lafiesta.com',
+        password: hashPassword,
+        role: 'EMPLOYEE',
         status: 'ACTIVE',
         createdAt: new Date(),
         updatedAt: new Date()

@@ -35,7 +35,8 @@ const User = sequelize.define('User', {
     comment: 'ID de la sucursal física asignada'
   },
   role: {
-    type: DataTypes.ENUM('SUPER_ADMIN', 'ADMIN', 'OWNER', 'EMPLOYEE', 'USER'),
+    // 👇 Solo los 3 roles permitidos en el sistema
+    type: DataTypes.ENUM('SUPER_ADMIN', 'OWNER', 'EMPLOYEE'),
     allowNull: false,
     defaultValue: 'EMPLOYEE'
   },
@@ -64,12 +65,14 @@ User.prototype.isSuperAdmin = function () {
   return this.role === 'SUPER_ADMIN';
 };
 
+// Se deja como alias de SUPER_ADMIN por si alguna ruta antigua de Express aún usa .isAdmin()
 User.prototype.isAdmin = function () {
-  return ['SUPER_ADMIN', 'ADMIN'].includes(this.role);
+  return this.role === 'SUPER_ADMIN';
 };
 
 User.prototype.isOwner = function () {
-  return ['SUPER_ADMIN', 'ADMIN', 'OWNER'].includes(this.role);
+  // Eliminamos 'ADMIN' de la validación
+  return ['SUPER_ADMIN', 'OWNER'].includes(this.role);
 };
 
 User.prototype.isEmployee = function () {
