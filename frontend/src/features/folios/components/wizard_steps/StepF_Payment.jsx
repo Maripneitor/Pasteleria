@@ -58,18 +58,18 @@ const StepF_Payment = ({ prev }) => {
     });
 
     const handleFinish = () => {
-        // Sanitizamos y alineamos los datos EXACTAMENTE como los espera el Schema de Zod y el Servicio
-        
         // 1. Preparar Pisos
         const detallesPisos = (orderData.pisos || [])
             .filter(p => p.personas && parseInt(p.personas) > 0)
-            .map(p => ({
-                piso: parseInt(p.piso) || 1,
-                sabores_pan: Array.isArray(p.sabores_pan) ? p.sabores_pan : [p.sabores_pan].filter(Boolean),
-                rellenos: Array.isArray(p.rellenos) ? p.rellenos : [p.rellenos].filter(Boolean)
+            .map((p, index) => ({
+                piso: index + 1,
+                personas: p.personas,
+                sabores_pan: Array.isArray(p.panes) ? p.panes : [p.panes].filter(Boolean),
+                rellenos: Array.isArray(p.rellenos) ? p.rellenos : [p.rellenos].filter(Boolean),
+                notas: p.notas || ''
             }));
 
-        // 2. Preparar Complementarios (Gelatinas, cupcakes, etc.)
+        // 2. Preparar Complementarios
         const complementariosList = (orderData.complements || [])
             .filter(c => c.sabor || (c.personas && parseInt(c.personas) > 0))
             .map(c => ({
@@ -77,35 +77,31 @@ const StepF_Payment = ({ prev }) => {
                 forma: c.forma || '',
                 sabores_pan: Array.isArray(c.sabor) ? c.sabor : [c.sabor].filter(Boolean),
                 rellenos: Array.isArray(c.relleno) ? c.relleno : [c.relleno].filter(Boolean),
-                descripcion: c.descripcion || ''
+                descripcion: c.descripcion || '',
+                precio: parseFloat(c.precio) || 0
             }));
 
-        // 3. Preparar Accesorios (Velas, letreros)
+        // 3. Preparar Accesorios
         const accesoriosList = (orderData.extras || []).map(e => ({
             name: e.name,
             price: parseFloat(e.price) || 0,
             qty: parseInt(e.qty) || 1
         }));
 
-        // 4. Armar la dirección completa si es envío
+        // 4. Armar la dirección completa si es envío (AHORA SÍ CON NUM_EXT)
         let ubicacion_entrega = 'Recolección en tienda';
-        if (orderData.isDelivery) {
-            ubicacion_entrega = `${orderData.calle || ''}, ${orderData.colonia || ''}. Ref: ${orderData.referencias || ''}`.trim();
+        if (orderData.is_delivery) {
+            ubicacion_entrega = `${orderData.calle || ''} ${orderData.num_ext || ''}, ${orderData.colonia || ''}. Ref: ${orderData.referencias || ''}`.trim();
         }
 
-        // 🚨 5. SANITIZADOR DE TIPO DE FOLIO (Para evitar el Error 400 de Zod)
+        // 5. Sanitizador de Tipo de Folio
         const validTipos = ['Normal', 'Base/Especial', 'Express', 'Mayoreo'];
         let tipoFolioSeguro = orderData.tipo_folio;
-        
-        // Limpieza de datos sucios comunes del Frontend
         if (tipoFolioSeguro === 'Base' || tipoFolioSeguro === 'Especial') {
             tipoFolioSeguro = 'Base/Especial';
         } else if (typeof tipoFolioSeguro === 'string') {
-            // Convierte "normal" a "Normal"
             tipoFolioSeguro = tipoFolioSeguro.charAt(0).toUpperCase() + tipoFolioSeguro.slice(1).toLowerCase();
         }
-
-        // Si después de todo sigue sin ser válido, forzamos el default
         if (!validTipos.includes(tipoFolioSeguro)) {
             tipoFolioSeguro = 'Normal';
         }
@@ -114,23 +110,30 @@ const StepF_Payment = ({ prev }) => {
             // --- CLIENTE ---
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
+            cliente_telefono_extra: orderData.clientPhoneExtra || '', // Agregado
             clientId: orderData.clientId || null,
 
-            // --- LOGÍSTICA ---
+            // --- LOGÍSTICA (AHORA SÍ MANDA TODO) ---
             fecha_entrega: orderData.deliveryDate,
             hora_entrega: orderData.deliveryTime,
-            is_delivery: orderData.isDelivery || false,
+            is_delivery: orderData.is_delivery || false,
             ubicacion_entrega: ubicacion_entrega,
-            costo_envio: shipping,
+            calle: orderData.calle || '',
+            num_ext: orderData.num_ext || '',
+            colonia: orderData.colonia || '',
+            referencias: orderData.referencias || '',
+            ubicacion_maps: orderData.ubicacion_maps || '',
+            costo_envio: parseFloat(orderData.costo_envio || 0),
 
             // --- PRODUCTO PRINCIPAL ---
-            tipo_folio: tipoFolioSeguro, // 🔥 Aquí usamos la variable ya validada y limpia
+            tipo_folio: tipoFolioSeguro, 
             forma: orderData.shape || '',
             numero_personas: parseInt(orderData.peopleCount) || 0,
+            altura_extra: orderData.extraHeight ? 'Si' : 'No', // Agregado el dato del Paso D
             sabores_pan: Array.isArray(orderData.panes) ? orderData.panes : [orderData.panes].filter(Boolean),
             rellenos: Array.isArray(orderData.rellenos) ? orderData.rellenos : [orderData.rellenos].filter(Boolean),
 
-            // --- ARREGLOS AVANZADOS (Alineados con Zod y el Servicio) ---
+            // --- ARREGLOS AVANZADOS ---
             detallesPisos: detallesPisos,
             complementarios: complementariosList,
             accesorios: accesoriosList, 
@@ -144,7 +147,7 @@ const StepF_Payment = ({ prev }) => {
             },
 
             // --- FINANCIERO ---
-            costo_base: baseCost,
+            costo_base: parseFloat(orderData.costo_base || 0),
             total: total,
             anticipo: advance,
             estatus_pago: (remaining <= 0) ? 'Pagado' : 'Pendiente',
