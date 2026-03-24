@@ -37,21 +37,28 @@ exports.createFolio = asyncHandler(async (req, res) => {
     const body = normalizeBody(req.body);
     const tenantId = req.user?.tenantId || 1;
 
-    // 🌟 INICIO: Asociar las imágenes subidas al pedido
     const baseUrl = (process.env.API_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
     
     if (!body.diseno_metadata) body.diseno_metadata = {};
-    
-    if (req.files && req.files.length > 0) {
-        // Generar URLs completas para que el frontend las lea directo
-        const imageUrls = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
-        
-        body.diseno_metadata.allImages = imageUrls;
-        body.imagen_referencia_url = imageUrls[0]; // Usamos la primera como imagen principal
-    } else {
-        body.diseno_metadata.allImages = [];
+    let finalImages = [];
+
+    // 🌟 Rescatar las URLs no importa cómo las mande el frontend
+    if (body.diseno_metadata?.allImages && body.diseno_metadata.allImages.length > 0) {
+        finalImages = Array.isArray(body.diseno_metadata.allImages) ? body.diseno_metadata.allImages : [body.diseno_metadata.allImages];
+    } else if (body.referenceImages) {
+        finalImages = Array.isArray(body.referenceImages) ? body.referenceImages : [body.referenceImages];
+    } else if (body.existingImages) {
+        finalImages = Array.isArray(body.existingImages) ? body.existingImages : [body.existingImages];
     }
-    // 🌟 FIN: Corrección de imágenes
+    
+    // Por si llegan archivos nuevos multipart
+    if (req.files && req.files.length > 0) {
+        const imageUrls = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
+        finalImages = [...finalImages, ...imageUrls];
+    }
+
+    body.diseno_metadata.allImages = finalImages;
+    if (finalImages.length > 0) body.imagen_referencia_url = finalImages[0];
 
     const { sequelize } = require('../../../models');
     const t = await sequelize.transaction();
@@ -72,32 +79,30 @@ exports.updateFolio = asyncHandler(async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const tenantFilter = buildTenantWhere(req);
-        const body = req.body;
-
-        // 🌟 INICIO: Asociar las imágenes en edición
+        const { normalizeBody } = require('../../../utils/parseMaybeJson');
+        const body = normalizeBody(req.body); // Asegurar que todo esté parseado
+        
         const baseUrl = (process.env.API_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
         
         if (!body.diseno_metadata) body.diseno_metadata = {};
         let finalImages = [];
         
-        // 1. Conservar las imágenes que ya existían (URLs pasadas)
+        // 🌟 Rescatar imágenes previas para no borrarlas al editar
         if (body.existingImages) {
             finalImages = Array.isArray(body.existingImages) ? body.existingImages : [body.existingImages];
+        } else if (body.diseno_metadata?.allImages && body.diseno_metadata.allImages.length > 0) {
+            finalImages = Array.isArray(body.diseno_metadata.allImages) ? body.diseno_metadata.allImages : [body.diseno_metadata.allImages];
         }
 
-        // 2. Agregar las nuevas imágenes recién subidas
+        // Agregar las nuevas imágenes subidas durante la edición
         if (req.files && req.files.length > 0) {
             const newImages = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
             finalImages = [...finalImages, ...newImages];
         }
 
         body.diseno_metadata.allImages = finalImages;
-        if (finalImages.length > 0) {
-            body.imagen_referencia_url = finalImages[0];
-        }
-        // 🌟 FIN: Corrección de imágenes
+        if (finalImages.length > 0) body.imagen_referencia_url = finalImages[0];
 
-        // Pass userId so the audit log knows WHO made the change
         const row = await folioService.updateFolio(req.params.id, body, tenantFilter, t, req.user?.id);
         await t.commit();
         res.json(row);

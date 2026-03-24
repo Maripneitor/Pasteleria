@@ -21,7 +21,10 @@ app.use(requestLogger);
 
 // Security Headers (Helmet)
 const helmet = require('helmet');
-app.use(helmet());
+app.use(helmet({
+  // Permite que el frontend (puerto 5173) cargue imágenes del backend (puerto 3000)
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // Rate Limiting para Login
 const rateLimit = require('express-rate-limit');

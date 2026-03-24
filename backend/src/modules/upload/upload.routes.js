@@ -44,11 +44,13 @@ router.post('/reference', authMiddleware, upload.single('image'), (req, res) => 
             return res.status(400).json({ error: 'No se subió ninguna imagen' });
         }
 
-        const fileUrl = `/uploads/${req.file.filename}`;
+        // ✅ NUEVO: Construir la URL completa desde aquí
+        const baseUrl = (process.env.API_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
+        const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
         res.json({
             success: true,
-            url: fileUrl,
+            url: fileUrl, // Ahora manda: http://localhost:3000/uploads/...
             filename: req.file.filename,
             originalName: req.file.originalname
         });

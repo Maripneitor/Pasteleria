@@ -86,6 +86,9 @@ const StepF_Payment = ({ prev }) => {
             complementsList: complementosValidos, // El backend usa esto para bulkCreate en FolioComplemento
             accesorios: orderData.extras,
 
+            // ✅ AGREGA LA LÍNEA JUSTO AQUÍ
+            referenceImages: orderData.referenceImages || [], 
+
             descripcion_diseno: orderData.descripcion_diseno,
             dedicatoria: orderData.dedicatoria,
             imagen_referencia_url: orderData.imagen_referencia_url,
