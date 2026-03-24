@@ -15,7 +15,9 @@ const StepA_Client = ({ next, prev }) => {
         }
     };
 
-    const isValid = orderData.clientName && orderData.clientPhone;
+    // ✅ Verifica que tenga nombre y que el teléfono (limpio de letras/espacios) tenga al menos 10 dígitos
+    const cleanPhone = (orderData.clientPhone || '').replace(/\D/g, '');
+    const isValid = orderData.clientName && cleanPhone.length >= 10 && cleanPhone.length <= 15;
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">

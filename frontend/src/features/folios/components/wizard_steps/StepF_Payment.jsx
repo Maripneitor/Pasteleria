@@ -65,6 +65,7 @@ const StepF_Payment = ({ prev }) => {
         const payload = {
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
+            cliente_telefono_extra: orderData.clientPhoneExtra || '', // ✅ Agrega esta línea
             clientId: orderData.clientId || null,
 
             fecha_entrega: orderData.deliveryDate,

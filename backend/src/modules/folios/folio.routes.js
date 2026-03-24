@@ -6,6 +6,14 @@ const tenantScope = require('../../../middleware/tenantScope');
 const uploadReference = require('../../../middleware/uploadReference');
 const validateRequest = require('../../../middleware/validate');
 const { createFolioSchema, updateFolioSchema } = require('../../../schemas/folioSchema');
+const { normalizeBody } = require('../../../utils/parseMaybeJson');
+
+const parseBodyMiddleware = (req, res, next) => {
+    if (req.body) {
+        req.body = normalizeBody(req.body);
+    }
+    next();
+};
 
 // Protected Routes
 router.use(authMiddleware);
@@ -28,9 +36,19 @@ router.get('/:id/label-pdf', folioController.generarEtiqueta);
 
 // ✅ CRUD Operations
 router.get('/', folioController.listFolios);
-router.post('/', uploadReference.array('referenceImages', 5), validateRequest(createFolioSchema), folioController.createFolio);
+router.post('/', 
+    uploadReference.array('referenceImages', 5), 
+    parseBodyMiddleware, // ✅ Ahora es una función middleware válida
+    validateRequest(createFolioSchema), 
+    folioController.createFolio
+);
 router.get('/:id', folioController.getFolioById);
-router.put('/:id', uploadReference.array('referenceImages', 5), validateRequest(updateFolioSchema), folioController.updateFolio);
+router.put('/:id', 
+    uploadReference.array('referenceImages', 5), 
+    parseBodyMiddleware, // ✅ Ahora es una función middleware válida
+    validateRequest(updateFolioSchema), 
+    folioController.updateFolio
+);
 router.patch('/:id/cancel', folioController.cancelFolio);
 router.patch('/:id/status', folioController.updateFolioStatus);
 router.delete('/:id', folioController.deleteFolio);

@@ -37,6 +37,22 @@ exports.createFolio = asyncHandler(async (req, res) => {
     const body = normalizeBody(req.body);
     const tenantId = req.user?.tenantId || 1;
 
+    // 🌟 INICIO: Asociar las imágenes subidas al pedido
+    const baseUrl = (process.env.API_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
+    
+    if (!body.diseno_metadata) body.diseno_metadata = {};
+    
+    if (req.files && req.files.length > 0) {
+        // Generar URLs completas para que el frontend las lea directo
+        const imageUrls = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
+        
+        body.diseno_metadata.allImages = imageUrls;
+        body.imagen_referencia_url = imageUrls[0]; // Usamos la primera como imagen principal
+    } else {
+        body.diseno_metadata.allImages = [];
+    }
+    // 🌟 FIN: Corrección de imágenes
+
     const { sequelize } = require('../../../models');
     const t = await sequelize.transaction();
 
@@ -56,8 +72,33 @@ exports.updateFolio = asyncHandler(async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const tenantFilter = buildTenantWhere(req);
+        const body = req.body;
+
+        // 🌟 INICIO: Asociar las imágenes en edición
+        const baseUrl = (process.env.API_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
+        
+        if (!body.diseno_metadata) body.diseno_metadata = {};
+        let finalImages = [];
+        
+        // 1. Conservar las imágenes que ya existían (URLs pasadas)
+        if (body.existingImages) {
+            finalImages = Array.isArray(body.existingImages) ? body.existingImages : [body.existingImages];
+        }
+
+        // 2. Agregar las nuevas imágenes recién subidas
+        if (req.files && req.files.length > 0) {
+            const newImages = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
+            finalImages = [...finalImages, ...newImages];
+        }
+
+        body.diseno_metadata.allImages = finalImages;
+        if (finalImages.length > 0) {
+            body.imagen_referencia_url = finalImages[0];
+        }
+        // 🌟 FIN: Corrección de imágenes
+
         // Pass userId so the audit log knows WHO made the change
-        const row = await folioService.updateFolio(req.params.id, req.body, tenantFilter, t, req.user?.id);
+        const row = await folioService.updateFolio(req.params.id, body, tenantFilter, t, req.user?.id);
         await t.commit();
         res.json(row);
     } catch (error) {
