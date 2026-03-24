@@ -58,58 +58,97 @@ const StepF_Payment = ({ prev }) => {
     });
 
     const handleFinish = () => {
-        // Filtramos para enviar solo los pisos y complementos que realmente tengan datos
-        const pisosValidos = (orderData.pisos || []).filter(p => p.personas && parseInt(p.personas) > 0);
-        const complementosValidos = (orderData.complements || []).filter(c => c.sabor || (c.personas && parseInt(c.personas) > 0));
+        // Sanitizamos y alineamos los datos EXACTAMENTE como los espera el Schema de Zod y el Servicio
+        
+        // 1. Preparar Pisos
+        const detallesPisos = (orderData.pisos || [])
+            .filter(p => p.personas && parseInt(p.personas) > 0)
+            .map(p => ({
+                piso: parseInt(p.piso) || 1,
+                sabores_pan: Array.isArray(p.sabores_pan) ? p.sabores_pan : [p.sabores_pan].filter(Boolean),
+                rellenos: Array.isArray(p.rellenos) ? p.rellenos : [p.rellenos].filter(Boolean)
+            }));
+
+        // 2. Preparar Complementarios (Gelatinas, cupcakes, etc.)
+        const complementariosList = (orderData.complements || [])
+            .filter(c => c.sabor || (c.personas && parseInt(c.personas) > 0))
+            .map(c => ({
+                numero_personas: parseInt(c.personas) || 0,
+                forma: c.forma || '',
+                sabores_pan: Array.isArray(c.sabor) ? c.sabor : [c.sabor].filter(Boolean),
+                rellenos: Array.isArray(c.relleno) ? c.relleno : [c.relleno].filter(Boolean),
+                descripcion: c.descripcion || ''
+            }));
+
+        // 3. Preparar Accesorios (Velas, letreros)
+        const accesoriosList = (orderData.extras || []).map(e => ({
+            name: e.name,
+            price: parseFloat(e.price) || 0,
+            qty: parseInt(e.qty) || 1
+        }));
+
+        // 4. Armar la dirección completa si es envío
+        let ubicacion_entrega = 'Recolección en tienda';
+        if (orderData.isDelivery) {
+            ubicacion_entrega = `${orderData.calle || ''}, ${orderData.colonia || ''}. Ref: ${orderData.referencias || ''}`.trim();
+        }
+
+        // 🚨 5. SANITIZADOR DE TIPO DE FOLIO (Para evitar el Error 400 de Zod)
+        const validTipos = ['Normal', 'Base/Especial', 'Express', 'Mayoreo'];
+        let tipoFolioSeguro = orderData.tipo_folio;
+        
+        // Limpieza de datos sucios comunes del Frontend
+        if (tipoFolioSeguro === 'Base' || tipoFolioSeguro === 'Especial') {
+            tipoFolioSeguro = 'Base/Especial';
+        } else if (typeof tipoFolioSeguro === 'string') {
+            // Convierte "normal" a "Normal"
+            tipoFolioSeguro = tipoFolioSeguro.charAt(0).toUpperCase() + tipoFolioSeguro.slice(1).toLowerCase();
+        }
+
+        // Si después de todo sigue sin ser válido, forzamos el default
+        if (!validTipos.includes(tipoFolioSeguro)) {
+            tipoFolioSeguro = 'Normal';
+        }
 
         const payload = {
+            // --- CLIENTE ---
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
-            cliente_telefono_extra: orderData.clientPhoneExtra || '', // ✅ Agrega esta línea
             clientId: orderData.clientId || null,
 
+            // --- LOGÍSTICA ---
             fecha_entrega: orderData.deliveryDate,
             hora_entrega: orderData.deliveryTime,
-            tipo_folio: orderData.tipo_folio,
-            forma: orderData.shape,
-            numero_personas: orderData.peopleCount,
-
-            sabores_pan: orderData.panes,
-            rellenos: orderData.rellenos,
-
-            // 🔥 NUEVOS CAMPOS (Alineados con el esquema de OpenAI y BD):
-            detallesPisos: pisosValidos,
-            complementarios: complementosValidos,
-
-            // 🔥 LEGACY Y RELACIONES (Se mantienen para asegurar compatibilidad con tu folio.service.js)
-            complementos: complementosValidos, 
-            complementsList: complementosValidos, // El backend usa esto para bulkCreate en FolioComplemento
-            accesorios: orderData.extras,
-
-            // ✅ AGREGA LA LÍNEA JUSTO AQUÍ
-            referenceImages: orderData.referenceImages || [], 
-
-            descripcion_diseno: orderData.descripcion_diseno,
-            dedicatoria: orderData.dedicatoria,
-            imagen_referencia_url: orderData.imagen_referencia_url,
-            diseno_metadata: {
-                pisos: pisosValidos, // Mantenemos copia en metadata por retrocompatibilidad
-                allImages: orderData.referenceImages
-            },
-
-            is_delivery: orderData.isDelivery,
-            calle: orderData.calle,
-            colonia: orderData.colonia,
-            referencias: orderData.referencias,
+            is_delivery: orderData.isDelivery || false,
+            ubicacion_entrega: ubicacion_entrega,
             costo_envio: shipping,
 
+            // --- PRODUCTO PRINCIPAL ---
+            tipo_folio: tipoFolioSeguro, // 🔥 Aquí usamos la variable ya validada y limpia
+            forma: orderData.shape || '',
+            numero_personas: parseInt(orderData.peopleCount) || 0,
+            sabores_pan: Array.isArray(orderData.panes) ? orderData.panes : [orderData.panes].filter(Boolean),
+            rellenos: Array.isArray(orderData.rellenos) ? orderData.rellenos : [orderData.rellenos].filter(Boolean),
+
+            // --- ARREGLOS AVANZADOS (Alineados con Zod y el Servicio) ---
+            detallesPisos: detallesPisos,
+            complementarios: complementariosList,
+            accesorios: accesoriosList, 
+
+            // --- DISEÑO ---
+            descripcion_diseno: orderData.descripcion_diseno || '',
+            dedicatoria: orderData.dedicatoria || '',
+            imagen_referencia_url: orderData.imagen_referencia_url || '',
+            diseno_metadata: {
+                allImages: orderData.referenceImages || []
+            },
+
+            // --- FINANCIERO ---
             costo_base: baseCost,
-            totalValue: total,
             total: total,
             anticipo: advance,
             estatus_pago: (remaining <= 0) ? 'Pagado' : 'Pendiente',
-            // Si el pedido ya existe y estaba en DRAFT, al actualizarlo lo pasamos a CONFIRMED
-            status: orderData.status === 'DRAFT' ? 'CONFIRMED' : (orderData.status || 'CONFIRMED')
+            estatus_produccion: 'Pendiente'
         };
 
         if (orderData.id) {

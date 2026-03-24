@@ -300,25 +300,68 @@ class FolioService {
         if (!folio) throw { status: 404, message: 'Folio no encontrado' };
         
         const f = folio.toJSON();
-        const branding = pdfService.getDefaultBranding(); // ✅ Branding real
+        const branding = pdfService.getDefaultBranding(); 
 
+        // Helper interno para parsear JSONs guardados como texto sin romper el código
+        const safeParse = (val) => {
+            if (!val) return [];
+            if (Array.isArray(val)) return val;
+            try { return JSON.parse(val) || []; } catch { return []; }
+        };
+
+        // Construimos el DTO (Data Transfer Object) ultra completo para el PDF
         const folioData = {
-            folioNumber: f.folioNumber,
-            formattedDeliveryDate: f.fecha_entrega,
-            formattedDeliveryTime: f.hora_entrega,
-            client: { name: f.cliente_nombre, phone: f.cliente_telefono, phone2: f.cliente_telefono_extra },
+            id: f.id,
+            folio_numero: f.folioNumber || f.id,
+            fecha_entrega: f.fecha_entrega,
+            hora_entrega: f.hora_entrega,
+            estatus_produccion: f.estatus_produccion,
+            tipo_folio: f.tipo_folio || 'Normal',
+            numero_personas: f.numero_personas,
+            sabores_pan: safeParse(f.sabores_pan),
+            rellenos: safeParse(f.rellenos),
+            descripcion_diseno: f.descripcion_diseno || 'Sin descripción detallada',
+            cliente_nombre: f.cliente_nombre,
+            cliente_telefono: f.cliente_telefono,
             total: f.total,
-            advancePayment: f.anticipo,
+            anticipo: f.anticipo,
             balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
+            
+            // --- NUEVOS CAMPOS AVANZADOS ---
+            // --- NUEVOS CAMPOS AVANZADOS ---
+            is_delivery: f.is_delivery || false,
+            ubicacion_entrega: f.ubicacion_entrega || 'Recolección en tienda',
+            costo_envio: f.costo_envio || 0,
+            
+            // Recopilamos TODAS las imágenes (la principal y el arreglo allImages de diseno_metadata)
+            imagenes_referencia: (() => {
+                const imgs = [];
+                if (f.imagen_referencia_url) imgs.push(f.imagen_referencia_url);
+                if (f.diseno_metadata && Array.isArray(f.diseno_metadata.allImages)) {
+                    f.diseno_metadata.allImages.forEach(url => {
+                        if (!imgs.includes(url)) imgs.push(url); // Evitar duplicados
+                    });
+                }
+                return imgs;
+            })(),
+            
+            // Obtenemos los pisos ya sea de diseno_metadata o detallesPisos
+            tiers: safeParse(f.detallesPisos || (f.diseno_metadata ? f.diseno_metadata.tiers : [])),
+            
+            // Complementarios (Pasteles extra, gelatina, etc.)
             complements: f.complementosList || [],
-            status: f.estatus_folio
+            
+            // Accesorios (Velas, letreros)
+            additionals: safeParse(f.accesorios || f.complementos)
         };
 
         const buffer = await renderPdf({
-            templateName: 'folioTemplate',
+            templateName: 'folio-pdf', // Aseguramos que apunte a tu plantilla principal
             data: { folio: folioData, watermark: computeWatermark(f) },
-            branding: branding // ✅ Ahora con branding
+            branding: branding,
+            options: { format: 'A4', printBackground: true, margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' } }
         });
+        
         return { buffer, filename: `${folio.folioNumber}.pdf` };
     }
 

@@ -1,224 +1,162 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <style>
-        body {
-            font-family: 'Helvetica', sans-serif;
-            padding: 40px;
-            color: #333;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 3px solid <%=(config && config.primaryColor) || '#ec4899' %>;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-
-        .logo h1 {
-            color: <%=(config && config.primaryColor) || '#ec4899' %>;
-            margin: 0;
-            font-size: 28px;
-        }
-
-        .info {
-            text-align: right;
-            font-size: 14px;
-            color: #666;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-
-        th,
-        td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background: <%=(config && config.primaryColor) ? config.primaryColor + '20': '#fbcfe8' %>;
-            /* 20% opacity */
-            color: <%=(config && config.primaryColor) || '#831843' %>;
-        }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: <%=(config && config.primaryColor) || '#8b5cf6' %>;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            border-left: 5px solid <%=(config && config.primaryColor) || '#8b5cf6' %>;
-            padding-left: 10px;
-        }
-
-        .footer {
-            margin-top: 50px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 2px solid #ddd;
-            padding-top: 20px;
-        }
-
-        .totals {
-            font-size: 16px;
-        }
-
-        .total-row {
-            font-weight: bold;
-            font-size: 20px;
-            color: #ec4899;
-        }
-
-        .qr-section {
-            text-align: center;
-        }
-
-        .qr-section img {
-            width: 100px;
-            height: 100px;
-        }
-
-        .watermark {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 96px;
-            font-weight: 900;
-            opacity: .10;
-            transform: rotate(-25deg);
-            pointer-events: none;
-            z-index: 0;
-            letter-spacing: 4px;
-        }
-
-        .page {
-            position: relative;
-            z-index: 1;
-        }
+        /* CSS 100% puro. Sin etiquetas de EJS aquí para que tu linter no marque errores */
+        body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #333; font-size: 13px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 3px solid var(--primary-color); padding-bottom: 15px; margin-bottom: 20px; }
+        .logo h1 { color: var(--primary-color); margin: 0; font-size: 28px; }
+        .info { text-align: right; font-size: 13px; color: #555; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; page-break-inside: avoid; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: var(--primary-light); color: var(--primary-dark); width: 25%; }
+        .section-title { font-size: 16px; font-weight: bold; color: var(--primary-color); margin-top: 25px; margin-bottom: 10px; border-left: 5px solid var(--primary-color); padding-left: 10px; }
+        .footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-start; border-top: 2px solid #ddd; padding-top: 20px; page-break-inside: avoid; }
+        .totals { font-size: 15px; text-align: right; }
+        .total-row { font-weight: bold; font-size: 18px; color: #ec4899; margin-top: 5px; }
+        .qr-section { text-align: center; }
+        .qr-section img { width: 90px; height: 90px; }
+        
+        .watermark { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 96px; font-weight: 900; opacity: 0.05; transform: rotate(-25deg); pointer-events: none; z-index: 0; letter-spacing: 4px; }
+        .page { position: relative; z-index: 1; }
+        .image-container { text-align: center; margin-top: 15px; page-break-inside: avoid; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
+        .ref-image { max-width: 100%; max-height: 350px; object-fit: contain; border-radius: 4px; }
     </style>
 </head>
 
-<body>
-    <div class="watermark">
-        <%= watermark %>
-    </div>
+<body style="
+    --primary-color: <%= (config && config.primaryColor) ? config.primaryColor : '#ec4899' %>; 
+    --primary-light: <%= (config && config.primaryColor) ? config.primaryColor + '20' : '#fbcfe8' %>; 
+    --primary-dark: <%= (config && config.primaryColor) ? config.primaryColor : '#831843' %>;
+">
+    <div class="watermark"><%= watermark %></div>
 
     <div class="page">
         <div class="header">
             <div class="logo">
                 <% if (config && config.logoUrl) { %>
-                    <img src="<%= config.logoUrl %>" style="max-height: 80px; max-width: 250px;" alt="Logo" />
+                    <img src="<%= config.logoUrl %>" style="max-height: 70px; max-width: 250px;" alt="Logo" />
                     <% if (config.businessName) { %>
-                        <h2 style="font-size: 16px; margin: 5px 0 0 0; color: <%= config.primaryColor || '#ec4899' %>;">
-                            <%= config.businessName %>
-                        </h2>
-                        <% } %>
-                            <% } else { %>
-                                <h1>
-                                    <%= (config && config.businessName) || 'La Fiesta 🎂' %>
-                                </h1>
-                                <p>Pastelería Artesanal</p>
-                                <% } %>
-                                    <% if (config && config.pdfHeaderText) { %>
-                                        <p style="font-size: 10px; color: #666; margin-top: 5px;">
-                                            <%= config.pdfHeaderText %>
-                                        </p>
-                                        <% } %>
+                        <h2 style="font-size: 14px; margin: 5px 0 0 0; color: var(--primary-color);"><%= config.businessName %></h2>
+                    <% } %>
+                <% } else { %>
+                    <h1><%= (config && config.businessName) || 'Pastelería LyA' %></h1>
+                    <p>Orden de Producción / Nota de Venta</p>
+                <% } %>
             </div>
             <div class="info">
-                <p><strong>Folio:</strong> #<%= folio.folio_numero || folio.id %>
-                </p>
-                <p><strong>Fecha Entrega:</strong>
-                    <%= folio.fecha_entrega %> - <%= folio.hora_entrega %>
-                </p>
-                <p><strong>Estado:</strong>
-                    <%= folio.estatus_produccion %>
-                </p>
+                <p><strong>Folio:</strong> #<%= folio.folio_numero %></p>
+                <p><strong>Fecha Entrega:</strong> <%= folio.fecha_entrega %> - <%= folio.hora_entrega %></p>
+                <p><strong>Estado:</strong> <%= folio.estatus_produccion %></p>
             </div>
         </div>
 
-        <!-- Cliente -->
-        <div class="section-title">Datos del Cliente</div>
+        <div class="section-title">Datos del Cliente y Logística</div>
         <table>
             <tr>
-                <th>Nombre</th>
-                <td>
-                    <%= folio.cliente_nombre %>
-                </td>
-                <th>Teléfono</th>
-                <td>
-                    <%= folio.cliente_telefono %>
-                </td>
+                <th>Nombre</th><td><%= folio.cliente_nombre %></td>
+                <th>Teléfono</th><td><%= folio.cliente_telefono %></td>
             </tr>
+            <tr>
+                <th>Método de Entrega</th>
+                <td><%= folio.is_delivery || folio.costo_envio > 0 ? 'Envío a Domicilio' : 'Recolección en Tienda' %></td>
+                <th>Costo de Envío</th>
+                <td>$<%= parseFloat(folio.costo_envio || 0).toFixed(2) %></td>
+            </tr>
+            <% if (folio.is_delivery || folio.ubicacion_entrega) { %>
+            <tr>
+                <th>Dirección de Entrega</th>
+                <td colspan="3"><%= folio.ubicacion_entrega || 'No especificada' %></td>
+            </tr>
+            <% } %>
         </table>
 
-        <!-- Especificaciones -->
-        <div class="section-title">Especificaciones del Pastel</div>
+        <div class="section-title">Especificaciones del Pastel Principal</div>
         <table>
             <tr>
-                <th>Tipo</th>
-                <td>
-                    <%= folio.tipo_folio %>
-                </td>
-                <th>Sabores</th>
-                <td>
-                    <%= (folio.sabores_pan || []).join(', ') %>
-                </td>
+                <th>Tipo de Orden</th><td><%= folio.tipo_folio || 'Normal' %></td>
+                <th>Personas (Aprox)</th><td><%= folio.numero_personas || 'N/A' %></td>
             </tr>
+            <% if (!folio.tiers || folio.tiers.length === 0) { %>
             <tr>
-                <th>Rellenos</th>
-                <td>
-                    <%= (folio.rellenos || []).join(' , ') %>
-                </td>
-                <th>Personas</th>
-                <td>
-                    <%= folio.numero_personas %>
-                </td>
+                <th>Sabores (Pan)</th><td><%= (folio.sabores_pan || []).join(', ') || 'N/A' %></td>
+                <th>Rellenos</th><td><%= (folio.rellenos || []).join(', ') || 'N/A' %></td>
             </tr>
+            <% } %>
         </table>
 
-        <!-- Diseño -->
-        <div class="section-title">Detalles de Diseño</div>
-        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <p>
-                <%= folio.descripcion_diseno || ' Sin descripción detallada' %>
-                        </p>
-    </div>
+        <% if (folio.tiers && folio.tiers.length > 0) { %>
+            <div class="section-title">Desglose por Pisos</div>
+            <table>
+                <tr>
+                    <th style="width: 15%;">Nivel</th>
+                    <th style="width: 15%;">Personas</th>
+                    <th style="width: 35%;">Pan / Sabor</th>
+                    <th style="width: 35%;">Relleno</th>
+                </tr>
+                <% folio.tiers.forEach((tier, idx) => { %>
+                    <tr>
+                        <td><strong>Piso <%= idx + 1 %></strong></td>
+                        <td><%= tier.personas || tier.persons || '-' %> p.</td>
+                        <td><%= (tier.sabores || tier.panes || []).join(', ') || 'N/A' %></td>
+                        <td><%= (tier.rellenos || []).join(', ') || 'N/A' %></td>
+                    </tr>
+                <% }); %>
+            </table>
+        <% } %>
 
-    <!-- Footer -->
-    <div class="footer">
-        <div class="qr-section">
-            <% if (typeof qrCode !=='undefined' && qrCode) { %>
-                <img src="<%= qrCode %>" />
-                <p style="font-size: 10px;">Escanear para Ver en Web</p>
+        <% if (folio.complements && folio.complements.length > 0) { %>
+            <div class="section-title">Artículos Complementarios</div>
+            <table>
+                <tr>
+                    <th style="width: 20%;">Forma/Tipo</th>
+                    <th style="width: 20%;">Sabor</th>
+                    <th style="width: 40%;">Descripción Extra</th>
+                    <th style="width: 20%;">Precio</th>
+                </tr>
+                <% folio.complements.forEach((comp) => { %>
+                    <tr>
+                        <td><%= comp.forma || 'Extra' %></td>
+                        <td><%= comp.sabor_pan || comp.sabor || 'N/A' %></td>
+                        <td><%= comp.descripcion || '-' %></td>
+                        <td>$<%= parseFloat(comp.precio || 0).toFixed(2) %></td>
+                    </tr>
+                <% }); %>
+            </table>
+        <% } %>
+
+        <div class="section-title">Instrucciones de Decoración</div>
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px; white-space: pre-wrap;"><%= folio.descripcion_diseno || 'Sin descripción de diseño detallada.' %></div>
+
+        <% if (folio.imagenes_referencia && folio.imagenes_referencia.length > 0) { %>
+            <div class="section-title">Referencias Visuales</div>
+            <div style="text-align: center; margin-top: 15px; font-size: 0;">
+                <% folio.imagenes_referencia.forEach((imgUrl) => { %>
+                    <div class="image-container" style="display: inline-block; width: 46%; margin: 1%; vertical-align: top; box-sizing: border-box; font-size: 13px;">
+                        <img src="<%= imgUrl %>" class="ref-image" style="width: 100%; max-height: 300px; object-fit: contain; border-radius: 4px;" alt="Referencia de diseño" />
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+
+        <div class="footer">
+            <div class="qr-section">
+                <% if (typeof qrCode !=='undefined' && qrCode) { %>
+                    <img src="<%= qrCode %>" />
+                    <p style="font-size: 10px;">Escanear Folio</p>
                 <% } %>
-                    <% if (config && config.pdfFooterText) { %>
-                        <p style="font-size: 9px; color: #888; white-space: pre-wrap;">
-                            <%= config.pdfFooterText %>
-                        </p>
-                        <% } %>
+            </div>
+            
+            <div class="totals">
+                <p>Subtotal / Costo Base: $<%= (parseFloat(folio.total) - parseFloat(folio.costo_envio || 0)).toFixed(2) %></p>
+                <p>Costo de Envío: $<%= parseFloat(folio.costo_envio || 0).toFixed(2) %></p>
+                <div style="border-top: 1px solid #ddd; margin: 5px 0;"></div>
+                <p><strong>Total Pedido: $<%= parseFloat(folio.total).toFixed(2) %></strong></p>
+                <p style="color: #10b981;">Anticipo (Pagado): -$<%= parseFloat(folio.anticipo).toFixed(2) %></p>
+                <p class="total-row">Resta a Pagar: $<%= parseFloat(folio.balance).toFixed(2) %></p>
+            </div>
         </div>
-        <div class="totals" style="text-align: right;">
-            <p>Total: $<%= folio.total %>
-            </p>
-            <p style="color: green;">Anticipo: -$<%= folio.anticipo %>
-            </p>
-            <p class="total-row">Resta a Pagar: $<%= (folio.total - folio.anticipo).toFixed(2) %>
-            </p>
-        </div>
+        
     </div>
-    </div>
-
 </body>
-
 </html>
