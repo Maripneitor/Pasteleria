@@ -37,6 +37,10 @@
         .watermark.PENDIENTE { color: rgba(156, 163, 175, 0.15); } 
         .page { position: relative; z-index: 1; }
         .page-break { page-break-before: always; padding-top: 20px; }
+        
+        /* 🔥 CLASE MÁGICA PARA MANTENER BLOQUES UNIDOS */
+        .keep-together { page-break-inside: avoid; margin-top: 10px; }
+        
         .image-container { text-align: center; margin-top: 15px; page-break-inside: avoid; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
         .ref-image { max-width: 100%; max-height: 350px; object-fit: contain; border-radius: 4px; }
     </style>
@@ -52,8 +56,9 @@
         const hasComps = folio.complements && folio.complements.length > 0;
         const hasImages = folio.imagenes_referencia && folio.imagenes_referencia.length > 0;
         
+        // Ya solo necesitamos saber si hay anexos para crear la hoja 2. 
+        // El PDF decidirá solito si necesita crear la hoja 3.
         const needsPage2 = hasTiers || hasComps || hasImages;
-        const needsPage3 = hasTiers && hasComps && hasImages;
     %>
 
     <div class="watermark <%= watermark %>"><%= watermark %></div>
@@ -128,7 +133,7 @@
                 <div style="border-top: 1px solid #ddd; margin: 5px 0;"></div>
                 <p><strong>Total Pedido: $<%= parseFloat(folio.total).toFixed(2) %></strong></p>
                 <p style="color: #10b981;">Anticipo (Pagado): -$<%= parseFloat(folio.anticipo).toFixed(2) %></p>
-                <p class="total-row">Resta a Pagar: $<%= parseFloat(folio.balance).toFixed(2) %></p>
+                <p class="total-row">Resta a Pagar: $<%= parseFloat(folio.total - folio.anticipo).toFixed(2) %></p>
             </div>
         </div>
     </div>
@@ -183,34 +188,18 @@
             </table>
         <% } %>
 
-        <% if (hasImages && !needsPage3) { %>
-            <div class="section-title">Referencias Visuales</div>
-            <div style="text-align: center; margin-top: 15px; font-size: 0;">
-                <% folio.imagenes_referencia.forEach((imgUrl) => { %>
-                    <div class="image-container" style="display: inline-block; width: 46%; margin: 1%; vertical-align: top; box-sizing: border-box; font-size: 13px;">
-                        <img src="<%= imgUrl %>" class="ref-image" alt="Referencia de diseño" />
-                    </div>
-                <% }); %>
+        <% if (hasImages) { %>
+            <div class="keep-together">
+                <div class="section-title">Referencias Visuales</div>
+                <div style="text-align: center; margin-top: 15px; font-size: 0;">
+                    <% folio.imagenes_referencia.forEach((imgUrl) => { %>
+                        <div class="image-container" style="display: inline-block; width: 46%; margin: 1%; vertical-align: top; box-sizing: border-box; font-size: 13px;">
+                            <img src="<%= imgUrl %>" class="ref-image" alt="Referencia de diseño" />
+                        </div>
+                    <% }); %>
+                </div>
             </div>
         <% } %>
-    </div>
-    <% } %>
-
-    <% if (needsPage3) { %>
-    <div class="page page-break">
-        <div class="header-mini">
-            <span>Anexo Visual - Folio #<%= folio.folio_numero %></span>
-            <span><%= folio.cliente_nombre %></span>
-        </div>
-
-        <div class="section-title">Referencias Visuales</div>
-        <div style="text-align: center; margin-top: 15px; font-size: 0;">
-            <% folio.imagenes_referencia.forEach((imgUrl) => { %>
-                <div class="image-container" style="display: inline-block; width: 46%; margin: 1%; vertical-align: top; box-sizing: border-box; font-size: 13px;">
-                    <img src="<%= imgUrl %>" class="ref-image" alt="Referencia de diseño" />
-                </div>
-            <% }); %>
-        </div>
     </div>
     <% } %>
 
