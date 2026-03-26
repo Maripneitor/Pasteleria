@@ -331,7 +331,7 @@ class FolioService {
                 return imgs;
             })(),
             
-            tiers: safeParse(f.detallesPisos || (f.diseno_metadata ? f.diseno_metadata.tiers : [])),
+            tiers: safeParse(f.detallesPisos || (f.diseno_metadata ? f.diseno_metadata.pisos : []) || []),
             
             // 🔥 CORRECCIÓN CRÍTICA 1: Leer también 'complementarios' (la columna directa en MySQL)
             complements: safeParse(f.complementarios || f.complementosList || f.complementos),

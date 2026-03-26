@@ -72,6 +72,12 @@ const StepF_Payment = ({ prev }) => {
         let hora_limpia = orderData.deliveryTime || '';
         if (hora_limpia.length > 5) hora_limpia = hora_limpia.substring(0, 5); 
 
+        // 🛡️ SANITIZADOR DE TIPO DE FOLIO (El que faltaba)
+        let tipoFolioSeguro = orderData.tipo_folio || 'Normal';
+        if (tipoFolioSeguro === 'Base' || tipoFolioSeguro === 'Especial') {
+            tipoFolioSeguro = 'Base/Especial';
+        }
+
         const payload = {
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
@@ -79,14 +85,15 @@ const StepF_Payment = ({ prev }) => {
 
             fecha_entrega: orderData.deliveryDate,
             hora_entrega: hora_limpia,
-            tipo_folio: orderData.tipo_folio,
+            
+            // 🔥 AQUÍ ENVIAMOS LA VARIABLE SANITIZADA PARA ZOD
+            tipo_folio: tipoFolioSeguro, 
             forma: orderData.shape,
             numero_personas: orderData.peopleCount,
 
             sabores_pan: orderData.panes,
             rellenos: orderData.rellenos,
 
-            // 🔥 AHORA SÍ ENVIAMOS LA LLAVE CORRECTA
             complementarios: complementariosList,
             accesorios: orderData.extras,
 
@@ -98,7 +105,7 @@ const StepF_Payment = ({ prev }) => {
                 allImages: orderData.referenceImages
             },
 
-            is_delivery: orderData.isDelivery,
+            is_delivery: orderData.is_delivery || orderData.isDelivery, // Soporte a ambas llaves
             calle: orderData.calle,
             colonia: orderData.colonia,
             referencias: orderData.referencias,

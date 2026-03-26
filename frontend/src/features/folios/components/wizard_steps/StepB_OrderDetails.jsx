@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
-import { Calendar, Clock, Cake, Layers, Loader2, Plus, X, Mic } from 'lucide-react';
+import { Calendar, Clock, Cake, Layers, Loader2, X, Mic } from 'lucide-react';
 import catalogApi from '@/features/catalogs/api/catalogs.api';
 
 const StepB_OrderDetails = ({ next, prev }) => {
@@ -8,6 +8,15 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const [flavors, setFlavors] = useState([]);
     const [fillings, setFillings] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // 🔥 ESTADO LOCAL BLINDADO PARA LOS PISOS
+    const [localPisos, setLocalPisos] = useState(() => {
+        const ctxPisos = orderData.pisos || [];
+        return Array.from({ length: 8 }, (_, i) => ({
+            personas: '', panes: [], rellenos: [], notas: '',
+            ...(ctxPisos[i] || {})
+        }));
+    });
 
     // Load Catalogs
     useEffect(() => {
@@ -28,16 +37,21 @@ const StepB_OrderDetails = ({ next, prev }) => {
         load();
     }, []);
 
+    // 🔄 SINCRONIZADOR SILENCIOSO: Empuja al Contexto sin perder datos
+    useEffect(() => {
+        updateOrder({ pisos: localPisos });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localPisos]);
+
     // Helper for Time Picker (12h format as requested)
     const hours = Array.from({ length: 12 }, (_, i) => i + 1);
     const minutes = ['00', '15', '30', '45'];
     const periods = ['AM', 'PM'];
 
-    // 🔥 SOLUCIÓN: Calculamos la hora al vuelo para matar el "Efecto Ping-Pong"
+    // Calculamos la hora al vuelo para matar el "Efecto Ping-Pong"
     const getParsedTime = () => {
         if (!orderData.deliveryTime) return { hour: '12', minute: '00', period: 'PM' };
         
-        // Limpiamos la hora por si la IA le metió texto por error
         const timeClean = orderData.deliveryTime.replace(/[^0-9:]/g, ''); 
         if (!timeClean.includes(':')) return { hour: '12', minute: '00', period: 'PM' };
 
@@ -63,48 +77,55 @@ const StepB_OrderDetails = ({ next, prev }) => {
         if (newTime.period === 'AM' && h === 12) h = 0;
 
         const hStr = h.toString().padStart(2, '0');
-        // Mandamos el formato 24h directo al contexto global sin estados intermedios
         updateOrder({ deliveryTime: `${hStr}:${newTime.minute}` }); 
     };
 
     const parsedTime = getParsedTime();
 
-    // 🔥 AGREGA ESTA LÍNEA QUE SE NOS BORRÓ:
-    const isBase = orderData.tipo_folio === 'Base';
+    // Soportamos "Base" o "Base/Especial" por si el backend lo transforma
+    const isBase = orderData.tipo_folio === 'Base' || orderData.tipo_folio === 'Base/Especial';
     
-    // Pisos Management (Fixed to 8 as requested)
+    // 🛡️ MANEJADORES DE PISOS INMUTABLES
     const handleUpdatePiso = (idx, field, val) => {
-        const current = [...(orderData.pisos || [])];
-        if (!current[idx]) return;
-        current[idx][field] = val;
-        updateOrder({ pisos: current });
+        setLocalPisos(prev => {
+            const newPisos = [...prev];
+            newPisos[idx] = { ...newPisos[idx], [field]: val };
+            return newPisos;
+        });
     };
 
     const handleAddItem = (idx, field, value) => {
         if (!value) return;
-        const piso = orderData.pisos[idx];
-        const currentList = Array.isArray(piso[field]) ? piso[field] : (piso[field] ? [piso[field]] : []);
-        const max = field === 'panes' ? 3 : 2;
-        
-        if (currentList.length >= max) {
-            import('react-hot-toast').then(m => m.default.error(`Solo puedes agregar hasta ${max} ${field}`));
-            return;
-        }
-        if (!currentList.includes(value)) {
-            handleUpdatePiso(idx, field, [...currentList, value]);
-        }
+        setLocalPisos(prev => {
+            const newPisos = [...prev];
+            const piso = newPisos[idx];
+            const currentList = Array.isArray(piso[field]) ? piso[field] : (piso[field] ? [piso[field]] : []);
+            const max = field === 'panes' ? 3 : 2;
+            
+            if (currentList.length >= max) {
+                import('react-hot-toast').then(m => m.default.error(`Solo puedes agregar hasta ${max} ${field}`));
+                return prev;
+            }
+            if (!currentList.includes(value)) {
+                newPisos[idx] = { ...piso, [field]: [...currentList, value] };
+            }
+            return newPisos;
+        });
     };
 
     const handleRemoveItem = (idx, field, tagIndex) => {
-        const piso = orderData.pisos[idx];
-        const currentList = Array.isArray(piso[field]) ? [...piso[field]] : [];
-        currentList.splice(tagIndex, 1);
-        handleUpdatePiso(idx, field, currentList);
+        setLocalPisos(prev => {
+            const newPisos = [...prev];
+            const piso = newPisos[idx];
+            const currentList = Array.isArray(piso[field]) ? [...piso[field]] : [];
+            currentList.splice(tagIndex, 1);
+            newPisos[idx] = { ...piso, [field]: currentList };
+            return newPisos;
+        });
     };
 
     const startDictation = (idx) => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            // @ts-ignore
             import('react-hot-toast').then(m => m.default.error('Dictado por voz no soportado en este navegador'));
             return;
         }
@@ -116,28 +137,29 @@ const StepB_OrderDetails = ({ next, prev }) => {
         recognition.interimResults = false;
 
         recognition.onstart = () => {
-             // @ts-ignore
             import('react-hot-toast').then(m => m.default.success('Escuchando... dicta ahora 🎙️'));
         };
 
         recognition.onresult = (event) => {
             const text = event.results[0][0].transcript;
-            const currentNotas = orderData.pisos[idx].notas || '';
-            const newNotas = currentNotas ? `${currentNotas} ${text}` : text;
-            handleUpdatePiso(idx, 'notas', newNotas);
+            setLocalPisos(prev => {
+                const newPisos = [...prev];
+                const currentNotas = newPisos[idx].notas || '';
+                newPisos[idx] = { ...newPisos[idx], notas: currentNotas ? `${currentNotas} ${text}` : text };
+                return newPisos;
+            });
         };
 
         recognition.onerror = (event) => {
             console.error('Speech recognition error', event.error);
-             // @ts-ignore
             import('react-hot-toast').then(m => m.default.error('No se pudo escuchar correctamente.'));
         };
 
         recognition.start();
     };
 
-    // Validation (Check if at least one floor has people count)
-    const hasPisos = isBase && (orderData.pisos || []).some(p => p.personas && parseInt(p.personas) > 0);
+    // Validation usando localPisos para mayor precisión en tiempo real
+    const hasPisos = isBase && localPisos.some(p => p.personas && parseInt(p.personas) > 0);
     const hasSelections = orderData.panes?.length > 0 && orderData.rellenos?.length > 0;
     const isValid = orderData.deliveryDate && orderData.deliveryTime &&
         orderData.peopleCount &&
@@ -343,7 +365,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     <p className="text-[10px] text-purple-400 mb-4 italic">El bot llenará solo los pisos necesarios. Los campos vacíos serán ignorados.</p>
                     
                     <div className="space-y-4">
-                        {(orderData.pisos || []).slice(0, 8).map((piso, idx) => (
+                        {localPisos.map((piso, idx) => (
                             <div key={idx} className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm relative group">
                                 <span className="absolute -top-2 -left-2 bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                                     PISO {idx + 1}
@@ -353,7 +375,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                         <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Personas</label>
                                         <input 
                                             type="number" 
-                                            value={piso.personas || ''} 
+                                            value={piso.personas} 
                                             onChange={(e) => handleUpdatePiso(idx, 'personas', e.target.value)} 
                                             className="w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm" 
                                             placeholder="Ej. 10"
@@ -406,7 +428,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                         <div className="flex gap-2 relative">
                                             <input 
                                                 type="text" 
-                                                value={piso.notas || ''} 
+                                                value={piso.notas} 
                                                 onChange={(e) => handleUpdatePiso(idx, 'notas', e.target.value)} 
                                                 className="w-full py-2 px-3 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm" 
                                                 placeholder="Dicta la forma..." 
