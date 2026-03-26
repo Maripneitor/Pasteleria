@@ -113,10 +113,14 @@ async function toOrderDTO(order, branding) {
     const qrUrl = await QRCode.toDataURL(`${baseUrl}/folios/${plain.id}`, { margin: 2, scale: 4 });
     const mapsLink = plain.ubicacion_maps && plain.ubicacion_maps.startsWith('http') ? plain.ubicacion_maps : null;
 
+    // Helper interno ultra seguro para parsear
     const parseList = (val) => {
         if (!val) return [];
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch (e) { return []; }
+        }
         if (Array.isArray(val)) return val;
-        try { return JSON.parse(val); } catch (e) { return []; }
+        return [];
     };
 
     const additionals = [
@@ -124,13 +128,25 @@ async function toOrderDTO(order, branding) {
         ...parseList(plain.accesorios).map(c => ({ name: c.name || c, price: c.price || 0 }))
     ];
 
-    const complementosList = (plain.complementosList || []).map(c => ({
-        persons: c.personas,
-        shape: c.forma,
-        flavor: c.sabor_pan,
-        filling: c.relleno,
-        description: c.descripcion,
-        price: c.precio
+    // 🚀 1. LECTURA SEGURA DE COMPLEMENTARIOS
+    const complementosJSON = parseList(plain.complementarios || plain.complementosList || plain.complementos);
+    const complementosList = complementosJSON.map(c => ({
+        persons: c.numero_personas || c.personas || 'N/A',
+        shape: c.forma || 'N/A',
+        flavor: Array.isArray(c.sabores_pan) ? c.sabores_pan.join(', ') : (c.sabores_pan || c.sabor_pan || c.sabor || 'N/A'),
+        filling: Array.isArray(c.rellenos) ? c.rellenos.join(', ') : (c.rellenos || c.relleno || 'N/A'),
+        description: c.descripcion || 'Sin descripción',
+        price: c.precio || 0
+    }));
+
+    // 🚀 2. LECTURA SEGURA DE PISOS
+    const pisosJSON = parseList(plain.detallesPisos || (plain.diseno_metadata ? plain.diseno_metadata.pisos : []) || (plain.diseno_metadata ? plain.diseno_metadata.tiers : []));
+    const tiersList = pisosJSON.map((t, idx) => ({
+        piso: t.piso || idx + 1,
+        persons: t.personas || t.persons || 'N/A',
+        panes: Array.isArray(t.sabores_pan) ? t.sabores_pan : parseList(t.sabores_pan || t.panes || t.sabores),
+        rellenos: Array.isArray(t.rellenos) ? t.rellenos : parseList(t.rellenos),
+        notas: t.notas || ''
     }));
 
     return {
@@ -150,12 +166,11 @@ async function toOrderDTO(order, branding) {
         designDescription: plain.descripcion_diseno,
         dedicatoria: plain.dedicatoria,
         imageUrls: plain.imagen_referencia_url ? [plain.imagen_referencia_url] : [],
-        tiers: parseList(plain.diseno_metadata?.tiers || []).map(t => ({
-            persons: t.personas || t.persons,
-            panes: parseList(t.sabores || t.panes),
-            rellenos: parseList(t.rellenos),
-            notas: t.notas
-        })),
+        
+        // Inyectamos arreglos procesados
+        tiers: tiersList,
+        complements: complementosList, 
+        
         total: plain.total,
         advancePayment: plain.anticipo,
         balance: plain.total - plain.anticipo,
@@ -165,7 +180,6 @@ async function toOrderDTO(order, branding) {
             email: plain.client?.email || ''
         },
         additionals,
-        complements: complementosList,
         isPaid: plain.estatus_pago === 'Pagado',
         status: plain.status
     };

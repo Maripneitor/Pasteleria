@@ -56,7 +56,6 @@ class FolioService {
         const where = { ...tenantFilter };
 
         if (q) {
-            // Esto permite que si buscas "Juan", lo busque en nombre, tel o folio
             where[Op.or] = [
                 { folioNumber: { [Op.like]: `%${q}%` } },
                 { cliente_nombre: { [Op.like]: `%${q}%` } },
@@ -67,13 +66,11 @@ class FolioService {
         return Folio.findAll({
             where,
             order: [['createdAt', 'DESC']],
-            limit: 10 // No satures el chat, con 10 es suficiente
+            limit: 10
         });
     }
 
     async getFolioById(id, tenantFilter, includeComplements = true) {
-        // 1. Limpiamos el filtro de sucursal porque los borradores de IA
-        // a veces nacen con branchId en null y eso bloquea la búsqueda.
         const safeFilter = { ...tenantFilter };
         delete safeFilter.branchId;
 
@@ -82,8 +79,6 @@ class FolioService {
             options.include = [{ association: 'complementosList' }];
         }
         
-        // 2. Agregamos .unscoped() para romper cualquier candado automático
-        // que esté escondiendo los estatus "DRAFT".
         return Folio.unscoped().findOne(options);
     }
 
@@ -159,7 +154,7 @@ class FolioService {
                 folioId: row.id,
                 personas: safeNum(c.personas),
                 forma: c.forma,
-                sabor_pan: c.sabor || c.sabor_pan, // ✅ CORRECCIÓN: mapeado a sabor_pan
+                sabor_pan: c.sabor || c.sabor_pan, 
                 relleno: c.relleno,
                 precio: safeNum(c.precio),
                 descripcion: c.descripcion
@@ -189,22 +184,18 @@ class FolioService {
 
         const before = row.toJSON();
         
-        // 1. Actualizamos los datos principales del Folio
         await row.update(data, { transaction: t });
 
-        // 2. 🔥 ACTUALIZAR COMPLEMENTOS (Borrar y recrear para evitar duplicados/desajustes)
         const complementsList = Array.isArray(data.complementsList) ? data.complementsList : [];
         if (complementsList.length > 0 || before.complementos?.length > 0) {
-            // Borramos los viejos asociados a este folio
             await FolioComplemento.destroy({ where: { folioId: id }, transaction: t });
             
-            // Creamos los nuevos (aplicando tu corrección de sabor_pan)
             if (complementsList.length > 0) {
                 const complementsToCreate = complementsList.map(c => ({
                     folioId: id,
                     personas: safeNum(c.personas),
                     forma: c.forma,
-                    sabor_pan: c.sabor || c.sabor_pan, // ✅ La corrección también aquí
+                    sabor_pan: c.sabor || c.sabor_pan,
                     relleno: c.relleno,
                     precio: safeNum(c.precio),
                     descripcion: c.descripcion
@@ -302,14 +293,12 @@ class FolioService {
         const f = folio.toJSON();
         const branding = pdfService.getDefaultBranding(); 
 
-        // Helper interno para parsear JSONs guardados como texto sin romper el código
         const safeParse = (val) => {
             if (!val) return [];
             if (Array.isArray(val)) return val;
             try { return JSON.parse(val) || []; } catch { return []; }
         };
 
-        // Construimos el DTO (Data Transfer Object) ultra completo para el PDF
         const folioData = {
             id: f.id,
             folio_numero: f.folioNumber || f.id,
@@ -327,37 +316,33 @@ class FolioService {
             anticipo: f.anticipo,
             balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
             
-            // --- NUEVOS CAMPOS AVANZADOS ---
-            // --- NUEVOS CAMPOS AVANZADOS ---
             is_delivery: f.is_delivery || false,
             ubicacion_entrega: f.ubicacion_entrega || 'Recolección en tienda',
             costo_envio: f.costo_envio || 0,
             
-            // Recopilamos TODAS las imágenes (la principal y el arreglo allImages de diseno_metadata)
             imagenes_referencia: (() => {
                 const imgs = [];
                 if (f.imagen_referencia_url) imgs.push(f.imagen_referencia_url);
                 if (f.diseno_metadata && Array.isArray(f.diseno_metadata.allImages)) {
                     f.diseno_metadata.allImages.forEach(url => {
-                        if (!imgs.includes(url)) imgs.push(url); // Evitar duplicados
+                        if (!imgs.includes(url)) imgs.push(url);
                     });
                 }
                 return imgs;
             })(),
             
-            // Obtenemos los pisos ya sea de diseno_metadata o detallesPisos
             tiers: safeParse(f.detallesPisos || (f.diseno_metadata ? f.diseno_metadata.tiers : [])),
             
-            // Complementarios (Pasteles extra, gelatina, etc.)
-            complements: f.complementosList || [],
+            // 🔥 CORRECCIÓN CRÍTICA 1: Leer también 'complementarios' (la columna directa en MySQL)
+            complements: safeParse(f.complementarios || f.complementosList || f.complementos),
             
-            // Accesorios (Velas, letreros)
             additionals: safeParse(f.accesorios || f.complementos)
         };
 
         const buffer = await renderPdf({
-            templateName: 'folio-pdf', // Aseguramos que apunte a tu plantilla principal
-            data: { folio: folioData, watermark: computeWatermark(f) },
+            templateName: 'folio-pdf', 
+            // 🔥 CORRECCIÓN CRÍTICA 2: Añadido "config: branding" para que el EJS se pinte correctamente
+            data: { folio: folioData, watermark: computeWatermark(f), config: branding },
             branding: branding,
             options: { format: 'A4', printBackground: true, margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' } }
         });

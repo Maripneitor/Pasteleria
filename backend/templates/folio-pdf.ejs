@@ -18,24 +18,23 @@
         .qr-section { text-align: center; }
         .qr-section img { width: 90px; height: 90px; }
         
-/* ESTILOS DE LA MARCA DE AGUA (AL FRENTE Y A COLOR) */
+        /* ESTILOS DE LA MARCA DE AGUA (AL FRENTE Y A COLOR) */
         .watermark { 
             position: fixed; 
             inset: 0; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            font-size: 110px; /* Un poco más grande para que impacte */
+            font-size: 110px;
             font-weight: 900; 
             transform: rotate(-30deg); 
-            pointer-events: none; /* Permite que el mouse "atraviese" el texto si se necesita seleccionar */
-            z-index: 9999; /* 🔥 Magia: Lo manda por encima de todas las tablas y fotos */
+            pointer-events: none;
+            z-index: 9999;
             letter-spacing: 4px; 
         }
-        /* Colores con 15% de opacidad (transparencia) */
-        .watermark.CANCELADO { color: rgba(239, 68, 68, 0.15); } /* Rojo cristalino */
-        .watermark.PAGADO { color: rgba(16, 185, 129, 0.15); }  /* Verde cristalino */
-        .watermark.PENDIENTE { color: rgba(156, 163, 175, 0.15); } /* Gris cristalino */
+        .watermark.CANCELADO { color: rgba(239, 68, 68, 0.15); } 
+        .watermark.PAGADO { color: rgba(16, 185, 129, 0.15); }  
+        .watermark.PENDIENTE { color: rgba(156, 163, 175, 0.15); } 
         .page { position: relative; z-index: 1; }
         .page-break { page-break-before: always; padding-top: 20px; }
         .image-container { text-align: center; margin-top: 15px; page-break-inside: avoid; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
@@ -53,10 +52,7 @@
         const hasComps = folio.complements && folio.complements.length > 0;
         const hasImages = folio.imagenes_referencia && folio.imagenes_referencia.length > 0;
         
-        // ¿Necesitamos la Hoja 2? (Si hay CUALQUIERA de los 3 elementos)
         const needsPage2 = hasTiers || hasComps || hasImages;
-        
-        // ¿Necesitamos la Hoja 3? (SOLO si hay Pisos + Complementarios + Imágenes a la vez)
         const needsPage3 = hasTiers && hasComps && hasImages;
     %>
 
@@ -110,8 +106,8 @@
             </tr>
             <% if (!hasTiers) { %>
             <tr>
-                <th>Sabores (Pan)</th><td><%= (folio.sabores_pan || []).join(', ') || 'N/A' %></td>
-                <th>Rellenos</th><td><%= (folio.rellenos || []).join(', ') || 'N/A' %></td>
+                <th>Sabores (Pan)</th><td><%= Array.isArray(folio.sabores_pan) ? folio.sabores_pan.join(', ') : (folio.sabores_pan || 'N/A') %></td>
+                <th>Rellenos</th><td><%= Array.isArray(folio.rellenos) ? folio.rellenos.join(', ') : (folio.rellenos || 'N/A') %></td>
             </tr>
             <% } %>
         </table>
@@ -137,7 +133,6 @@
         </div>
     </div>
 
-
     <% if (needsPage2) { %>
     <div class="page page-break">
         <div class="header-mini">
@@ -156,10 +151,10 @@
                 </tr>
                 <% folio.tiers.forEach((tier, idx) => { %>
                     <tr>
-                        <td><strong>Piso <%= idx + 1 %></strong></td>
-                        <td><%= tier.personas || tier.persons || '-' %> p.</td>
-                        <td><%= (tier.sabores || tier.panes || []).join(', ') || 'N/A' %></td>
-                        <td><%= (tier.rellenos || []).join(', ') || 'N/A' %></td>
+                        <td><strong>Piso <%= tier.piso || idx + 1 %></strong></td>
+                        <td><%= tier.personas || tier.persons || tier.numero_personas || '-' %> p.</td>
+                        <td><%= Array.isArray(tier.sabores_pan) ? tier.sabores_pan.join(', ') : (tier.sabores_pan || tier.sabores || tier.panes || 'N/A') %></td>
+                        <td><%= Array.isArray(tier.rellenos) ? tier.rellenos.join(', ') : (tier.rellenos || 'N/A') %></td>
                     </tr>
                 <% }); %>
             </table>
@@ -170,16 +165,19 @@
             <table>
                 <tr>
                     <th style="width: 20%;">Forma/Tipo</th>
-                    <th style="width: 20%;">Sabor</th>
-                    <th style="width: 40%;">Descripción Extra</th>
-                    <th style="width: 20%;">Precio</th>
+                    <th style="width: 30%;">Sabor</th>
+                    <th style="width: 50%;">Descripción Extra</th>
                 </tr>
                 <% folio.complements.forEach((comp) => { %>
                     <tr>
                         <td><%= comp.forma || 'Extra' %></td>
-                        <td><%= comp.sabor_pan || comp.sabor || 'N/A' %></td>
-                        <td><%= comp.descripcion || '-' %></td>
-                        <td>$<%= parseFloat(comp.precio || 0).toFixed(2) %></td>
+                        <td><%= Array.isArray(comp.sabores_pan) ? comp.sabores_pan.join(', ') : (comp.sabores_pan || comp.sabor || 'N/A') %></td>
+                        <td>
+                            <%= comp.descripcion || '-' %>
+                            <% if (comp.rellenos && comp.rellenos.length > 0) { %>
+                                <br><small><strong>Relleno:</strong> <%= Array.isArray(comp.rellenos) ? comp.rellenos.join(', ') : comp.rellenos %></small>
+                            <% } %>
+                        </td>
                     </tr>
                 <% }); %>
             </table>
@@ -197,7 +195,6 @@
         <% } %>
     </div>
     <% } %>
-
 
     <% if (needsPage3) { %>
     <div class="page page-break">
