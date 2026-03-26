@@ -80,88 +80,66 @@ export const OrderProvider = ({ children }) => {
         });
     };
 
-    // 2. LOAD ORDER (Rehidratación blindada para TODOS los campos)
     const loadOrder = (folio) => {
-        // --- FUNCIÓN DE NORMALIZACIÓN ---
-        const normalizeArray = (val) => {
-            if (!val) return [];
-            if (Array.isArray(val)) return val;
-            if (typeof val === 'string') return val.split(',').map(s => s.trim());
-            return [val];
-        };
-
-        let rawPisos = folio.detallesPisos || folio.diseno_metadata?.pisos || [];
-        try { if (typeof rawPisos === 'string') rawPisos = JSON.parse(rawPisos); } catch(e) {}
-        let parsedPisos = Array.isArray(rawPisos) ? rawPisos : (rawPisos && typeof rawPisos === 'object' ? [rawPisos] : []);
-
-        let rawComps = folio.complementosList || folio.complementarios || folio.complementos || [];
-        try { if (typeof rawComps === 'string') rawComps = JSON.parse(rawComps); } catch(e) {}
-        let parsedComplements = Array.isArray(rawComps) ? rawComps : (rawComps && typeof rawComps === 'object' ? [rawComps] : []);
-
-        const hasValidPisos = parsedPisos.some(p => p && (parseInt(p.personas || p.persons || 0) > 0 || (p.panes && p.panes.length > 0) || p.notas || p.description));
-        let tipoFolioCalculado = 'Normal';
-        const tfStr = String(folio.tipo_folio || '').toLowerCase();
-        if (tfStr.includes('base') || tfStr.includes('especial') || hasValidPisos) {
-            tipoFolioCalculado = 'Base';
+        // 🛡️ PARCHE MYSQL: Convierte strings a JSON si es necesario
+        let rawComps = folio.complementarios || folio.complementos || [];
+        if (typeof rawComps === 'string') {
+            try { rawComps = JSON.parse(rawComps); } catch(e) { rawComps = []; }
         }
+        if (!Array.isArray(rawComps)) rawComps = [];
+
+        const parsedComplements = rawComps.map(c => ({
+            personas: c.numero_personas || c.personas || '',
+            forma: c.forma || 'Redondo',
+            sabor: (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : c.sabor) || '',
+            relleno: (Array.isArray(c.rellenos) ? c.rellenos[0] : c.relleno) || '',
+            descripcion: c.descripcion || '',
+            precio: c.precio || 0
+        }));
 
         setOrderData({
             id: folio.id, 
             clientName: folio.cliente_nombre || '',
             clientPhone: folio.cliente_telefono || '',
-            clientPhoneExtra: folio.cliente_telefono_extra || '', // Agregado
             clientId: folio.clientId,
             selectedClient: folio.clientId ? { id: folio.clientId, name: folio.cliente_nombre, phone: folio.cliente_telefono } : null,
             
-            tipo_folio: tipoFolioCalculado,
+            tipo_folio: folio.tipo_folio || 'Normal',
             peopleCount: folio.numero_personas || '',
             shape: folio.forma || 'Redondo',
-            panes: normalizeArray(folio.sabores_pan),
-            rellenos: normalizeArray(folio.rellenos),
+            panes: Array.isArray(folio.sabores_pan) ? folio.sabores_pan : [],
+            rellenos: Array.isArray(folio.rellenos) ? folio.rellenos : [],
+            
             extras: folio.accesorios || [],
             
             deliveryDate: folio.fecha_entrega || '',
             deliveryTime: folio.hora_entrega || '',
             
-            // LOGÍSTICA CORREGIDA
             is_delivery: !!folio.is_delivery,
             calle: folio.calle || '',
             num_ext: folio.num_ext || '',
             colonia: folio.colonia || '',
             referencias: folio.referencias || '',
             ubicacion_maps: folio.ubicacion_maps || '',
-            costo_envio: Number(folio.costo_envio) || 0,
+            costo_envio: folio.costo_envio || 0,
+            costo_base: folio.costo_base || 0,
             
-            // FINANZAS Y DISEÑO
-            costo_base: Number(folio.costo_base) || 0,
             descripcion_diseno: folio.descripcion_diseno || '',
             dedicatoria: folio.dedicatoria || '',
-            extraHeight: folio.altura_extra === 'Si', // CORREGIDO (Lee de la BD)
+            extraHeight: folio.altura_extra === 'Si',
             referenceImages: folio.diseno_metadata?.allImages || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : []),
-            total: Number(folio.total) || 0,
-            advance: Number(folio.anticipo) || 0,
-            applyCommission: false,
             
-            // ARREGLOS CON LLAVES EMPAREJADAS
-            pisos: [...parsedPisos, ...Array.from({ length: 8 }, () => ({}))]
-                   .map(p => ({
-                       personas: p.personas || p.persons || '',
-                       panes: normalizeArray(p.sabores_pan || p.panes || p.flavor),
-                       rellenos: normalizeArray(p.rellenos || p.filling),
-                       notas: p.notas || p.description || ''
-                   })).slice(0, 8),
+            total: folio.total || 0,
+            advance: folio.anticipo || 0,
             
-            complements: [...parsedComplements, ...Array.from({ length: 3 }, () => ({}))]
-                   .map(c => ({
-                       personas: c.numero_personas || c.personas || c.persons || '',
-                       forma: c.forma || c.shape || 'Redondo',
-                       sabor: (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : c.sabores_pan) || c.sabor || c.flavor || '',
-                       relleno: (Array.isArray(c.rellenos) ? c.rellenos[0] : c.rellenos) || c.relleno || c.filling || '',
-                       descripcion: c.descripcion || c.description || '',
-                       precio: Number(c.precio || c.price || 0)
-                   })).slice(0, 3)
+            pisos: (folio.diseno_metadata?.pisos?.length === 8) 
+                ? folio.diseno_metadata.pisos 
+                : [...(folio.diseno_metadata?.pisos || []), ...Array.from({ length: Math.max(0, 8 - (folio.diseno_metadata?.pisos?.length || 0)) }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))].slice(0, 8),
+            
+            // 🔥 REHIDRATACIÓN SEGURA DE COMPLEMENTOS
+            complements: [...parsedComplements, ...Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 }))].slice(0, 3)
         });
-        setStep(1); 
+        setStep(1);
     };
 
     return (

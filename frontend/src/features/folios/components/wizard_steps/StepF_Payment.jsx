@@ -58,100 +58,58 @@ const StepF_Payment = ({ prev }) => {
     });
 
     const handleFinish = () => {
-        // 1. Preparar Pisos
-        const detallesPisos = (orderData.pisos || [])
-            .filter(p => p.personas && parseInt(p.personas) > 0)
-            .map((p, index) => ({
-                piso: index + 1,
-                personas: p.personas,
-                sabores_pan: Array.isArray(p.panes) ? p.panes : [p.panes].filter(Boolean),
-                rellenos: Array.isArray(p.rellenos) ? p.rellenos : [p.rellenos].filter(Boolean),
-                notas: p.notas || ''
-            }));
-
-        // 2. Preparar Complementarios
+        // 🔒 Preparamos los datos estrictamente para Zod y MySQL
         const complementariosList = (orderData.complements || [])
             .filter(c => c.sabor || (c.personas && parseInt(c.personas) > 0))
             .map(c => ({
                 numero_personas: parseInt(c.personas) || 0,
-                forma: c.forma || '',
-                sabores_pan: Array.isArray(c.sabor) ? c.sabor : [c.sabor].filter(Boolean),
-                rellenos: Array.isArray(c.relleno) ? c.relleno : [c.relleno].filter(Boolean),
-                descripcion: c.descripcion || '',
-                precio: parseFloat(c.precio) || 0
+                forma: c.forma || 'Redondo',
+                sabores_pan: c.sabor ? [c.sabor] : [],
+                rellenos: c.relleno ? [c.relleno] : [],
+                descripcion: c.descripcion || ''
             }));
 
-        // 3. Preparar Accesorios
-        const accesoriosList = (orderData.extras || []).map(e => ({
-            name: e.name,
-            price: parseFloat(e.price) || 0,
-            qty: parseInt(e.qty) || 1
-        }));
-
-        // 4. Armar la dirección completa si es envío (AHORA SÍ CON NUM_EXT)
-        let ubicacion_entrega = 'Recolección en tienda';
-        if (orderData.is_delivery) {
-            ubicacion_entrega = `${orderData.calle || ''} ${orderData.num_ext || ''}, ${orderData.colonia || ''}. Ref: ${orderData.referencias || ''}`.trim();
-        }
-
-        // 5. Sanitizador de Tipo de Folio
-        const validTipos = ['Normal', 'Base/Especial', 'Express', 'Mayoreo'];
-        let tipoFolioSeguro = orderData.tipo_folio;
-        if (tipoFolioSeguro === 'Base' || tipoFolioSeguro === 'Especial') {
-            tipoFolioSeguro = 'Base/Especial';
-        } else if (typeof tipoFolioSeguro === 'string') {
-            tipoFolioSeguro = tipoFolioSeguro.charAt(0).toUpperCase() + tipoFolioSeguro.slice(1).toLowerCase();
-        }
-        if (!validTipos.includes(tipoFolioSeguro)) {
-            tipoFolioSeguro = 'Normal';
-        }
+        let hora_limpia = orderData.deliveryTime || '';
+        if (hora_limpia.length > 5) hora_limpia = hora_limpia.substring(0, 5); 
 
         const payload = {
-            // --- CLIENTE ---
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
-            cliente_telefono_extra: orderData.clientPhoneExtra || '', // Agregado
             clientId: orderData.clientId || null,
 
-            // --- LOGÍSTICA (AHORA SÍ MANDA TODO) ---
             fecha_entrega: orderData.deliveryDate,
-            hora_entrega: orderData.deliveryTime,
-            is_delivery: orderData.is_delivery || false,
-            ubicacion_entrega: ubicacion_entrega,
-            calle: orderData.calle || '',
-            num_ext: orderData.num_ext || '',
-            colonia: orderData.colonia || '',
-            referencias: orderData.referencias || '',
-            ubicacion_maps: orderData.ubicacion_maps || '',
-            costo_envio: parseFloat(orderData.costo_envio || 0),
+            hora_entrega: hora_limpia,
+            tipo_folio: orderData.tipo_folio,
+            forma: orderData.shape,
+            numero_personas: orderData.peopleCount,
 
-            // --- PRODUCTO PRINCIPAL ---
-            tipo_folio: tipoFolioSeguro, 
-            forma: orderData.shape || '',
-            numero_personas: parseInt(orderData.peopleCount) || 0,
-            altura_extra: orderData.extraHeight ? 'Si' : 'No', // Agregado el dato del Paso D
-            sabores_pan: Array.isArray(orderData.panes) ? orderData.panes : [orderData.panes].filter(Boolean),
-            rellenos: Array.isArray(orderData.rellenos) ? orderData.rellenos : [orderData.rellenos].filter(Boolean),
+            sabores_pan: orderData.panes,
+            rellenos: orderData.rellenos,
 
-            // --- ARREGLOS AVANZADOS ---
-            detallesPisos: detallesPisos,
+            // 🔥 AHORA SÍ ENVIAMOS LA LLAVE CORRECTA
             complementarios: complementariosList,
-            accesorios: accesoriosList, 
+            accesorios: orderData.extras,
 
-            // --- DISEÑO ---
-            descripcion_diseno: orderData.descripcion_diseno || '',
-            dedicatoria: orderData.dedicatoria || '',
-            imagen_referencia_url: orderData.imagen_referencia_url || '',
+            descripcion_diseno: orderData.descripcion_diseno,
+            dedicatoria: orderData.dedicatoria,
+            imagen_referencia_url: orderData.imagen_referencia_url,
             diseno_metadata: {
-                allImages: orderData.referenceImages || []
+                pisos: (orderData.pisos || []).filter(p => p.personas && parseInt(p.personas) > 0),
+                allImages: orderData.referenceImages
             },
 
-            // --- FINANCIERO ---
-            costo_base: parseFloat(orderData.costo_base || 0),
+            is_delivery: orderData.isDelivery,
+            calle: orderData.calle,
+            colonia: orderData.colonia,
+            referencias: orderData.referencias,
+            costo_envio: shipping,
+
+            costo_base: baseCost,
+            totalValue: total,
             total: total,
             anticipo: advance,
             estatus_pago: (remaining <= 0) ? 'Pagado' : 'Pendiente',
-            estatus_produccion: 'Pendiente'
+            status: 'CONFIRMED'
         };
 
         if (orderData.id) {

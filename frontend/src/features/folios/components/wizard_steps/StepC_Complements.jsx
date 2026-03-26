@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
-import { PlusCircle, Trash2 } from 'lucide-react';
 import catalogApi from '@/features/catalogs/api/catalogs.api';
+
+const DEFAULT_COMPLEMENT = { personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 };
 
 const StepC_Complements = ({ next, prev }) => {
     const { orderData, updateOrder } = useOrder();
     const [flavors, setFlavors] = useState([]);
     const [fillings, setFillings] = useState([]);
+
+    // 🧠 ESTADO LOCAL: Inicia con lo que hay en OrderData o valores por defecto
+    const [localComps, setLocalComps] = useState(() => {
+        const ctxComps = orderData.complements || [];
+        return Array.from({ length: 3 }, (_, i) => ({
+            ...DEFAULT_COMPLEMENT,
+            ...(ctxComps[i] || {})
+        }));
+    });
 
     useEffect(() => {
         const load = async () => {
@@ -20,14 +30,18 @@ const StepC_Complements = ({ next, prev }) => {
         load();
     }, []);
 
-    // Fixed to 3 complements as requested
-    const updateComplement = (index, field, value) => {
-        const current = [...(orderData.complements || [])];
-        // Ensure we have 3 slots
-        const fixedComps = current.length === 3 ? current : Array.from({ length: 3 }, (_, i) => current[i] || { personas: 10, forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 });
-        
-        fixedComps[index][field] = value;
-        updateOrder({ complements: fixedComps });
+    // 🔄 SINCRONIZADOR: Empuja silenciosamente al Contexto cuando el usuario escribe
+    useEffect(() => {
+        updateOrder({ complements: localComps });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localComps]);
+
+    const handleChange = (index, field, value) => {
+        setLocalComps(prev => {
+            const newComps = [...prev];
+            newComps[index] = { ...newComps[index], [field]: value };
+            return newComps;
+        });
     };
 
     return (
@@ -38,8 +52,7 @@ const StepC_Complements = ({ next, prev }) => {
             </h2>
             <p className="text-gray-500 text-sm">El bot puede llenar hasta 3 pasteles complementarios automáticamente. Los vacíos se ignorarán.</p>
 
-            {/* Ensure 3 slots are shown */}
-            {(orderData.complements?.length === 3 ? orderData.complements : Array.from({ length: 3 }, (_, i) => (orderData.complements && orderData.complements[i]) || { personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })).map((comp, idx) => (
+            {localComps.map((comp, idx) => (
                 <div key={idx} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm relative animate-in fade-in slide-in-from-bottom-2">
                     <span className="absolute -top-2 -left-2 bg-pink-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                         COMPLEMENTO {idx + 1}
@@ -51,8 +64,8 @@ const StepC_Complements = ({ next, prev }) => {
                             <input
                                 type="number"
                                 value={comp.personas}
-                                onChange={(e) => updateComplement(idx, 'personas', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-pink-500 text-sm"
+                                onChange={(e) => handleChange(idx, 'personas', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-pink-500 text-sm bg-gray-50 focus:bg-white"
                                 placeholder="0"
                             />
                         </div>
@@ -60,8 +73,8 @@ const StepC_Complements = ({ next, prev }) => {
                             <label className="text-xs font-bold text-gray-500 uppercase">Forma</label>
                             <select
                                 value={comp.forma}
-                                onChange={(e) => updateComplement(idx, 'forma', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
+                                onChange={(e) => handleChange(idx, 'forma', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm bg-gray-50 focus:bg-white"
                             >
                                 <option>Redondo</option>
                                 <option>Cuadrado</option>
@@ -73,8 +86,8 @@ const StepC_Complements = ({ next, prev }) => {
                             <label className="text-xs font-bold text-gray-500 uppercase">Sabor</label>
                             <select
                                 value={comp.sabor}
-                                onChange={(e) => updateComplement(idx, 'sabor', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
+                                onChange={(e) => handleChange(idx, 'sabor', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm bg-gray-50 focus:bg-white"
                             >
                                 <option value="">Original / Vacio</option>
                                 {flavors.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
@@ -84,8 +97,8 @@ const StepC_Complements = ({ next, prev }) => {
                             <label className="text-xs font-bold text-gray-500 uppercase">Relleno</label>
                             <select
                                 value={comp.relleno}
-                                onChange={(e) => updateComplement(idx, 'relleno', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
+                                onChange={(e) => handleChange(idx, 'relleno', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm bg-gray-50 focus:bg-white"
                             >
                                 <option value="">Original / Vacio</option>
                                 {fillings.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
@@ -99,8 +112,8 @@ const StepC_Complements = ({ next, prev }) => {
                             <input
                                 type="text"
                                 value={comp.descripcion}
-                                onChange={(e) => updateComplement(idx, 'descripcion', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                                onChange={(e) => handleChange(idx, 'descripcion', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white"
                                 placeholder="Ej. Encima del principal, mismo color..."
                             />
                         </div>
@@ -109,18 +122,8 @@ const StepC_Complements = ({ next, prev }) => {
             ))}
 
             <div className="flex justify-between pt-6">
-                <button
-                    onClick={prev}
-                    className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition"
-                >
-                    Atrás
-                </button>
-                <button
-                    onClick={next}
-                    className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 transition shadow-lg shadow-pink-200"
-                >
-                    Siguiente
-                </button>
+                <button onClick={prev} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-xl transition">Atrás</button>
+                <button onClick={next} className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 transition shadow-lg shadow-pink-200">Siguiente</button>
             </div>
         </div>
     );
