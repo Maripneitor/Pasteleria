@@ -158,17 +158,25 @@
             <div class="section-title">Desglose por Pisos</div>
             <table>
                 <tr>
-                    <th style="width: 15%;">Nivel</th>
-                    <th style="width: 15%;">Personas</th>
-                    <th style="width: 35%;">Pan / Sabor</th>
-                    <th style="width: 35%;">Relleno</th>
+                    <th style="width: 15%; text-align: center;">Nivel</th>
+                    <th style="width: 15%; text-align: center;">Pers.</th>
+                    
+                    <th style="width: 20%;">Pan / Sabor</th>
+                    
+                    <th style="width: 20%;">Relleno</th>
+                    
+                    <th style="width: 30%;">Notas</th>
                 </tr>
                 <% safePisos.forEach((tier, idx) => { %>
                     <tr>
-                        <td><strong>Piso <%= tier.piso || idx + 1 %></strong></td>
-                        <td><%= tier.persons || tier.personas || tier.numero_personas || '-' %> p.</td>
+                        <td style="text-align: center;"><strong>Piso <%= tier.piso || idx + 1 %></strong></td>
+                        <td style="text-align: center;"><%= tier.persons || tier.personas || tier.numero_personas || '-' %></td>
+                        
                         <td><%= Array.isArray(tier.panes || tier.sabores_pan) ? (tier.panes || tier.sabores_pan).join(', ') : (tier.panes || tier.sabores_pan || 'N/A') %></td>
+                        
                         <td><%= Array.isArray(tier.rellenos) ? tier.rellenos.join(', ') : (tier.rellenos || 'N/A') %></td>
+                        
+                        <td style="font-size: 0.9em; color: #555;"><%= tier.notas || '-' %></td>
                     </tr>
                 <% }); %>
             </table>

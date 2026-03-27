@@ -68,9 +68,10 @@ const StepF_Payment = ({ prev }) => {
         // Formato estricto para que pase el Zod Schema
         const detallesPisosZod = pisosValidos.map((p, idx) => ({
             piso: idx + 1,
-            personas: sanitizeNumber(p.personas), // 🔥 FIX: ¡Inyectamos las personas de vuelta!
+            personas: sanitizeNumber(p.personas),
             sabores_pan: Array.isArray(p.panes) ? p.panes : (p.panes ? [p.panes] : []),
-            rellenos: Array.isArray(p.rellenos) ? p.rellenos : (p.rellenos ? [p.rellenos] : [])
+            rellenos: Array.isArray(p.rellenos) ? p.rellenos : (p.rellenos ? [p.rellenos] : []),
+            notas: p.notas || '' // 🔥 FIX: ¡Empaquetamos las notas!
         }));
 
         // --- 2. PROCESAMOS COMPLEMENTARIOS ---

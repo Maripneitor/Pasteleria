@@ -78,9 +78,10 @@ const createFolioSchema = z.object({
     detallesPisos: z.array(
         z.object({
             piso: z.number().or(z.string()),
-            personas: z.number().or(z.string()).optional(), // 🔥 FIX: Zod ahora permitirá las personas
+            personas: z.number().or(z.string()).optional(),
             sabores_pan: z.array(z.string()).optional(),
-            rellenos: z.array(z.string()).optional()
+            rellenos: z.array(z.string()).optional(),
+            notas: z.string().optional() // 🔥 FIX: Zod ahora permite las notas
         }).passthrough()
     ).optional(),
 
@@ -124,6 +125,9 @@ const createFolioSchema = z.object({
         .optional(),
 
     descripcion_diseno: z.string().trim().max(500).optional(),
+
+    // 🔥 FIX DE ORO: Evita que Zod mutile las notas y las imágenes de la BD al actualizar
+    diseno_metadata: z.any().optional(),
 
     // 🔥 AQUI ACTUALIZAMOS EL ENUM (Agregamos 'Base/Especial')
     tipo_folio: z.enum(['Normal', 'Base/Especial', 'Express', 'Mayoreo']).default('Normal'),
