@@ -343,6 +343,7 @@ class FolioService {
             descripcion_diseno: f.descripcion_diseno || 'Sin descripción detallada',
             cliente_nombre: f.cliente_nombre,
             cliente_telefono: f.cliente_telefono,
+            cliente_telefono_extra: f.cliente_telefono_extra,
             total: f.total,
             anticipo: f.anticipo,
             balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
