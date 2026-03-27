@@ -68,6 +68,7 @@ const StepF_Payment = ({ prev }) => {
         // Formato estricto para que pase el Zod Schema
         const detallesPisosZod = pisosValidos.map((p, idx) => ({
             piso: idx + 1,
+            personas: sanitizeNumber(p.personas), // 🔥 FIX: ¡Inyectamos las personas de vuelta!
             sabores_pan: Array.isArray(p.panes) ? p.panes : (p.panes ? [p.panes] : []),
             rellenos: Array.isArray(p.rellenos) ? p.rellenos : (p.rellenos ? [p.rellenos] : [])
         }));
@@ -81,7 +82,11 @@ const StepF_Payment = ({ prev }) => {
             forma: c.forma || 'Redondo',
             sabores_pan: c.sabor ? [c.sabor] : [],
             rellenos: c.relleno ? [c.relleno] : [],
-            descripcion: c.descripcion || ''
+            descripcion: c.descripcion || '',
+            // 🔥 FIX: Inyectamos todas las variantes posibles para que Zod no lo pierda
+            sabor: c.sabor || '',
+            sabor_pan: c.sabor || '',
+            relleno: c.relleno || ''
         }));
 
         // Formato EXACTO que lee tu Backend (folio.service.js) para insertarlo en MySQL
@@ -89,7 +94,10 @@ const StepF_Payment = ({ prev }) => {
             personas: sanitizeNumber(c.personas),
             forma: c.forma || 'Redondo',
             sabor: c.sabor || '',
+            sabor_pan: c.sabor || '', // 🔥 FIX DE ORO: MySQL exige esta columna exacta
+            sabores_pan: c.sabor ? [c.sabor] : [], // Por si el backend usa el array
             relleno: c.relleno || '',
+            rellenos: c.relleno ? [c.relleno] : [],
             precio: parseFloat(c.precio) || 0,
             descripcion: c.descripcion || ''
         }));

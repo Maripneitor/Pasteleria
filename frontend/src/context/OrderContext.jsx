@@ -92,7 +92,8 @@ export const OrderProvider = ({ children }) => {
         const parsedComplements = rawComps.map(c => ({
             personas: c.numero_personas || c.personas || '',
             forma: c.forma || 'Redondo',
-            sabor: (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : c.sabor) || '',
+            // 🔥 FIX FINAL: Añadimos sabor_pan a la lista de búsqueda en la rehidratación
+            sabor: (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : (c.sabor || c.sabor_pan)) || '',
             relleno: (Array.isArray(c.rellenos) ? c.rellenos[0] : c.relleno) || '',
             descripcion: c.descripcion || '',
             precio: c.precio || 0

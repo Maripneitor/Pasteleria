@@ -11,13 +11,27 @@ const StepC_Complements = ({ next, prev }) => {
     const [sizes, setSizes] = useState([]);   
     const [loading, setLoading] = useState(true);
 
-    // 🔥 ¡RECUPERADO! ESTADO LOCAL BLINDADO PARA EVITAR FUGA DE DATOS
+    // 🔥 ¡RECUPERADO Y BLINDADO! ESTADO LOCAL CON MAPEO DE EDICIÓN
     const [localComps, setLocalComps] = useState(() => {
-        const ctxComps = orderData.complements || [];
-        return Array.from({ length: 3 }, (_, i) => ({
-            personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0,
-            ...(ctxComps[i] || {})
-        }));
+        // En edición, el backend puede mandar "complements", "complementosList" o "complementarios"
+        const ctxComps = orderData.complements || orderData.complementosList || orderData.complementarios || [];
+        
+        return Array.from({ length: 3 }, (_, i) => {
+            const c = ctxComps[i] || {};
+            
+            // 🚀 INTERCEPTOR: Traduce los nombres de la Base de Datos a los nombres del Formulario
+            const saborReal = c.sabor || c.sabor_pan || (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : '') || '';
+            const rellenoReal = c.relleno || (Array.isArray(c.rellenos) ? c.rellenos[0] : '') || '';
+
+            return {
+                personas: c.personas || c.numero_personas || '',
+                forma: c.forma || 'Redondo',
+                sabor: saborReal,     // 🔥 Aquí inyectamos el valor correcto
+                relleno: rellenoReal, 
+                descripcion: c.descripcion || '',
+                precio: c.precio || 0
+            };
+        });
     });
 
     useEffect(() => {

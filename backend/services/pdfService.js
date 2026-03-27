@@ -113,7 +113,6 @@ async function toOrderDTO(order, branding) {
     const qrUrl = await QRCode.toDataURL(`${baseUrl}/folios/${plain.id}`, { margin: 2, scale: 4 });
     const mapsLink = plain.ubicacion_maps && plain.ubicacion_maps.startsWith('http') ? plain.ubicacion_maps : null;
 
-    // Helper interno ultra seguro para parsear
     const parseList = (val) => {
         if (!val) return [];
         if (typeof val === 'string') {
@@ -121,6 +120,20 @@ async function toOrderDTO(order, branding) {
         }
         if (Array.isArray(val)) return val;
         return [];
+    };
+
+    // 🔥 FIX: Helper blindado para extraer valores vengan como vengan
+    const extractValue = (val) => {
+        if (!val) return 'N/A';
+        if (Array.isArray(val)) return val.length > 0 ? val.join(', ') : 'N/A';
+        if (typeof val === 'string' && val.trim() !== '') {
+            try {
+                const parsed = JSON.parse(val);
+                if (Array.isArray(parsed)) return parsed.length > 0 ? parsed.join(', ') : 'N/A';
+            } catch(e) {}
+            return val;
+        }
+        return 'N/A';
     };
 
     const additionals = [
@@ -133,8 +146,8 @@ async function toOrderDTO(order, branding) {
     const complementosList = complementosJSON.map(c => ({
         persons: c.numero_personas || c.personas || 'N/A',
         shape: c.forma || 'N/A',
-        flavor: Array.isArray(c.sabores_pan) ? c.sabores_pan.join(', ') : (c.sabores_pan || c.sabor_pan || c.sabor || 'N/A'),
-        filling: Array.isArray(c.rellenos) ? c.rellenos.join(', ') : (c.rellenos || c.relleno || 'N/A'),
+        flavor: extractValue(c.sabores_pan || c.sabor_pan || c.sabor || c.flavor), // 🔥 Extrae perfecto
+        filling: extractValue(c.rellenos || c.relleno || c.filling),               // 🔥 Extrae perfecto
         description: c.descripcion || 'Sin descripción',
         price: c.precio || 0
     }));
@@ -149,7 +162,6 @@ async function toOrderDTO(order, branding) {
         notas: t.notas || ''
     }));
 
-    // 🔥 FIX 1: Leer el array nuevo del Wizard (allImages) para que salgan en el PDF
     const safeImages = (plain.diseno_metadata?.allImages && plain.diseno_metadata.allImages.length > 0) 
         ? plain.diseno_metadata.allImages 
         : (plain.imagen_referencia_url ? [plain.imagen_referencia_url] : []);

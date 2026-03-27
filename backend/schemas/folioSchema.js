@@ -78,9 +78,10 @@ const createFolioSchema = z.object({
     detallesPisos: z.array(
         z.object({
             piso: z.number().or(z.string()),
+            personas: z.number().or(z.string()).optional(), // 🔥 FIX: Zod ahora permitirá las personas
             sabores_pan: z.array(z.string()).optional(),
             rellenos: z.array(z.string()).optional()
-        })
+        }).passthrough()
     ).optional(),
 
     complementarios: z.array(
@@ -89,8 +90,28 @@ const createFolioSchema = z.object({
             forma: z.string().optional(),
             sabores_pan: z.array(z.string()).optional(),
             rellenos: z.array(z.string()).optional(),
-            descripcion: z.string().optional()
-        })
+            descripcion: z.string().optional(),
+            // 🔥 FIX: Declaramos los textos explícitamente para que Zod NO los borre
+            sabor: z.string().optional(),
+            sabor_pan: z.string().optional(),
+            relleno: z.string().optional(),
+            precio: z.number().or(z.string()).optional()
+        }).passthrough()
+    ).optional(),
+
+    // 🔥 FIX: Registramos la lista exacta que manda tu Frontend en StepF_Payment
+    complementsList: z.array(
+        z.object({
+            personas: z.number().or(z.string()).optional(),
+            forma: z.string().optional(),
+            sabor: z.string().optional(),
+            sabor_pan: z.string().optional(),
+            sabores_pan: z.array(z.string()).optional(),
+            relleno: z.string().optional(),
+            rellenos: z.array(z.string()).optional(),
+            descripcion: z.string().optional(),
+            precio: z.number().or(z.string()).optional()
+        }).passthrough()
     ).optional(),
     // ----------------------------------------
 

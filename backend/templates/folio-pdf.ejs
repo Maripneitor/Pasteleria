@@ -25,7 +25,14 @@
         .page { position: relative; z-index: 1; }
         .page-break { page-break-before: always; padding-top: 20px; }
         
-        .keep-together { page-break-inside: avoid; margin-top: 10px; }
+        .keep-together { 
+            page-break-inside: avoid !important; 
+            break-inside: avoid !important;
+            -webkit-column-break-inside: avoid;
+            margin-top: 20px; 
+            display: block; 
+            width: 100%;
+        }
         .image-container { text-align: center; margin-top: 15px; page-break-inside: avoid; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
         .ref-image { max-width: 100%; max-height: 350px; object-fit: contain; border-radius: 4px; }
 
@@ -49,10 +56,8 @@
         const safeImages = folio.imageUrls || (folio.diseno_metadata && folio.diseno_metadata.allImages) || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : (folio.imagenes_referencia || []));
         const hasImages = safeImages.length > 0;
 
-        // 🧠 LÓGICA DE SALTO DE PÁGINA
-        // Si tenemos Pisos Y Complementos Y Imágenes, las fotos se van a la Hoja 3.
-        const needsPage3 = hasTiers && hasComps && hasImages;
-        const needsPage2 = hasTiers || hasComps || (hasImages && !needsPage3);
+        // 🔥 FIX: Lógica dinámica delegada a CSS. Agrupamos todo en un único "Anexo".
+        const needsAnexo = hasTiers || hasComps || hasImages;
 
         const cNombre = (folio.client && folio.client.name) ? folio.client.name : folio.cliente_nombre;
         const cTelefono = (folio.client && folio.client.phone) ? folio.client.phone : folio.cliente_telefono;
@@ -142,7 +147,7 @@
         </div>
     </div>
 
-    <% if (needsPage2) { %>
+    <% if (needsAnexo) { %>
     <div class="page page-break">
         <div class="header-mini">
             <span>Anexo de Producción - Folio #<%= folio.folioNumber || folio.folio_numero %></span>
@@ -174,28 +179,29 @@
             <table>
                 <tr>
                     <th style="width: 20%;">Forma/Tipo</th>
-                    <th style="width: 30%;">Sabor</th>
-                    <th style="width: 50%;">Descripción Extra</th>
+                    <th style="width: 25%;">Sabor</th>
+                    <th style="width: 25%;">Relleno</th>
+                    <th style="width: 30%;">Descripción Extra</th>
                 </tr>
-                <% safeComps.forEach((comp) => { %>
+                <% safeComps.forEach((comp) => { 
+                    // 🚀 Súper Extractor Visual: Atrapa el valor venga como venga (DB cruda, Frontend o DTO)
+                    const fSabor = comp.flavor || comp.sabor_pan || comp.sabor || (Array.isArray(comp.sabores_pan) ? comp.sabores_pan.join(', ') : comp.sabores_pan) || 'Original / Vacío';
+                    const fRelleno = comp.filling || comp.relleno || (Array.isArray(comp.rellenos) ? comp.rellenos.join(', ') : comp.rellenos) || 'Original / Vacío';
+                %>
                     <tr>
                         <td><%= comp.shape || comp.forma || 'Extra' %></td>
-                        <td><%= Array.isArray(comp.flavor || comp.sabores_pan) ? (comp.flavor || comp.sabores_pan).join(', ') : (comp.flavor || comp.sabores_pan || comp.sabor || 'N/A') %></td>
-                        <td>
-                            <%= comp.description || comp.descripcion || '-' %>
-                            <% if (comp.filling || (comp.rellenos && comp.rellenos.length > 0)) { %>
-                                <br><small><strong>Relleno:</strong> <%= Array.isArray(comp.filling || comp.rellenos) ? (comp.filling || comp.rellenos).join(', ') : (comp.filling || comp.rellenos || comp.relleno) %></small>
-                            <% } %>
-                        </td>
+                        <td><%= fSabor %></td>
+                        <td><%= fRelleno %></td>
+                        <td><%= comp.description || comp.descripcion || '-' %></td>
                     </tr>
                 <% }); %>
             </table>
         <% } %>
 
-        <% if (hasImages && !needsPage3) { %>
+        <% if (hasImages) { %>
             <div class="keep-together">
                 <div class="section-title">Referencias Visuales</div>
-                <div style="text-align: center; margin-top: 15px; font-size: 0;">
+                <div style="text-align: center; margin-top: 15px; font-size: 0; display: block;">
                     <% safeImages.forEach((imgUrl) => { %>
                         <div class="image-container" style="display: inline-block; width: 46%; margin: 1%; vertical-align: top; box-sizing: border-box; font-size: 13px;">
                             <img src="<%= imgUrl %>" class="ref-image" alt="Referencia de diseño" />
@@ -204,24 +210,6 @@
                 </div>
             </div>
         <% } %>
-    </div>
-    <% } %>
-
-    <% if (needsPage3) { %>
-    <div class="page page-break">
-        <div class="header-mini">
-            <span>Anexo Visual - Folio #<%= folio.folioNumber || folio.folio_numero %></span>
-            <span><%= cNombre %></span>
-        </div>
-
-        <div class="section-title">Referencias Visuales</div>
-        <div style="text-align: center; margin-top: 15px; font-size: 0;">
-            <% safeImages.forEach((imgUrl) => { %>
-                <div class="image-container" style="display: inline-block; width: 46%; margin: 1%; vertical-align: top; box-sizing: border-box; font-size: 13px;">
-                    <img src="<%= imgUrl %>" class="ref-image" alt="Referencia de diseño" />
-                </div>
-            <% }); %>
-        </div>
     </div>
     <% } %>
 

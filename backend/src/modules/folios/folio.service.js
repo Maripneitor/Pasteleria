@@ -72,7 +72,7 @@ class FolioService {
                 ['fecha_entrega', 'ASC'], 
                 ['hora_entrega', 'ASC']
             ],
-            limit: 10 // Ojo: si quieres ver más de 10 pedidos a la vez, puedes aumentar este número.
+            limit: 100 // Ojo: si quieres ver más de 10 pedidos a la vez, puedes aumentar este número.
         });
     }
 
@@ -197,21 +197,30 @@ class FolioService {
         const before = row.toJSON();
         await row.update(data, { transaction: t });
 
-        // 🔥 FIX 2: Guardar los cambios de Complementos al Editar (Bug silencioso corregido)
-        if (Array.isArray(data.complementsList)) {
+        // 🔥 FIX 2: Guardar los cambios de Complementos al Editar (A prueba de balas)
+        // Intentamos leer de complementsList, y si Zod lo borró, caemos en complementarios
+        const compsData = data.complementsList || data.complementarios;
+        
+        if (Array.isArray(compsData)) {
             // Borramos los viejos y metemos los nuevos para evitar duplicados
             await FolioComplemento.destroy({ where: { folioId: id }, transaction: t });
             
-            if (data.complementsList.length > 0) {
-                const compsToCreate = data.complementsList.map(c => ({
-                    folioId: id,
-                    personas: safeNum(c.personas),
-                    forma: c.forma,
-                    sabor: c.sabor,
-                    relleno: c.relleno,
-                    precio: safeNum(c.precio),
-                    descripcion: c.descripcion
-                }));
+            if (compsData.length > 0) {
+                const compsToCreate = compsData.map(c => {
+                    // 🚀 SÚPER EXTRACTOR: Atrapa el valor venga como string o como array
+                    const saborReal = c.sabor || c.sabor_pan || (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : '') || '';
+                    const rellenoReal = c.relleno || (Array.isArray(c.rellenos) ? c.rellenos[0] : '') || '';
+
+                    return {
+                        folioId: id,
+                        personas: safeNum(c.personas || c.numero_personas),
+                        forma: c.forma,
+                        sabor_pan: saborReal, // ✅ Mapeado directo a la columna de MySQL
+                        relleno: rellenoReal,
+                        precio: safeNum(c.precio),
+                        descripcion: c.descripcion
+                    };
+                });
                 await FolioComplemento.bulkCreate(compsToCreate, { transaction: t });
             }
         }
