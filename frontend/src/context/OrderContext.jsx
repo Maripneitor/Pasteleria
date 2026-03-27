@@ -55,6 +55,7 @@ export const OrderProvider = ({ children }) => {
         setOrderData({
             clientName: '',
             clientPhone: '',
+            clientPhoneExtra: '', // 🔥 FIX 1: Se nos había olvidado limpiarlo al reiniciar
             products: [],
             complements: Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })),
             extras: [],
@@ -67,7 +68,7 @@ export const OrderProvider = ({ children }) => {
             colonia: '',
             referencias: '',
             ubicacion_maps: '',
-            shippingCost: 0,
+            costo_envio: 0,
             total: 0,
             advance: 0,
             applyCommission: false,
@@ -81,8 +82,8 @@ export const OrderProvider = ({ children }) => {
     };
 
     const loadOrder = (folio) => {
-        // 🛡️ PARCHE MYSQL: Convierte strings a JSON si es necesario
-        let rawComps = folio.complementarios || folio.complementos || [];
+        // 🛡️ PARCHE MYSQL MEJORADO: Agregamos "folio.complementosList" que es como lo manda tu backend
+        let rawComps = folio.complementosList || folio.complementarios || folio.complementos || [];
         if (typeof rawComps === 'string') {
             try { rawComps = JSON.parse(rawComps); } catch(e) { rawComps = []; }
         }
@@ -101,8 +102,18 @@ export const OrderProvider = ({ children }) => {
             id: folio.id, 
             clientName: folio.cliente_nombre || '',
             clientPhone: folio.cliente_telefono || '',
+            
+            // 🔥 FIX 2: Cargar el teléfono extra de la Base de Datos
+            clientPhoneExtra: folio.cliente_telefono_extra || '',
+
             clientId: folio.clientId,
-            selectedClient: folio.clientId ? { id: folio.clientId, name: folio.cliente_nombre, phone: folio.cliente_telefono } : null,
+            // 🔥 FIX 3: Guardar el teléfono 2 en el selectedClient por si lo necesitas
+            selectedClient: folio.clientId ? { 
+                id: folio.clientId, 
+                name: folio.cliente_nombre, 
+                phone: folio.cliente_telefono,
+                phone2: folio.cliente_telefono_extra
+            } : null,
             
             tipo_folio: folio.tipo_folio || 'Normal',
             peopleCount: folio.numero_personas || '',

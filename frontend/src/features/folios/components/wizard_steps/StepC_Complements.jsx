@@ -1,53 +1,62 @@
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
+import { PlusCircle, Trash2, Loader2 } from 'lucide-react';
 import catalogApi from '@/features/catalogs/api/catalogs.api';
-
-// 🔥 Cambiamos el default a vacío para forzar la selección dinámica de la forma
-const DEFAULT_COMPLEMENT = { personas: '', forma: '', sabor: '', relleno: '', descripcion: '', precio: 0 };
 
 const StepC_Complements = ({ next, prev }) => {
     const { orderData, updateOrder } = useOrder();
     const [flavors, setFlavors] = useState([]);
     const [fillings, setFillings] = useState([]);
-    const [shapes, setShapes] = useState([]); // 🔥 ESTADO PARA LAS FORMAS
+    const [shapes, setShapes] = useState([]); 
+    const [sizes, setSizes] = useState([]);   
+    const [loading, setLoading] = useState(true);
 
-    // 🧠 ESTADO LOCAL: Inicia con lo que hay en OrderData o valores por defecto
+    // 🔥 ¡RECUPERADO! ESTADO LOCAL BLINDADO PARA EVITAR FUGA DE DATOS
     const [localComps, setLocalComps] = useState(() => {
         const ctxComps = orderData.complements || [];
         return Array.from({ length: 3 }, (_, i) => ({
-            ...DEFAULT_COMPLEMENT,
+            personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0,
             ...(ctxComps[i] || {})
         }));
     });
 
     useEffect(() => {
         const load = async () => {
-            // 🔥 AHORA TRAEMOS LAS FORMAS DESDE LA BD
-            const [f, c, s] = await Promise.all([
-                catalogApi.getFlavors(false),
-                catalogApi.getFillings(false),
-                catalogApi.getShapes('COMPLEMENTARY', false) // Usa 'Complemento' o ajústalo si tu backend requiere otro tipo
-            ]);
-            setFlavors(f);
-            setFillings(c);
-            setShapes(s);
+            try {
+                const [f, c, sh, sz] = await Promise.all([
+                    catalogApi.getFlavors(false).catch(() => []),
+                    catalogApi.getFillings(false).catch(() => []),
+                    catalogApi.getShapes('COMPLEMENTARY', false).catch(() => []),
+                    catalogApi.getSizes('COMPLEMENTARY', false).catch(() => [])
+                ]);
+                setFlavors(f);
+                setFillings(c);
+                setShapes(sh);
+                setSizes(sz);
+            } catch (e) {
+                console.error("Error cargando catálogos en StepC:", e);
+            } finally {
+                setLoading(false);
+            }
         };
         load();
     }, []);
 
-    // 🔄 SINCRONIZADOR: Empuja silenciosamente al Contexto cuando el usuario escribe
+    // 🔄 ¡RECUPERADO! SINCRONIZADOR SILENCIOSO AL CONTEXTO
     useEffect(() => {
         updateOrder({ complements: localComps });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [localComps]);
 
-    const handleChange = (index, field, value) => {
+    const updateComplement = (index, field, value) => {
         setLocalComps(prev => {
             const newComps = [...prev];
             newComps[index] = { ...newComps[index], [field]: value };
             return newComps;
         });
     };
+
+    if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin text-pink-500 mx-auto" /></div>;
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
@@ -66,32 +75,40 @@ const StepC_Complements = ({ next, prev }) => {
                     <div className="grid md:grid-cols-4 gap-4 mb-3">
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase">Personas</label>
-                            <input
-                                type="number"
-                                value={comp.personas}
-                                onChange={(e) => handleChange(idx, 'personas', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-pink-500 text-sm bg-gray-50 focus:bg-white"
-                                placeholder="0"
-                            />
+                            <select
+                                value={comp.personas || ''}
+                                onChange={(e) => updateComplement(idx, 'personas', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-pink-500 outline-none"
+                            >
+                                <option value="">Seleccione...</option>
+                                {sizes.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                            </select>
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase">Forma</label>
-                            {/* 🔥 SELECT DINÁMICO DESDE LA BD */}
                             <select
-                                value={comp.forma}
-                                onChange={(e) => handleChange(idx, 'forma', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm bg-gray-50 focus:bg-white"
+                                value={comp.forma || ''}
+                                onChange={(e) => updateComplement(idx, 'forma', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
                             >
-                                <option value="">Seleccione forma...</option>
-                                {shapes.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                                {shapes.length > 0 ? (
+                                    shapes.map(s => <option key={s.id} value={s.name}>{s.name}</option>)
+                                ) : (
+                                    <>
+                                        <option value="Redondo">Redondo</option>
+                                        <option value="Cuadrado">Cuadrado</option>
+                                        <option value="Rectangular">Rectangular</option>
+                                        <option value="Corazon">Corazón</option>
+                                    </>
+                                )}
                             </select>
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase">Sabor</label>
                             <select
-                                value={comp.sabor}
-                                onChange={(e) => handleChange(idx, 'sabor', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm bg-gray-50 focus:bg-white"
+                                value={comp.sabor || ''}
+                                onChange={(e) => updateComplement(idx, 'sabor', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
                             >
                                 <option value="">Original / Vacio</option>
                                 {flavors.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
@@ -100,9 +117,9 @@ const StepC_Complements = ({ next, prev }) => {
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase">Relleno</label>
                             <select
-                                value={comp.relleno}
-                                onChange={(e) => handleChange(idx, 'relleno', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm bg-gray-50 focus:bg-white"
+                                value={comp.relleno || ''}
+                                onChange={(e) => updateComplement(idx, 'relleno', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
                             >
                                 <option value="">Original / Vacio</option>
                                 {fillings.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}
@@ -115,9 +132,9 @@ const StepC_Complements = ({ next, prev }) => {
                             <label className="text-xs font-bold text-gray-500 uppercase">Descripción / Detalles</label>
                             <input
                                 type="text"
-                                value={comp.descripcion}
-                                onChange={(e) => handleChange(idx, 'descripcion', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:bg-white"
+                                value={comp.descripcion || ''}
+                                onChange={(e) => updateComplement(idx, 'descripcion', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 outline-none"
                                 placeholder="Ej. Encima del principal, mismo color..."
                             />
                         </div>

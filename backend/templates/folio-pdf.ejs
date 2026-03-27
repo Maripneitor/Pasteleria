@@ -112,7 +112,13 @@
         <table>
             <tr>
                 <th>Nombre</th><td><%= folio.cliente_nombre %></td>
-                <th>Teléfono</th><td><%= folio.cliente_telefono %></td>
+                <th>Teléfono</th>
+                <td>
+                    <%= folio.cliente_telefono %>
+                    <% if (folio.cliente_telefono_extra) { %>
+                        <br><span style="color: #666; font-size: 11px; font-weight: bold;">Alt:</span> <span style="color: #666; font-size: 11px;"><%= folio.cliente_telefono_extra %></span>
+                    <% } %>
+                </td>
             </tr>
             <tr>
                 <th>Método de Entrega</th>

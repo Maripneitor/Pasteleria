@@ -147,6 +147,7 @@ class FolioService {
             tenantId,
             cliente_nombre: String(folioData.cliente_nombre || '').trim(),
             cliente_telefono: String(folioData.cliente_telefono || '').trim(),
+            cliente_telefono_extra: folioData.cliente_telefono_extra ? String(folioData.cliente_telefono_extra).trim() : null,
             total: finalTotal,
             estatus_pago,
             sabores_pan: resolvedSabores,
@@ -188,25 +189,30 @@ class FolioService {
         const row = await this.getFolioById(id, tenantFilter, false);
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
 
+        // 🔥 FIX 1: Forzar la asignación del teléfono extra (Obliga a Sequelize a guardarlo)
+        if (data.cliente_telefono_extra !== undefined) {
+            row.cliente_telefono_extra = data.cliente_telefono_extra ? String(data.cliente_telefono_extra).trim() : null;
+        }
+
         const before = row.toJSON();
-        
         await row.update(data, { transaction: t });
 
-        const complementsList = Array.isArray(data.complementsList) ? data.complementsList : [];
-        if (complementsList.length > 0 || before.complementos?.length > 0) {
+        // 🔥 FIX 2: Guardar los cambios de Complementos al Editar (Bug silencioso corregido)
+        if (Array.isArray(data.complementsList)) {
+            // Borramos los viejos y metemos los nuevos para evitar duplicados
             await FolioComplemento.destroy({ where: { folioId: id }, transaction: t });
             
-            if (complementsList.length > 0) {
-                const complementsToCreate = complementsList.map(c => ({
+            if (data.complementsList.length > 0) {
+                const compsToCreate = data.complementsList.map(c => ({
                     folioId: id,
                     personas: safeNum(c.personas),
                     forma: c.forma,
-                    sabor_pan: c.sabor || c.sabor_pan,
+                    sabor: c.sabor,
                     relleno: c.relleno,
                     precio: safeNum(c.precio),
                     descripcion: c.descripcion
                 }));
-                await FolioComplemento.bulkCreate(complementsToCreate, { transaction: t });
+                await FolioComplemento.bulkCreate(compsToCreate, { transaction: t });
             }
         }
 

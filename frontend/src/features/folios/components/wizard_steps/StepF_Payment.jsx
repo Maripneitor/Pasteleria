@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useOrder } from '@/context/OrderContext';
 import { Calculator, CheckCircle, DollarSign, Loader2, X, Save, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -12,7 +12,6 @@ const StepF_Payment = ({ prev }) => {
     const queryClient = useQueryClient();
     const [addCommission, setAddCommission] = useState(false);
 
-    // Calculate Totals automatically
     const baseCost = parseFloat(orderData.costo_base || 0);
     const shipping = parseFloat(orderData.costo_envio || 0);
     const extrasTotal = (orderData.extras || []).reduce((acc, curr) => acc + (curr.qty * curr.price), 0);
@@ -44,10 +43,8 @@ const StepF_Payment = ({ prev }) => {
         onSuccess: (result) => {
             const isUpdate = !!orderData.id;
             toast.success(isUpdate ? '¡Pedido actualizado!' : '¡Pedido creado!');
-            
             queryClient.invalidateQueries({ queryKey: ['folios'] });
             if (orderData.id) queryClient.invalidateQueries({ queryKey: ['folios', orderData.id] });
-            
             navigate(`/folios/${result?.id || orderData.id}`);
         },
         onError: (error) => {
@@ -57,55 +54,86 @@ const StepF_Payment = ({ prev }) => {
         }
     });
 
-    const handleFinish = () => {
-        // 🔒 Preparamos los datos estrictamente para Zod y MySQL
-        const complementariosList = (orderData.complements || [])
-            .filter(c => c.sabor || (c.personas && parseInt(c.personas) > 0))
-            .map(c => ({
-                numero_personas: parseInt(c.personas) || 0,
-                forma: c.forma || 'Redondo',
-                sabores_pan: c.sabor ? [c.sabor] : [],
-                rellenos: c.relleno ? [c.relleno] : [],
-                descripcion: c.descripcion || ''
-            }));
+    // 🔥 Súper Sanitizador: Convierte "10 Personas" en el número 10.
+    const sanitizeNumber = (val) => {
+        if (!val) return 0;
+        const num = parseInt(val.toString().replace(/\D/g, ''), 10);
+        return isNaN(num) ? 0 : num;
+    };
 
+    const handleFinish = () => {
+        // --- 1. PROCESAMOS PISOS ---
+        const pisosValidos = (orderData.pisos || []).filter(p => p.personas && sanitizeNumber(p.personas) > 0);
+        
+        // Formato estricto para que pase el Zod Schema
+        const detallesPisosZod = pisosValidos.map((p, idx) => ({
+            piso: idx + 1,
+            sabores_pan: Array.isArray(p.panes) ? p.panes : (p.panes ? [p.panes] : []),
+            rellenos: Array.isArray(p.rellenos) ? p.rellenos : (p.rellenos ? [p.rellenos] : [])
+        }));
+
+        // --- 2. PROCESAMOS COMPLEMENTARIOS ---
+        const rawComplements = (orderData.complements || []).filter(c => c.sabor || c.relleno || (c.personas && sanitizeNumber(c.personas) > 0));
+
+        // Formato para calmar a Zod
+        const complementariosZod = rawComplements.map(c => ({
+            numero_personas: sanitizeNumber(c.personas),
+            forma: c.forma || 'Redondo',
+            sabores_pan: c.sabor ? [c.sabor] : [],
+            rellenos: c.relleno ? [c.relleno] : [],
+            descripcion: c.descripcion || ''
+        }));
+
+        // Formato EXACTO que lee tu Backend (folio.service.js) para insertarlo en MySQL
+        const complementsListDB = rawComplements.map(c => ({
+            personas: sanitizeNumber(c.personas),
+            forma: c.forma || 'Redondo',
+            sabor: c.sabor || '',
+            relleno: c.relleno || '',
+            precio: parseFloat(c.precio) || 0,
+            descripcion: c.descripcion || ''
+        }));
+
+        // --- 3. SANITIZADORES GLOBALES (Tus Salvavidas) ---
         let hora_limpia = orderData.deliveryTime || '';
         if (hora_limpia.length > 5) hora_limpia = hora_limpia.substring(0, 5); 
 
-        // 🛡️ SANITIZADOR DE TIPO DE FOLIO (El que faltaba)
         let tipoFolioSeguro = orderData.tipo_folio || 'Normal';
-        if (tipoFolioSeguro === 'Base' || tipoFolioSeguro === 'Especial') {
-            tipoFolioSeguro = 'Base/Especial';
-        }
+        if (tipoFolioSeguro === 'Base' || tipoFolioSeguro === 'Especial') tipoFolioSeguro = 'Base/Especial';
 
         const payload = {
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
+            cliente_telefono_2: orderData.clientPhone2 || null, // Lo mandamos como null si está vacío
             clientId: orderData.clientId || null,
 
             fecha_entrega: orderData.deliveryDate,
             hora_entrega: hora_limpia,
             
-            // 🔥 AQUÍ ENVIAMOS LA VARIABLE SANITIZADA PARA ZOD
             tipo_folio: tipoFolioSeguro, 
             forma: orderData.shape,
-            numero_personas: orderData.peopleCount,
+            numero_personas: sanitizeNumber(orderData.peopleCount),
 
             sabores_pan: orderData.panes,
             rellenos: orderData.rellenos,
 
-            complementarios: complementariosList,
+            // 🔥 EL TRUCO DEL DOBLE AGENTE: Enviamos a ambos cadeneros
+            detallesPisos: detallesPisosZod,          // Para Zod
+            complementarios: complementariosZod,      // Para Zod
+            complementsList: complementsListDB,       // Para MySQL (FolioService)
+            
             accesorios: orderData.extras,
-
             descripcion_diseno: orderData.descripcion_diseno,
             dedicatoria: orderData.dedicatoria,
             imagen_referencia_url: orderData.imagen_referencia_url,
+            
+            // 🔥 DONDE SE GUARDAN LOS PISOS REALMENTE
             diseno_metadata: {
-                pisos: (orderData.pisos || []).filter(p => p.personas && parseInt(p.personas) > 0),
+                pisos: pisosValidos,
                 allImages: orderData.referenceImages
             },
 
-            is_delivery: orderData.is_delivery || orderData.isDelivery, // Soporte a ambas llaves
+            is_delivery: orderData.is_delivery || orderData.isDelivery, 
             calle: orderData.calle,
             colonia: orderData.colonia,
             referencias: orderData.referencias,
@@ -142,7 +170,7 @@ const StepF_Payment = ({ prev }) => {
                             type="number"
                             value={orderData.costo_base ?? ''}
                             onChange={(e) => updateOrder({ costo_base: parseFloat(e.target.value) || 0 })}
-                            className="w-24 p-1 border rounded text-right font-medium"
+                            className="w-24 p-1 border rounded text-right font-medium focus:ring-2 focus:ring-pink-500 outline-none"
                         />
                     </div>
                     <div className="flex justify-between text-sm">
@@ -159,14 +187,14 @@ const StepF_Payment = ({ prev }) => {
                     </div>
 
                     <div className="border-t pt-2 mt-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer w-max">
                             <input
                                 type="checkbox"
                                 checked={addCommission}
                                 onChange={(e) => setAddCommission(e.target.checked)}
-                                className="rounded text-pink-600"
+                                className="rounded text-pink-600 focus:ring-pink-500 w-4 h-4"
                             />
-                            <span className="text-sm font-bold text-blue-600">Comisión Tarjeta (4%)</span>
+                            <span className="text-sm font-bold text-blue-600 hover:text-blue-800 transition">Comisión Tarjeta (4%)</span>
                         </label>
                     </div>
 
@@ -183,19 +211,19 @@ const StepF_Payment = ({ prev }) => {
                             <DollarSign className="absolute left-3 top-3.5 text-green-600" size={20} />
                             <input
                                 type="number"
-                                value={orderData.anticipo || ''}
+                                value={orderData.anticipo ?? ''}
                                 onChange={(e) => updateOrder({ anticipo: parseFloat(e.target.value) || 0 })}
-                                className="w-full pl-10 p-4 border border-green-300 rounded-xl text-2xl font-bold text-green-900 bg-white"
+                                className="w-full pl-10 p-4 border border-green-300 rounded-xl text-2xl font-bold text-green-900 bg-white outline-none focus:ring-2 focus:ring-green-500"
                             />
                         </div>
-                        <label className="flex items-center gap-2 mt-4 cursor-pointer">
+                        <label className="flex items-center gap-2 mt-4 cursor-pointer w-max">
                             <input
                                 type="checkbox"
                                 checked={orderData.isPaidInFull || (advance >= total && total > 0)}
                                 onChange={handlePaidInFull}
-                                className="w-5 h-5 text-green-600 rounded"
+                                className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
                             />
-                            <span className="font-bold text-green-800">Pagado Total</span>
+                            <span className="font-bold text-green-800 hover:text-green-900 transition">Pagado Total</span>
                         </label>
                     </div>
 

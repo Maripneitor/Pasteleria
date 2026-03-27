@@ -15,7 +15,7 @@ const StepA_Client = ({ next, prev }) => {
         }
     };
 
-    // ✅ Verifica que tenga nombre y que el teléfono (limpio de letras/espacios) tenga al menos 10 dígitos
+    // ✅ Verifica que tenga nombre y que el teléfono principal (limpio) tenga al menos 10 dígitos
     const cleanPhone = (orderData.clientPhone || '').replace(/\D/g, '');
     const isValid = orderData.clientName && cleanPhone.length >= 10 && cleanPhone.length <= 15;
 
@@ -43,7 +43,7 @@ const StepA_Client = ({ next, prev }) => {
             {!isRegistered ? (
                 // Manual Fields
                 <div className="grid md:grid-cols-2 gap-4">
-                    <div>
+                    <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Cliente *</label>
                         <div className="relative">
                             <User className="absolute left-3 top-3 text-gray-400" size={18} />
@@ -64,20 +64,23 @@ const StepA_Client = ({ next, prev }) => {
                                 type="tel"
                                 value={orderData.clientPhone || ''}
                                 onChange={(e) => updateOrder({ clientPhone: e.target.value })}
-                                placeholder="Ej. 55 1234 5678"
+                                placeholder="Ej. 961 123 4567"
                                 className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none"
                             />
                         </div>
                     </div>
-                    <div className="md:col-span-2">
+                    <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono Adicional (Opcional)</label>
-                        <input
-                            type="tel"
-                            value={orderData.clientPhoneExtra || ''}
-                            onChange={(e) => updateOrder({ clientPhoneExtra: e.target.value })}
-                            placeholder="Otro número de contacto"
-                            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none"
-                        />
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-3 text-gray-400" size={18} />
+                            <input
+                                type="tel"
+                                value={orderData.clientPhoneExtra || ''}
+                                onChange={(e) => updateOrder({ clientPhoneExtra: e.target.value })}
+                                placeholder="Ej. 961 987 6543"
+                                className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none"
+                            />
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -90,22 +93,27 @@ const StepA_Client = ({ next, prev }) => {
                                 updateOrder({
                                     selectedClient: client,
                                     clientName: client.name,
-                                    clientPhone: client.phone
+                                    clientPhone: client.phone,
+                                    // 🔥 Extraemos el segundo teléfono si existe en la BD
+                                    clientPhoneExtra: client.phone2 || client.cliente_telefono_extra || ''
                                 });
                             } else {
-                                updateOrder({ selectedClient: null, clientName: '', clientPhone: '' });
+                                updateOrder({ selectedClient: null, clientName: '', clientPhone: '', clientPhoneExtra: '' });
                             }
                         }}
                     />
                     {orderData.selectedClient && (
                         <div className="mt-4 p-4 bg-green-50 border border-green-100 rounded-xl flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">
+                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold uppercase">
                                 {orderData.clientName.charAt(0)}
                             </div>
                             <div>
                                 <p className="font-bold text-gray-800">{orderData.clientName}</p>
-                                <p className="text-sm text-gray-600">{orderData.clientPhone}</p>
-                                <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full">Registrado</span>
+                                <p className="text-sm text-gray-600">
+                                    Principal: {orderData.clientPhone}
+                                    {orderData.clientPhoneExtra && ` | Alt: ${orderData.clientPhoneExtra}`}
+                                </p>
+                                <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full mt-1 inline-block">Registrado</span>
                             </div>
                         </div>
                     )}
