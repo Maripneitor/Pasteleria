@@ -7,6 +7,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const { orderData, updateOrder } = useOrder();
     const [flavors, setFlavors] = useState([]);
     const [fillings, setFillings] = useState([]);
+    const [shapes, setShapes] = useState([]); // 🔥 ESTADO PARA LAS FORMAS
     const [loading, setLoading] = useState(true);
 
     // 🔥 ESTADO LOCAL BLINDADO PARA LOS PISOS
@@ -22,12 +23,15 @@ const StepB_OrderDetails = ({ next, prev }) => {
     useEffect(() => {
         const load = async () => {
             try {
-                const [f, c] = await Promise.all([
+                // 🔥 AHORA TRAEMOS LAS FORMAS DESDE LA BD
+                const [f, c, s] = await Promise.all([
                     catalogApi.getFlavors(false),
-                    catalogApi.getFillings(false)
+                    catalogApi.getFillings(false),
+                    catalogApi.getShapes('MAIN', false) // Asumimos tipo 'Base', ajústalo si tu BD usa otro
                 ]);
                 setFlavors(f);
                 setFillings(c);
+                setShapes(s);
             } catch (e) {
                 console.error(e);
             } finally {
@@ -255,15 +259,14 @@ const StepB_OrderDetails = ({ next, prev }) => {
                 </div>
                 <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Forma</label>
+                    {/* 🔥 SELECT DINÁMICO DESDE LA BASE DE DATOS */}
                     <select
                         className="w-full p-3 border border-gray-300 rounded-xl bg-white"
-                        value={orderData.shape || 'Redondo'}
+                        value={orderData.shape || ''}
                         onChange={(e) => updateOrder({ shape: e.target.value })}
                     >
-                        <option value="Redondo">Redondo</option>
-                        <option value="Cuadrado">Cuadrado</option>
-                        <option value="Rectangular">Rectangular</option>
-                        <option value="Corazon">Corazón</option>
+                        <option value="">Seleccione forma...</option>
+                        {shapes.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                     </select>
                 </div>
             </div>
@@ -424,14 +427,15 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Notas / Forma</label>
+                                        {/* 🔥 SOLUCIÓN: Etiqueta "Notas" y placeholder limpios */}
+                                        <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Notas</label>
                                         <div className="flex gap-2 relative">
                                             <input 
                                                 type="text" 
                                                 value={piso.notas} 
                                                 onChange={(e) => handleUpdatePiso(idx, 'notas', e.target.value)} 
                                                 className="w-full py-2 px-3 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm" 
-                                                placeholder="Dicta la forma..." 
+                                                placeholder="Dicta la nota..." 
                                             />
                                             <button 
                                                 type="button"

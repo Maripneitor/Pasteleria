@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
 import catalogApi from '@/features/catalogs/api/catalogs.api';
 
-const DEFAULT_COMPLEMENT = { personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 };
+// 🔥 Cambiamos el default a vacío para forzar la selección dinámica de la forma
+const DEFAULT_COMPLEMENT = { personas: '', forma: '', sabor: '', relleno: '', descripcion: '', precio: 0 };
 
 const StepC_Complements = ({ next, prev }) => {
     const { orderData, updateOrder } = useOrder();
     const [flavors, setFlavors] = useState([]);
     const [fillings, setFillings] = useState([]);
+    const [shapes, setShapes] = useState([]); // 🔥 ESTADO PARA LAS FORMAS
 
     // 🧠 ESTADO LOCAL: Inicia con lo que hay en OrderData o valores por defecto
     const [localComps, setLocalComps] = useState(() => {
@@ -20,12 +22,15 @@ const StepC_Complements = ({ next, prev }) => {
 
     useEffect(() => {
         const load = async () => {
-            const [f, c] = await Promise.all([
+            // 🔥 AHORA TRAEMOS LAS FORMAS DESDE LA BD
+            const [f, c, s] = await Promise.all([
                 catalogApi.getFlavors(false),
-                catalogApi.getFillings(false)
+                catalogApi.getFillings(false),
+                catalogApi.getShapes('COMPLEMENTARY', false) // Usa 'Complemento' o ajústalo si tu backend requiere otro tipo
             ]);
             setFlavors(f);
             setFillings(c);
+            setShapes(s);
         };
         load();
     }, []);
@@ -71,15 +76,14 @@ const StepC_Complements = ({ next, prev }) => {
                         </div>
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase">Forma</label>
+                            {/* 🔥 SELECT DINÁMICO DESDE LA BD */}
                             <select
                                 value={comp.forma}
                                 onChange={(e) => handleChange(idx, 'forma', e.target.value)}
                                 className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm bg-gray-50 focus:bg-white"
                             >
-                                <option>Redondo</option>
-                                <option>Cuadrado</option>
-                                <option>Rectangular</option>
-                                <option>Corazón</option>
+                                <option value="">Seleccione forma...</option>
+                                {shapes.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                             </select>
                         </div>
                         <div>

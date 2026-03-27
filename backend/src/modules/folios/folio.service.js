@@ -56,6 +56,7 @@ class FolioService {
         const where = { ...tenantFilter };
 
         if (q) {
+            // Esto permite que si buscas "Juan", lo busque en nombre, tel o folio
             where[Op.or] = [
                 { folioNumber: { [Op.like]: `%${q}%` } },
                 { cliente_nombre: { [Op.like]: `%${q}%` } },
@@ -65,8 +66,13 @@ class FolioService {
 
         return Folio.findAll({
             where,
-            order: [['createdAt', 'DESC']],
-            limit: 10
+            // 🔥 CAMBIO AQUÍ: Ordenamos primero por fecha de entrega (los más próximos arriba)
+            // y luego por hora de entrega para mantener el orden exacto del día.
+            order: [
+                ['fecha_entrega', 'ASC'], 
+                ['hora_entrega', 'ASC']
+            ],
+            limit: 10 // Ojo: si quieres ver más de 10 pedidos a la vez, puedes aumentar este número.
         });
     }
 
@@ -247,16 +253,22 @@ class FolioService {
     async getDashboardStats(tenantFilter) {
         const today = new Date().toISOString().split('T')[0];
         const baseWhere = { ...tenantFilter, estatus_folio: { [Op.ne]: 'Cancelado' } };
+        
         const totalCount = await Folio.count({ where: baseWhere });
         const pendingCount = await Folio.count({ where: { ...baseWhere, estatus_produccion: 'Pendiente' } });
         const todayCount = await Folio.count({ where: { ...baseWhere, fecha_entrega: today } });
         const sumTotal = await Folio.sum('total', { where: baseWhere }) || 0;
         const sumAnticipo = await Folio.sum('anticipo', { where: baseWhere }) || 0;
 
+        // 🔥 CAMBIO AQUÍ: Próximas entregas en lugar de los últimos creados
         const recientes = await Folio.findAll({
-            where: tenantFilter,
-            limit: 5,
-            order: [['createdAt', 'DESC']]
+            // Es buena idea usar baseWhere para que no te salgan los cancelados aquí
+            where: baseWhere, 
+            limit: 5, // Muestra los próximos 5 pedidos
+            order: [
+                ['fecha_entrega', 'ASC'], 
+                ['hora_entrega', 'ASC']
+            ]
         });
 
         return {
@@ -299,6 +311,10 @@ class FolioService {
             try { return JSON.parse(val) || []; } catch { return []; }
         };
 
+        // 🔥 EXTRAEMOS EL USUARIO LOGUEADO
+        // Buscamos 'nombre', 'name' o fallamos a 'Vendedor' por defecto
+        const nombreVendedor = user?.nombre || user?.name || 'Vendedor no asignado';
+
         const folioData = {
             id: f.id,
             folio_numero: f.folioNumber || f.id,
@@ -333,15 +349,18 @@ class FolioService {
             
             tiers: safeParse(f.detallesPisos || (f.diseno_metadata ? f.diseno_metadata.pisos : []) || []),
             
-            // 🔥 CORRECCIÓN CRÍTICA 1: Leer también 'complementarios' (la columna directa en MySQL)
+            // CORRECCIÓN CRÍTICA 1: Leer también 'complementarios' (la columna directa en MySQL)
             complements: safeParse(f.complementarios || f.complementosList || f.complementos),
             
-            additionals: safeParse(f.accesorios || f.complementos)
+            additionals: safeParse(f.accesorios || f.complementos),
+
+            // 🔥 INYECTAMOS AL VENDEDOR AL PAYLOAD
+            vendedor: nombreVendedor 
         };
 
         const buffer = await renderPdf({
             templateName: 'folio-pdf', 
-            // 🔥 CORRECCIÓN CRÍTICA 2: Añadido "config: branding" para que el EJS se pinte correctamente
+            // CORRECCIÓN CRÍTICA 2: Añadido "config: branding" para que el EJS se pinte correctamente
             data: { folio: folioData, watermark: computeWatermark(f), config: branding },
             branding: branding,
             options: { format: 'A4', printBackground: true, margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' } }

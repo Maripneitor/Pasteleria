@@ -2,6 +2,11 @@
 <html>
 <head>
     <style>
+        /* 🔥 Agregamos margen inferior a la hoja para que el footer no tape el contenido */
+        @page {
+            margin-bottom: 22mm; 
+        }
+
         /* CSS 100% puro para evitar errores en el linter */
         body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #333; font-size: 13px; margin: 0; }
         .header { display: flex; justify-content: space-between; border-bottom: 3px solid var(--primary-color); padding-bottom: 15px; margin-bottom: 20px; }
@@ -43,6 +48,22 @@
         
         .image-container { text-align: center; margin-top: 15px; page-break-inside: avoid; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
         .ref-image { max-width: 100%; max-height: 350px; object-fit: contain; border-radius: 4px; }
+
+        /* 🔥 NUEVO: FOOTER FIJO PARA TODAS LAS HOJAS */
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            color: #777;
+            border-top: 1px solid #eaeaea;
+            padding-top: 10px;
+            padding-bottom: 5px;
+            background-color: white;
+            z-index: 10;
+        }
     </style>
 </head>
 
@@ -51,6 +72,10 @@
     --primary-light: <%= (config && config.primaryColor) ? config.primaryColor + '20' : '#fbcfe8' %>; 
     --primary-dark: <%= (config && config.primaryColor) ? config.primaryColor : '#831843' %>;
 ">
+    <div class="fixed-footer">
+        <strong>Atendido por:</strong> <%= folio.vendedor %> | Documento de Uso Interno - Pasteleria La Fiesta
+    </div>
+
     <% 
         const hasTiers = folio.tiers && folio.tiers.length > 0;
         const hasComps = folio.complements && folio.complements.length > 0;
@@ -72,7 +97,7 @@
                         <h2 style="font-size: 14px; margin: 5px 0 0 0; color: var(--primary-color);"><%= config.businessName %></h2>
                     <% } %>
                 <% } else { %>
-                    <h1><%= (config && config.businessName) || 'Pastelería LyA' %></h1>
+                    <h1><%= (config && config.businessName) || 'Pastelería La Fiesta' %></h1>
                     <p>Orden de Producción / Nota</p>
                 <% } %>
             </div>
