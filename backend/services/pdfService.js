@@ -149,6 +149,11 @@ async function toOrderDTO(order, branding) {
         notas: t.notas || ''
     }));
 
+    // 🔥 FIX 1: Leer el array nuevo del Wizard (allImages) para que salgan en el PDF
+    const safeImages = (plain.diseno_metadata?.allImages && plain.diseno_metadata.allImages.length > 0) 
+        ? plain.diseno_metadata.allImages 
+        : (plain.imagen_referencia_url ? [plain.imagen_referencia_url] : []);
+
     return {
         id: plain.id,
         folioNumber: plain.folio_numero || plain.id,
@@ -164,10 +169,12 @@ async function toOrderDTO(order, branding) {
         rellenos: parseList(plain.rellenos),
         cubierta: plain.diseno_metadata?.cubierta || null,
         designDescription: plain.descripcion_diseno,
-        dedicatoria: plain.dedicatoria,
-        imageUrls: plain.imagen_referencia_url ? [plain.imagen_referencia_url] : [],
         
-        // Inyectamos arreglos procesados
+        dedicatoria: plain.dedicatoria,
+        dedication: plain.dedicatoria, // 🔥 FIX 2: comanda.ejs espera la variable en inglés
+        
+        imageUrls: safeImages, // 🔥 FIX 1: Mandar el array procesado
+        
         tiers: tiersList,
         complements: complementosList, 
         
@@ -177,6 +184,7 @@ async function toOrderDTO(order, branding) {
         client: {
             name: plain.cliente_nombre || 'Cliente General',
             phone: plain.cliente_telefono || '',
+            phoneExtra: plain.cliente_telefono_extra || '', // 🔥 FIX 3: Inyectar teléfono adicional
             email: plain.client?.email || ''
         },
         additionals,

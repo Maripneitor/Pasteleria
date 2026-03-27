@@ -94,7 +94,7 @@ const StepF_Payment = ({ prev }) => {
             descripcion: c.descripcion || ''
         }));
 
-        // --- 3. SANITIZADORES GLOBALES (Tus Salvavidas) ---
+        // --- 3. SANITIZADORES GLOBALES ---
         let hora_limpia = orderData.deliveryTime || '';
         if (hora_limpia.length > 5) hora_limpia = hora_limpia.substring(0, 5); 
 
@@ -104,7 +104,8 @@ const StepF_Payment = ({ prev }) => {
         const payload = {
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
-            cliente_telefono_2: orderData.clientPhone2 || null, // Lo mandamos como null si está vacío
+            // 🔥 EL FIX ESTÁ AQUÍ: Nombres exactos mapeados al Context y al Backend
+            cliente_telefono_extra: orderData.clientPhoneExtra || '', 
             clientId: orderData.clientId || null,
 
             fecha_entrega: orderData.deliveryDate,
@@ -117,17 +118,15 @@ const StepF_Payment = ({ prev }) => {
             sabores_pan: orderData.panes,
             rellenos: orderData.rellenos,
 
-            // 🔥 EL TRUCO DEL DOBLE AGENTE: Enviamos a ambos cadeneros
-            detallesPisos: detallesPisosZod,          // Para Zod
-            complementarios: complementariosZod,      // Para Zod
-            complementsList: complementsListDB,       // Para MySQL (FolioService)
+            detallesPisos: detallesPisosZod,
+            complementarios: complementariosZod,
+            complementsList: complementsListDB,
             
             accesorios: orderData.extras,
             descripcion_diseno: orderData.descripcion_diseno,
             dedicatoria: orderData.dedicatoria,
             imagen_referencia_url: orderData.imagen_referencia_url,
             
-            // 🔥 DONDE SE GUARDAN LOS PISOS REALMENTE
             diseno_metadata: {
                 pisos: pisosValidos,
                 allImages: orderData.referenceImages

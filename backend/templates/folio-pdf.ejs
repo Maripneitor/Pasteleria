@@ -2,12 +2,7 @@
 <html>
 <head>
     <style>
-        /* 🔥 Agregamos margen inferior a la hoja para que el footer no tape el contenido */
-        @page {
-            margin-bottom: 22mm; 
-        }
-
-        /* CSS 100% puro para evitar errores en el linter */
+        @page { margin-bottom: 22mm; }
         body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #333; font-size: 13px; margin: 0; }
         .header { display: flex; justify-content: space-between; border-bottom: 3px solid var(--primary-color); padding-bottom: 15px; margin-bottom: 20px; }
         .header-mini { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px; font-size: 11px; color: #666; }
@@ -23,67 +18,45 @@
         .qr-section { text-align: center; }
         .qr-section img { width: 90px; height: 90px; }
         
-        /* ESTILOS DE LA MARCA DE AGUA (AL FRENTE Y A COLOR) */
-        .watermark { 
-            position: fixed; 
-            inset: 0; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 110px;
-            font-weight: 900; 
-            transform: rotate(-30deg); 
-            pointer-events: none;
-            z-index: 9999;
-            letter-spacing: 4px; 
-        }
+        .watermark { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 110px; font-weight: 900; transform: rotate(-30deg); pointer-events: none; z-index: 9999; letter-spacing: 4px; }
         .watermark.CANCELADO { color: rgba(239, 68, 68, 0.15); } 
         .watermark.PAGADO { color: rgba(16, 185, 129, 0.15); }  
         .watermark.PENDIENTE { color: rgba(156, 163, 175, 0.15); } 
         .page { position: relative; z-index: 1; }
         .page-break { page-break-before: always; padding-top: 20px; }
         
-        /* 🔥 CLASE MÁGICA PARA MANTENER BLOQUES UNIDOS */
         .keep-together { page-break-inside: avoid; margin-top: 10px; }
-        
         .image-container { text-align: center; margin-top: 15px; page-break-inside: avoid; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
         .ref-image { max-width: 100%; max-height: 350px; object-fit: contain; border-radius: 4px; }
 
-        /* 🔥 NUEVO: FOOTER FIJO PARA TODAS LAS HOJAS */
-        .fixed-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            font-size: 11px;
-            color: #777;
-            border-top: 1px solid #eaeaea;
-            padding-top: 10px;
-            padding-bottom: 5px;
-            background-color: white;
-            z-index: 10;
-        }
+        .fixed-footer { position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 11px; color: #777; border-top: 1px solid #eaeaea; padding-top: 10px; padding-bottom: 5px; background-color: white; z-index: 10; }
     </style>
 </head>
 
-<body style="
-    --primary-color: <%= (config && config.primaryColor) ? config.primaryColor : '#ec4899' %>; 
-    --primary-light: <%= (config && config.primaryColor) ? config.primaryColor + '20' : '#fbcfe8' %>; 
-    --primary-dark: <%= (config && config.primaryColor) ? config.primaryColor : '#831843' %>;
-">
+<body style="--primary-color: <%= (config && config.primaryColor) ? config.primaryColor : '#ec4899' %>; --primary-light: <%= (config && config.primaryColor) ? config.primaryColor + '20' : '#fbcfe8' %>; --primary-dark: <%= (config && config.primaryColor) ? config.primaryColor : '#831843' %>;">
     <div class="fixed-footer">
-        <strong>Atendido por:</strong> <%= folio.vendedor %> | Documento de Uso Interno - Pasteleria La Fiesta
+        <strong>Atendido por:</strong> <%= folio.vendedor || 'Sistema' %> | Documento de Uso Interno - Pasteleria La Fiesta
     </div>
 
     <% 
-        const hasTiers = folio.tiers && folio.tiers.length > 0;
-        const hasComps = folio.complements && folio.complements.length > 0;
-        const hasImages = folio.imagenes_referencia && folio.imagenes_referencia.length > 0;
-        
-        // Ya solo necesitamos saber si hay anexos para crear la hoja 2. 
-        // El PDF decidirá solito si necesita crear la hoja 3.
-        const needsPage2 = hasTiers || hasComps || hasImages;
+        // 🚀 MAPEO INTELIGENTE SUPREMO
+        const safePisos = folio.tiers || folio.detallesPisos || (folio.diseno_metadata && folio.diseno_metadata.pisos) || [];
+        const hasTiers = safePisos.length > 0;
+
+        const safeComps = folio.complements || folio.complementarios || folio.complementosList || folio.complementos || [];
+        const hasComps = safeComps.length > 0;
+
+        const safeImages = folio.imageUrls || (folio.diseno_metadata && folio.diseno_metadata.allImages) || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : (folio.imagenes_referencia || []));
+        const hasImages = safeImages.length > 0;
+
+        // 🧠 LÓGICA DE SALTO DE PÁGINA
+        // Si tenemos Pisos Y Complementos Y Imágenes, las fotos se van a la Hoja 3.
+        const needsPage3 = hasTiers && hasComps && hasImages;
+        const needsPage2 = hasTiers || hasComps || (hasImages && !needsPage3);
+
+        const cNombre = (folio.client && folio.client.name) ? folio.client.name : folio.cliente_nombre;
+        const cTelefono = (folio.client && folio.client.phone) ? folio.client.phone : folio.cliente_telefono;
+        const cTelefonoExtra = (folio.client && folio.client.phoneExtra) ? folio.client.phoneExtra : folio.cliente_telefono_extra;
     %>
 
     <div class="watermark <%= watermark %>"><%= watermark %></div>
@@ -102,34 +75,34 @@
                 <% } %>
             </div>
             <div class="info">
-                <p><strong>Folio:</strong> #<%= folio.folio_numero %></p>
-                <p><strong>Fecha Entrega:</strong> <%= folio.fecha_entrega %> - <%= folio.hora_entrega %></p>
-                <p><strong>Estado:</strong> <%= folio.estatus_produccion %></p>
+                <p><strong>Folio:</strong> #<%= folio.folioNumber || folio.folio_numero %></p>
+                <p><strong>Fecha Entrega:</strong> <%= folio.formattedDeliveryDate || folio.fecha_entrega %> - <%= folio.formattedDeliveryTime || folio.hora_entrega %></p>
+                <p><strong>Estado:</strong> <%= folio.status || folio.estatus_produccion %></p>
             </div>
         </div>
 
         <div class="section-title">Datos del Cliente y Logística</div>
         <table>
             <tr>
-                <th>Nombre</th><td><%= folio.cliente_nombre %></td>
+                <th>Nombre</th><td><%= cNombre %></td>
                 <th>Teléfono</th>
                 <td>
-                    <%= folio.cliente_telefono %>
-                    <% if (folio.cliente_telefono_extra) { %>
-                        <br><span style="color: #666; font-size: 11px; font-weight: bold;">Alt:</span> <span style="color: #666; font-size: 11px;"><%= folio.cliente_telefono_extra %></span>
+                    <%= cTelefono %>
+                    <% if (cTelefonoExtra) { %>
+                        <br><span style="color: #666; font-size: 11px; font-weight: bold;">Alt:</span> <span style="color: #666; font-size: 11px;"><%= cTelefonoExtra %></span>
                     <% } %>
                 </td>
             </tr>
             <tr>
                 <th>Método de Entrega</th>
-                <td><%= folio.is_delivery || folio.costo_envio > 0 ? 'Envío a Domicilio' : 'Recolección en Tienda' %></td>
+                <td><%= (folio.is_delivery || folio.costo_envio > 0 || folio.deliveryLocation !== 'En Sucursal') ? 'Envío a Domicilio' : 'Recolección en Tienda' %></td>
                 <th>Costo de Envío</th>
                 <td>$<%= parseFloat(folio.costo_envio || 0).toFixed(2) %></td>
             </tr>
-            <% if (folio.is_delivery || folio.ubicacion_entrega) { %>
+            <% if (folio.is_delivery || folio.ubicacion_entrega || (folio.deliveryLocation && folio.deliveryLocation !== 'En Sucursal')) { %>
             <tr>
                 <th>Dirección de Entrega</th>
-                <td colspan="3"><%= folio.ubicacion_entrega || 'No especificada' %></td>
+                <td colspan="3"><%= folio.deliveryLocation || folio.ubicacion_entrega || 'No especificada' %></td>
             </tr>
             <% } %>
         </table>
@@ -137,19 +110,19 @@
         <div class="section-title">Especificaciones del Pastel Principal</div>
         <table>
             <tr>
-                <th>Tipo de Orden</th><td><%= folio.tipo_folio || 'Normal' %></td>
-                <th>Personas (Aprox)</th><td><%= folio.numero_personas || 'N/A' %></td>
+                <th>Tipo de Orden</th><td><%= folio.folioType || folio.tipo_folio || 'Normal' %></td>
+                <th>Personas (Aprox)</th><td><%= folio.persons || folio.numero_personas || 'N/A' %></td>
             </tr>
             <% if (!hasTiers) { %>
             <tr>
-                <th>Sabores (Pan)</th><td><%= Array.isArray(folio.sabores_pan) ? folio.sabores_pan.join(', ') : (folio.sabores_pan || 'N/A') %></td>
+                <th>Sabores (Pan)</th><td><%= Array.isArray(folio.sabores || folio.sabores_pan) ? (folio.sabores || folio.sabores_pan).join(', ') : (folio.sabores || folio.sabores_pan || 'N/A') %></td>
                 <th>Rellenos</th><td><%= Array.isArray(folio.rellenos) ? folio.rellenos.join(', ') : (folio.rellenos || 'N/A') %></td>
             </tr>
             <% } %>
         </table>
 
         <div class="section-title">Instrucciones de Decoración</div>
-        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px; white-space: pre-wrap;"><%= folio.descripcion_diseno || 'Sin descripción de diseño detallada.' %></div>
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px; white-space: pre-wrap;"><%= folio.designDescription || folio.descripcion_diseno || 'Sin descripción de diseño detallada.' %></div>
 
         <div class="footer">
             <div class="qr-section">
@@ -163,8 +136,8 @@
                 <p>Costo de Envío: $<%= parseFloat(folio.costo_envio || 0).toFixed(2) %></p>
                 <div style="border-top: 1px solid #ddd; margin: 5px 0;"></div>
                 <p><strong>Total Pedido: $<%= parseFloat(folio.total).toFixed(2) %></strong></p>
-                <p style="color: #10b981;">Anticipo (Pagado): -$<%= parseFloat(folio.anticipo).toFixed(2) %></p>
-                <p class="total-row">Resta a Pagar: $<%= parseFloat(folio.total - folio.anticipo).toFixed(2) %></p>
+                <p style="color: #10b981;">Anticipo (Pagado): -$<%= parseFloat(folio.advancePayment || folio.anticipo || 0).toFixed(2) %></p>
+                <p class="total-row">Resta a Pagar: $<%= parseFloat(folio.balance || (folio.total - folio.anticipo)).toFixed(2) %></p>
             </div>
         </div>
     </div>
@@ -172,8 +145,8 @@
     <% if (needsPage2) { %>
     <div class="page page-break">
         <div class="header-mini">
-            <span>Anexo de Producción - Folio #<%= folio.folio_numero %></span>
-            <span><%= folio.cliente_nombre %></span>
+            <span>Anexo de Producción - Folio #<%= folio.folioNumber || folio.folio_numero %></span>
+            <span><%= cNombre %></span>
         </div>
 
         <% if (hasTiers) { %>
@@ -185,11 +158,11 @@
                     <th style="width: 35%;">Pan / Sabor</th>
                     <th style="width: 35%;">Relleno</th>
                 </tr>
-                <% folio.tiers.forEach((tier, idx) => { %>
+                <% safePisos.forEach((tier, idx) => { %>
                     <tr>
                         <td><strong>Piso <%= tier.piso || idx + 1 %></strong></td>
-                        <td><%= tier.personas || tier.persons || tier.numero_personas || '-' %> p.</td>
-                        <td><%= Array.isArray(tier.sabores_pan) ? tier.sabores_pan.join(', ') : (tier.sabores_pan || tier.sabores || tier.panes || 'N/A') %></td>
+                        <td><%= tier.persons || tier.personas || tier.numero_personas || '-' %> p.</td>
+                        <td><%= Array.isArray(tier.panes || tier.sabores_pan) ? (tier.panes || tier.sabores_pan).join(', ') : (tier.panes || tier.sabores_pan || 'N/A') %></td>
                         <td><%= Array.isArray(tier.rellenos) ? tier.rellenos.join(', ') : (tier.rellenos || 'N/A') %></td>
                     </tr>
                 <% }); %>
@@ -204,14 +177,14 @@
                     <th style="width: 30%;">Sabor</th>
                     <th style="width: 50%;">Descripción Extra</th>
                 </tr>
-                <% folio.complements.forEach((comp) => { %>
+                <% safeComps.forEach((comp) => { %>
                     <tr>
-                        <td><%= comp.forma || 'Extra' %></td>
-                        <td><%= Array.isArray(comp.sabores_pan) ? comp.sabores_pan.join(', ') : (comp.sabores_pan || comp.sabor || 'N/A') %></td>
+                        <td><%= comp.shape || comp.forma || 'Extra' %></td>
+                        <td><%= Array.isArray(comp.flavor || comp.sabores_pan) ? (comp.flavor || comp.sabores_pan).join(', ') : (comp.flavor || comp.sabores_pan || comp.sabor || 'N/A') %></td>
                         <td>
-                            <%= comp.descripcion || '-' %>
-                            <% if (comp.rellenos && comp.rellenos.length > 0) { %>
-                                <br><small><strong>Relleno:</strong> <%= Array.isArray(comp.rellenos) ? comp.rellenos.join(', ') : comp.rellenos %></small>
+                            <%= comp.description || comp.descripcion || '-' %>
+                            <% if (comp.filling || (comp.rellenos && comp.rellenos.length > 0)) { %>
+                                <br><small><strong>Relleno:</strong> <%= Array.isArray(comp.filling || comp.rellenos) ? (comp.filling || comp.rellenos).join(', ') : (comp.filling || comp.rellenos || comp.relleno) %></small>
                             <% } %>
                         </td>
                     </tr>
@@ -219,11 +192,11 @@
             </table>
         <% } %>
 
-        <% if (hasImages) { %>
+        <% if (hasImages && !needsPage3) { %>
             <div class="keep-together">
                 <div class="section-title">Referencias Visuales</div>
                 <div style="text-align: center; margin-top: 15px; font-size: 0;">
-                    <% folio.imagenes_referencia.forEach((imgUrl) => { %>
+                    <% safeImages.forEach((imgUrl) => { %>
                         <div class="image-container" style="display: inline-block; width: 46%; margin: 1%; vertical-align: top; box-sizing: border-box; font-size: 13px;">
                             <img src="<%= imgUrl %>" class="ref-image" alt="Referencia de diseño" />
                         </div>
@@ -231,6 +204,24 @@
                 </div>
             </div>
         <% } %>
+    </div>
+    <% } %>
+
+    <% if (needsPage3) { %>
+    <div class="page page-break">
+        <div class="header-mini">
+            <span>Anexo Visual - Folio #<%= folio.folioNumber || folio.folio_numero %></span>
+            <span><%= cNombre %></span>
+        </div>
+
+        <div class="section-title">Referencias Visuales</div>
+        <div style="text-align: center; margin-top: 15px; font-size: 0;">
+            <% safeImages.forEach((imgUrl) => { %>
+                <div class="image-container" style="display: inline-block; width: 46%; margin: 1%; vertical-align: top; box-sizing: border-box; font-size: 13px;">
+                    <img src="<%= imgUrl %>" class="ref-image" alt="Referencia de diseño" />
+                </div>
+            <% }); %>
+        </div>
     </div>
     <% } %>
 
