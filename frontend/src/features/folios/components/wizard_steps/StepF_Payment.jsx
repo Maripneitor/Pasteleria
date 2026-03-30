@@ -68,10 +68,10 @@ const StepF_Payment = ({ prev }) => {
         // Formato estricto para que pase el Zod Schema
         const detallesPisosZod = pisosValidos.map((p, idx) => ({
             piso: idx + 1,
-            personas: sanitizeNumber(p.personas),
+            personas: sanitizeNumber(p.personas), // Aseguramos que vayan las personas
             sabores_pan: Array.isArray(p.panes) ? p.panes : (p.panes ? [p.panes] : []),
             rellenos: Array.isArray(p.rellenos) ? p.rellenos : (p.rellenos ? [p.rellenos] : []),
-            notas: p.notas || '' // 🔥 FIX: ¡Empaquetamos las notas!
+            notas: p.notas || '' // 🔥 FIX: Empacamos las notas de cada piso
         }));
 
         // --- 2. PROCESAMOS COMPLEMENTARIOS ---
@@ -84,10 +84,10 @@ const StepF_Payment = ({ prev }) => {
             sabores_pan: c.sabor ? [c.sabor] : [],
             rellenos: c.relleno ? [c.relleno] : [],
             descripcion: c.descripcion || '',
-            // 🔥 FIX: Inyectamos todas las variantes posibles para que Zod no lo pierda
             sabor: c.sabor || '',
             sabor_pan: c.sabor || '',
-            relleno: c.relleno || ''
+            relleno: c.relleno || '',
+            precio: parseFloat(c.precio) || 0
         }));
 
         // Formato EXACTO que lee tu Backend (folio.service.js) para insertarlo en MySQL
@@ -95,8 +95,8 @@ const StepF_Payment = ({ prev }) => {
             personas: sanitizeNumber(c.personas),
             forma: c.forma || 'Redondo',
             sabor: c.sabor || '',
-            sabor_pan: c.sabor || '', // 🔥 FIX DE ORO: MySQL exige esta columna exacta
-            sabores_pan: c.sabor ? [c.sabor] : [], // Por si el backend usa el array
+            sabor_pan: c.sabor || '',
+            sabores_pan: c.sabor ? [c.sabor] : [],
             relleno: c.relleno || '',
             rellenos: c.relleno ? [c.relleno] : [],
             precio: parseFloat(c.precio) || 0,
@@ -113,7 +113,6 @@ const StepF_Payment = ({ prev }) => {
         const payload = {
             cliente_nombre: orderData.clientName,
             cliente_telefono: orderData.clientPhone,
-            // 🔥 EL FIX ESTÁ AQUÍ: Nombres exactos mapeados al Context y al Backend
             cliente_telefono_extra: orderData.clientPhoneExtra || '', 
             clientId: orderData.clientId || null,
 
@@ -141,10 +140,14 @@ const StepF_Payment = ({ prev }) => {
                 allImages: orderData.referenceImages
             },
 
+            // 🔥 FIX: Datos de envío completos
             is_delivery: orderData.is_delivery || orderData.isDelivery, 
             calle: orderData.calle,
+            num_ext: orderData.num_ext,
+            num_int: orderData.num_int,
             colonia: orderData.colonia,
             referencias: orderData.referencias,
+            ubicacion_maps: orderData.ubicacion_maps,
             costo_envio: shipping,
 
             costo_base: baseCost,

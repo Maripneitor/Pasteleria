@@ -22,7 +22,8 @@ export const OrderProvider = ({ children }) => {
         deliveryTime: '',
         is_delivery: false, // CORREGIDO (antes era isDelivery)
         calle: '',
-        num_ext: '',        // Agregado
+        num_ext: '',
+        num_int: '',        // Agregado
         colonia: '',
         referencias: '',
         ubicacion_maps: '', // Agregado
@@ -65,6 +66,7 @@ export const OrderProvider = ({ children }) => {
             is_delivery: false,
             calle: '',
             num_ext: '',
+            num_int: '',
             colonia: '',
             referencias: '',
             ubicacion_maps: '',
@@ -130,6 +132,7 @@ export const OrderProvider = ({ children }) => {
             is_delivery: !!folio.is_delivery,
             calle: folio.calle || '',
             num_ext: folio.num_ext || '',
+            num_int: folio.num_int || '', // 🔥 FIX: Faltaba inicializar el número interior
             colonia: folio.colonia || '',
             referencias: folio.referencias || '',
             ubicacion_maps: folio.ubicacion_maps || '',

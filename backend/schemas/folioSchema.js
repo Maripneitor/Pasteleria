@@ -67,6 +67,15 @@ const createFolioSchema = z.object({
         .string({ required_error: 'La hora de entrega es obligatoria' })
         .regex(/^\d{2}:\d{2}$/, 'El formato de hora debe ser HH:mm'),
 
+    // 🔥 FIX: Añadimos a la lista VIP los campos de envío para que Zod no los mutile
+    is_delivery: z.boolean().or(z.number()).or(z.string()).optional(),
+    calle: z.string().optional(),
+    num_ext: z.string().optional(),
+    num_int: z.string().optional(),
+    colonia: z.string().optional(),
+    referencias: z.string().optional(),
+    ubicacion_maps: z.string().optional(),
+
     // — PRODUCTO —
     numero_personas: z
         .union([z.number().int().positive(), z.string().regex(/^\d+$/).transform(Number)])
