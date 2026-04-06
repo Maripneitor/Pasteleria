@@ -4,14 +4,11 @@ const { z } = require('zod');
 // 🔧  HELPERS DE TRANSFORMACIÓN
 // ─────────────────────────────────────────────
 
-/** Capitaliza la primera letra de cada palabra: "juan pérez" → "Juan Pérez" */
 const toTitleCase = (val) =>
     val.toLowerCase().replace(/\b\w/gu, (c) => c.toUpperCase());
 
-/** Elimina todo carácter que no sea dígito: "(999) 123-4567" → "9991234567" */
 const digitsOnly = (val) => val.replace(/\D/g, '');
 
-/** Convierte strings vacíos a undefined (para que .optional() funcione bien) */
 const emptyToUndefined = (val) => (val === '' ? undefined : val);
 
 // ─────────────────────────────────────────────
@@ -67,7 +64,6 @@ const createFolioSchema = z.object({
         .string({ required_error: 'La hora de entrega es obligatoria' })
         .regex(/^\d{2}:\d{2}$/, 'El formato de hora debe ser HH:mm'),
 
-    // 🔥 FIX: Añadimos a la lista VIP los campos de envío para que Zod no los mutile
     is_delivery: z.boolean().or(z.number()).or(z.string()).optional(),
     calle: z.string().optional(),
     num_ext: z.string().optional(),
@@ -83,14 +79,13 @@ const createFolioSchema = z.object({
 
     forma: z.string().trim().optional(),
 
-    // 🍰 NUEVOS SCHEMAS PARA FLUJO AVANZADO
     detallesPisos: z.array(
         z.object({
             piso: z.number().or(z.string()),
             personas: z.number().or(z.string()).optional(),
             sabores_pan: z.array(z.string()).optional(),
             rellenos: z.array(z.string()).optional(),
-            notas: z.string().optional() // 🔥 FIX: Zod ahora permite las notas
+            notas: z.string().optional()
         }).passthrough()
     ).optional(),
 
@@ -101,7 +96,6 @@ const createFolioSchema = z.object({
             sabores_pan: z.array(z.string()).optional(),
             rellenos: z.array(z.string()).optional(),
             descripcion: z.string().optional(),
-            // 🔥 FIX: Declaramos los textos explícitamente para que Zod NO los borre
             sabor: z.string().optional(),
             sabor_pan: z.string().optional(),
             relleno: z.string().optional(),
@@ -109,7 +103,6 @@ const createFolioSchema = z.object({
         }).passthrough()
     ).optional(),
 
-    // 🔥 FIX: Registramos la lista exacta que manda tu Frontend en StepF_Payment
     complementsList: z.array(
         z.object({
             personas: z.number().or(z.string()).optional(),
@@ -123,7 +116,9 @@ const createFolioSchema = z.object({
             precio: z.number().or(z.string()).optional()
         }).passthrough()
     ).optional(),
-    // ----------------------------------------
+    
+    // 🔥 FIX: Le decimos a Zod explícitamente que los accesorios existen
+    accesorios: z.any().optional(),
 
     sabores_pan: z
         .union([z.array(z.string()), z.string().transform((v) => [v])])
@@ -134,11 +129,7 @@ const createFolioSchema = z.object({
         .optional(),
 
     descripcion_diseno: z.string().trim().max(500).optional(),
-
-    // 🔥 FIX DE ORO: Evita que Zod mutile las notas y las imágenes de la BD al actualizar
     diseno_metadata: z.any().optional(),
-
-    // 🔥 AQUI ACTUALIZAMOS EL ENUM (Agregamos 'Base/Especial')
     tipo_folio: z.enum(['Normal', 'Base/Especial', 'Express', 'Mayoreo']).default('Normal'),
 
     // — FINANCIERO —
@@ -146,6 +137,9 @@ const createFolioSchema = z.object({
     costo_base: moneyField,
     costo_envio: moneyField,
     anticipo: moneyField,
+    
+    // 🔥 FIX 2: Zod ya no podará nuestro booleano de comisión al recibir el POST/PUT
+aplica_comision: z.boolean().or(z.number()).or(z.string().transform(v => v === 'true' || v === '1')).optional(),
 
     estatus_pago: z
         .enum(['Pendiente', 'Anticipo', 'Pagado', 'Creditado'])
@@ -155,19 +149,12 @@ const createFolioSchema = z.object({
         .enum(['Pendiente', 'En Proceso', 'Listo', 'Entregado'])
         .default('Pendiente'),
 
-    // — OTROS —
     notas: z.string().trim().max(1000).optional(),
 
-}).passthrough(); // Permite campos extra (como imágenes) sin fallar
+}).passthrough(); 
 
-// ─────────────────────────────────────────────
-// 📋  ESQUEMA: ACTUALIZAR FOLIO (Todo opcional)
-// ─────────────────────────────────────────────
 const updateFolioSchema = createFolioSchema.partial();
 
-// ─────────────────────────────────────────────
-// 👤  ESQUEMA: CLIENTE
-// ─────────────────────────────────────────────
 const createClientSchema = z.object({
     name: z
         .string({ required_error: 'El nombre es obligatorio' })

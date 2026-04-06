@@ -7,11 +7,12 @@ export const useOrder = () => useContext(OrderContext);
 
 export const OrderProvider = ({ children }) => {
     const [step, setStep] = useState(1);
-    // 1. ESTADO INICIAL (Alineado con los nombres correctos)
+    
+    // 1. ESTADO INICIAL (Nomenclatura unificada con el Backend)
     const [orderData, setOrderData] = useState({
         clientName: '',
         clientPhone: '',
-        clientPhoneExtra: '', // Agregado
+        clientPhoneExtra: '',
         
         products: [], 
         complements: Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })),
@@ -20,19 +21,19 @@ export const OrderProvider = ({ children }) => {
 
         deliveryDate: '',
         deliveryTime: '',
-        is_delivery: false, // CORREGIDO (antes era isDelivery)
+        is_delivery: false,
         calle: '',
         num_ext: '',
-        num_int: '',        // Agregado
+        num_int: '',
         colonia: '',
         referencias: '',
-        ubicacion_maps: '', // Agregado
-        costo_envio: 0,     // CORREGIDO (antes era shippingCost)
+        ubicacion_maps: '',
+        costo_envio: 0,
 
         costo_base: 0,
         total: 0,
-        advance: 0,
-        applyCommission: false,
+        anticipo: 0, // 🔥 FIX 3: Estandarizado a "anticipo" (antes era advance)
+        aplica_comision: false, // 🔥 FIX 2: Guardamos el estado de la comisión en el Contexto
         
         descripcion_diseno: '',
         dedicatoria: '',
@@ -42,7 +43,6 @@ export const OrderProvider = ({ children }) => {
 
     const updateOrder = (data) => {
         setOrderData((prev) => {
-            // Support functional updates: updateOrder(prev => ({...}))
             const newData = typeof data === 'function' ? data(prev) : data;
             return { ...prev, ...newData };
         });
@@ -56,7 +56,7 @@ export const OrderProvider = ({ children }) => {
         setOrderData({
             clientName: '',
             clientPhone: '',
-            clientPhoneExtra: '', // 🔥 FIX 1: Se nos había olvidado limpiarlo al reiniciar
+            clientPhoneExtra: '', 
             products: [],
             complements: Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })),
             extras: [],
@@ -72,10 +72,8 @@ export const OrderProvider = ({ children }) => {
             ubicacion_maps: '',
             costo_envio: 0,
             total: 0,
-            advance: 0,
-            applyCommission: false,
-            
-            // Design
+            anticipo: 0, // 🔥 FIX 3
+            aplica_comision: false, // 🔥 FIX 2
             descripcion_diseno: '',
             dedicatoria: '',
             extraHeight: false,
@@ -84,7 +82,6 @@ export const OrderProvider = ({ children }) => {
     };
 
     const loadOrder = (folio) => {
-        // 🛡️ PARCHE MYSQL MEJORADO: Agregamos "folio.complementosList" que es como lo manda tu backend
         let rawComps = folio.complementosList || folio.complementarios || folio.complementos || [];
         if (typeof rawComps === 'string') {
             try { rawComps = JSON.parse(rawComps); } catch(e) { rawComps = []; }
@@ -94,23 +91,18 @@ export const OrderProvider = ({ children }) => {
         const parsedComplements = rawComps.map(c => ({
             personas: c.numero_personas || c.personas || '',
             forma: c.forma || 'Redondo',
-            // 🔥 FIX FINAL: Añadimos sabor_pan a la lista de búsqueda en la rehidratación
             sabor: (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : (c.sabor || c.sabor_pan)) || '',
             relleno: (Array.isArray(c.rellenos) ? c.rellenos[0] : c.relleno) || '',
             descripcion: c.descripcion || '',
-            precio: c.precio || 0
+            precio: parseFloat(c.precio) || 0 // 🔥 FIX 4: Asegurar casteo de precios en complementos
         }));
 
         setOrderData({
             id: folio.id, 
             clientName: folio.cliente_nombre || '',
             clientPhone: folio.cliente_telefono || '',
-            
-            // 🔥 FIX 2: Cargar el teléfono extra de la Base de Datos
             clientPhoneExtra: folio.cliente_telefono_extra || '',
-
             clientId: folio.clientId,
-            // 🔥 FIX 3: Guardar el teléfono 2 en el selectedClient por si lo necesitas
             selectedClient: folio.clientId ? { 
                 id: folio.clientId, 
                 name: folio.cliente_nombre, 
@@ -132,7 +124,7 @@ export const OrderProvider = ({ children }) => {
             is_delivery: !!folio.is_delivery,
             calle: folio.calle || '',
             num_ext: folio.num_ext || '',
-            num_int: folio.num_int || '', // 🔥 FIX: Faltaba inicializar el número interior
+            num_int: folio.num_int || '', 
             colonia: folio.colonia || '',
             referencias: folio.referencias || '',
             ubicacion_maps: folio.ubicacion_maps || '',
@@ -145,13 +137,13 @@ export const OrderProvider = ({ children }) => {
             referenceImages: folio.diseno_metadata?.allImages || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : []),
             
             total: folio.total || 0,
-            advance: folio.anticipo || 0,
+            anticipo: folio.anticipo || 0, // 🔥 FIX 3: Alineado con Backend y StepF_Payment
+            aplica_comision: !!folio.aplica_comision, // 🔥 FIX 2: Rehidratamos el estado del checkbox
             
             pisos: (folio.diseno_metadata?.pisos?.length === 8) 
                 ? folio.diseno_metadata.pisos 
                 : [...(folio.diseno_metadata?.pisos || []), ...Array.from({ length: Math.max(0, 8 - (folio.diseno_metadata?.pisos?.length || 0)) }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))].slice(0, 8),
             
-            // 🔥 REHIDRATACIÓN SEGURA DE COMPLEMENTOS
             complements: [...parsedComplements, ...Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 }))].slice(0, 3)
         });
         setStep(1);

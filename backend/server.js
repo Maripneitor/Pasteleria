@@ -157,8 +157,9 @@ async function bootstrap() {
     await conectarDB();
     console.log('✅ DB Conectada.');
 
-    await sequelize.sync(); 
-    console.log('🛡️ Sincronización automática de BD ajustada (alter: false).');
+    // CÁMBIALO TEMPORALMENTE A { alter: true }
+    await sequelize.sync({ alter: true }); 
+    console.log('🛡️ Sincronización automática de BD ajustada (alter: true).');
 
     // 👇 LO NUEVO CORREGIDO
     console.log('📱 Encendiendo motor de WhatsApp...');

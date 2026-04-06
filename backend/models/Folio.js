@@ -30,15 +30,7 @@ const Folio = sequelize.define('Folio', {
   hora_entrega: { type: DataTypes.STRING, allowNull: true },   // HH:mm
 
   // Ubicación
-  deliveryLocation: { type: DataTypes.STRING }, // Keeping this mixed as user didn't specify, but controller uses p.deliveryLocation in some places? No, Controller 372 doesn't show it. 
-  // Wait, Controller 372 CreateFolio doesn't explicitly list deliveryLocation in the create object?
-  // It has `diseno_metadata` and `descripcion_diseno`.
-  // I'll keep `deliveryLocation` or map it. Let's look at the payload in Section 4: `entrega: { ... }` inside `diseno_metadata`? 
-  // No, `diseno_metadata` has `entrega: { ... }`. 
-  // I will add `ubicacion_entrega` or similar if needed, or rely on JSON `diseno_metadata`.
-  // To be safe, I'll keep `deliveryLocation` as `ubicacion_entrega` to match Spanish style if possible, or just keep as is?
-  // User 372 CREATE controller doesn't seem to use `deliveryLocation` column. It might be in `diseno_metadata` or just omitted in the snippet.
-  // I'll leave `ubicacion_entrega` (string) just in case.
+  deliveryLocation: { type: DataTypes.STRING }, 
   ubicacion_entrega: { type: DataTypes.STRING }, // General one-line or legacy
 
   // Detalle de Entrega (Logística)
@@ -77,6 +69,7 @@ const Folio = sequelize.define('Folio', {
   costo_envio: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
   anticipo: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
   total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+  aplica_comision: { type: DataTypes.BOOLEAN, defaultValue: false }, // 🔥 FIX: Agregado para que Sequelize lo guarde
   resta: {
     type: DataTypes.VIRTUAL,
     get() { return this.total - this.anticipo; }

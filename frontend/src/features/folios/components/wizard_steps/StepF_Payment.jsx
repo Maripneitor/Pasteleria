@@ -6,29 +6,45 @@ import { useNavigate } from 'react-router-dom';
 import foliosApi from '@/features/folios/api/folios.api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+// 🔥 Helper Blindado para números (Evita NaNs y redondea a 2 decimales para MySQL)
+const getValidMoney = (val) => {
+    const parsed = parseFloat(val);
+    return isNaN(parsed) ? 0 : Number(parsed.toFixed(2));
+};
+
 const StepF_Payment = ({ prev }) => {
     const { orderData, updateOrder } = useOrder();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const [addCommission, setAddCommission] = useState(false);
+    
+    const [nuevoAbono, setNuevoAbono] = useState(''); 
 
-    const baseCost = parseFloat(orderData.costo_base || 0);
-    const shipping = parseFloat(orderData.costo_envio || 0);
-    const extrasTotal = (orderData.extras || []).reduce((acc, curr) => acc + (curr.qty * curr.price), 0);
-    const complementsTotal = (orderData.complements || []).reduce((acc, curr) => acc + (parseFloat(curr.precio) || 0), 0);
+    // --- CÁLCULOS MATEMÁTICOS SEGUROS ---
+    const baseCost = getValidMoney(orderData.costo_base);
+    const shipping = getValidMoney(orderData.costo_envio);
+    
+    const extrasTotal = (orderData.extras || []).reduce((acc, curr) => {
+        const p = getValidMoney(curr.precio || curr.price);
+        const q = parseInt(curr.cantidad || curr.qty, 10) || 1;
+        return acc + (p * q);
+    }, 0);
+    
+    const complementsTotal = (orderData.complements || []).reduce((acc, curr) => acc + getValidMoney(curr.precio), 0);
 
     const subTotal = baseCost + shipping + extrasTotal + complementsTotal;
-    const commissionAmount = addCommission ? (subTotal * 0.04) : 0;
+    const commissionAmount = orderData.aplica_comision ? getValidMoney(subTotal * 0.04) : 0;
+    const total = getValidMoney(subTotal + commissionAmount);
 
-    const total = subTotal + commissionAmount;
-    const advance = parseFloat(orderData.anticipo || 0);
-    const remaining = total - advance;
+    const historicalAdvance = getValidMoney(orderData.anticipo); 
+    const currentNewAbono = getValidMoney(nuevoAbono); 
+    const totalPaid = getValidMoney(historicalAdvance + currentNewAbono);
+    const remaining = getValidMoney(total - totalPaid);
 
     const handlePaidInFull = (e) => {
         if (e.target.checked) {
-            updateOrder({ anticipo: total, isPaidInFull: true });
+            setNuevoAbono(Math.max(0, getValidMoney(total - historicalAdvance)));
         } else {
-            updateOrder({ isPaidInFull: false });
+            setNuevoAbono('');
         }
     };
 
@@ -42,19 +58,28 @@ const StepF_Payment = ({ prev }) => {
         },
         onSuccess: (result) => {
             const isUpdate = !!orderData.id;
-            toast.success(isUpdate ? '¡Pedido actualizado!' : '¡Pedido creado!');
+            toast.success(isUpdate ? '¡Pedido actualizado y abonado!' : '¡Pedido creado con éxito!');
             queryClient.invalidateQueries({ queryKey: ['folios'] });
             if (orderData.id) queryClient.invalidateQueries({ queryKey: ['folios', orderData.id] });
             navigate(`/folios/${result?.id || orderData.id}`);
         },
         onError: (error) => {
-            console.error(error);
-            const errorMessage = error.response?.data?.message || 'Error al guardar';
-            toast.error(`Error: ${errorMessage}`);
+            // 🔥 DETECTOR DE ERRORES EXACTO DE ZOD
+            const backendErrors = error.response?.data?.errors;
+            const backendMessage = error.response?.data?.message;
+            
+            console.error("❌ RECHAZO DEL BACKEND (Detalles):", error.response?.data);
+            
+            if (Array.isArray(backendErrors)) {
+                // Si Zod nos da una lista de campos fallidos, los mostramos todos
+                const errorText = backendErrors.map(e => `${e.path || 'Campo'}: ${e.message}`).join(', ');
+                toast.error(`Error de validación: ${errorText}`, { duration: 6000 });
+            } else {
+                toast.error(`Error: ${backendMessage || 'No se pudo procesar la solicitud'}`, { duration: 5000 });
+            }
         }
     });
 
-    // 🔥 Súper Sanitizador: Convierte "10 Personas" en el número 10.
     const sanitizeNumber = (val) => {
         if (!val) return 0;
         const num = parseInt(val.toString().replace(/\D/g, ''), 10);
@@ -62,36 +87,19 @@ const StepF_Payment = ({ prev }) => {
     };
 
     const handleFinish = () => {
-        // --- 1. PROCESAMOS PISOS ---
         const pisosValidos = (orderData.pisos || []).filter(p => p.personas && sanitizeNumber(p.personas) > 0);
-        
-        // Formato estricto para que pase el Zod Schema
         const detallesPisosZod = pisosValidos.map((p, idx) => ({
             piso: idx + 1,
-            personas: sanitizeNumber(p.personas), // Aseguramos que vayan las personas
+            personas: sanitizeNumber(p.personas),
             sabores_pan: Array.isArray(p.panes) ? p.panes : (p.panes ? [p.panes] : []),
             rellenos: Array.isArray(p.rellenos) ? p.rellenos : (p.rellenos ? [p.rellenos] : []),
-            notas: p.notas || '' // 🔥 FIX: Empacamos las notas de cada piso
+            notas: p.notas || '' 
         }));
 
-        // --- 2. PROCESAMOS COMPLEMENTARIOS ---
         const rawComplements = (orderData.complements || []).filter(c => c.sabor || c.relleno || (c.personas && sanitizeNumber(c.personas) > 0));
-
-        // Formato para calmar a Zod
-        const complementariosZod = rawComplements.map(c => ({
+        
+        const mapComplements = rawComplements.map(c => ({
             numero_personas: sanitizeNumber(c.personas),
-            forma: c.forma || 'Redondo',
-            sabores_pan: c.sabor ? [c.sabor] : [],
-            rellenos: c.relleno ? [c.relleno] : [],
-            descripcion: c.descripcion || '',
-            sabor: c.sabor || '',
-            sabor_pan: c.sabor || '',
-            relleno: c.relleno || '',
-            precio: parseFloat(c.precio) || 0
-        }));
-
-        // Formato EXACTO que lee tu Backend (folio.service.js) para insertarlo en MySQL
-        const complementsListDB = rawComplements.map(c => ({
             personas: sanitizeNumber(c.personas),
             forma: c.forma || 'Redondo',
             sabor: c.sabor || '',
@@ -99,16 +107,19 @@ const StepF_Payment = ({ prev }) => {
             sabores_pan: c.sabor ? [c.sabor] : [],
             relleno: c.relleno || '',
             rellenos: c.relleno ? [c.relleno] : [],
-            precio: parseFloat(c.precio) || 0,
-            descripcion: c.descripcion || ''
+            descripcion: c.descripcion || '',
+            precio: getValidMoney(c.precio)
         }));
 
-        // --- 3. SANITIZADORES GLOBALES ---
         let hora_limpia = orderData.deliveryTime || '';
         if (hora_limpia.length > 5) hora_limpia = hora_limpia.substring(0, 5); 
-
         let tipoFolioSeguro = orderData.tipo_folio || 'Normal';
         if (tipoFolioSeguro === 'Base' || tipoFolioSeguro === 'Especial') tipoFolioSeguro = 'Base/Especial';
+
+        // 🔥 LÓGICA DE ESTATUS CORRECTA PARA EL NEGOCIO
+        let estatusCalculado = 'Pendiente';
+        if (remaining <= 0) estatusCalculado = 'Pagado';
+        else if (totalPaid > 0) estatusCalculado = 'Anticipo';
 
         const payload = {
             cliente_nombre: orderData.clientName,
@@ -116,8 +127,8 @@ const StepF_Payment = ({ prev }) => {
             cliente_telefono_extra: orderData.clientPhoneExtra || '', 
             clientId: orderData.clientId || null,
 
-            fecha_entrega: orderData.deliveryDate,
-            hora_entrega: hora_limpia,
+            fecha_entrega: orderData.deliveryDate || undefined, // Zod odia strings vacíos en fechas
+            hora_entrega: hora_limpia || undefined,
             
             tipo_folio: tipoFolioSeguro, 
             forma: orderData.shape,
@@ -127,34 +138,32 @@ const StepF_Payment = ({ prev }) => {
             rellenos: orderData.rellenos,
 
             detallesPisos: detallesPisosZod,
-            complementarios: complementariosZod,
-            complementsList: complementsListDB,
+            complementarios: mapComplements,
+            complementsList: mapComplements,
             
-            accesorios: orderData.extras,
-            descripcion_diseno: orderData.descripcion_diseno,
-            dedicatoria: orderData.dedicatoria,
+            accesorios: orderData.extras || [],
+            descripcion_diseno: orderData.descripcion_diseno || '',
+            dedicatoria: orderData.dedicatoria || '',
             imagen_referencia_url: orderData.imagen_referencia_url,
             
-            diseno_metadata: {
-                pisos: pisosValidos,
-                allImages: orderData.referenceImages
-            },
+            diseno_metadata: { pisos: pisosValidos, allImages: orderData.referenceImages },
 
-            // 🔥 FIX: Datos de envío completos
-            is_delivery: orderData.is_delivery || orderData.isDelivery, 
+            is_delivery: !!(orderData.is_delivery || orderData.isDelivery), 
             calle: orderData.calle,
             num_ext: orderData.num_ext,
             num_int: orderData.num_int,
             colonia: orderData.colonia,
             referencias: orderData.referencias,
             ubicacion_maps: orderData.ubicacion_maps,
+            
             costo_envio: shipping,
-
             costo_base: baseCost,
+            aplica_comision: !!orderData.aplica_comision,
             totalValue: total,
             total: total,
-            anticipo: advance,
-            estatus_pago: (remaining <= 0) ? 'Pagado' : 'Pendiente',
+            
+            anticipo: totalPaid, 
+            estatus_pago: estatusCalculado,
             status: 'CONFIRMED'
         };
 
@@ -201,8 +210,8 @@ const StepF_Payment = ({ prev }) => {
                         <label className="flex items-center gap-2 cursor-pointer w-max">
                             <input
                                 type="checkbox"
-                                checked={addCommission}
-                                onChange={(e) => setAddCommission(e.target.checked)}
+                                checked={!!orderData.aplica_comision}
+                                onChange={(e) => updateOrder({ aplica_comision: e.target.checked })}
                                 className="rounded text-pink-600 focus:ring-pink-500 w-4 h-4"
                             />
                             <span className="text-sm font-bold text-blue-600 hover:text-blue-800 transition">Comisión Tarjeta (4%)</span>
@@ -217,30 +226,39 @@ const StepF_Payment = ({ prev }) => {
 
                 <div className="space-y-6">
                     <div className="bg-green-50 p-6 rounded-2xl border border-green-200">
-                        <label className="block text-sm font-bold text-green-800 mb-2">Anticipo Recibido</label>
+                        
+                        {historicalAdvance > 0 && (
+                            <div className="flex justify-between items-center mb-4 text-green-700 bg-green-100 p-3 rounded-lg text-sm font-bold shadow-sm">
+                                <span>Anticipo Histórico (Abonado):</span>
+                                <span>${historicalAdvance.toFixed(2)}</span>
+                            </div>
+                        )}
+
+                        <label className="block text-sm font-bold text-green-800 mb-2">Nuevo Abono (Recibido Hoy)</label>
                         <div className="relative">
                             <DollarSign className="absolute left-3 top-3.5 text-green-600" size={20} />
                             <input
                                 type="number"
-                                value={orderData.anticipo ?? ''}
-                                onChange={(e) => updateOrder({ anticipo: parseFloat(e.target.value) || 0 })}
+                                value={nuevoAbono}
+                                onChange={(e) => setNuevoAbono(e.target.value)}
+                                placeholder="0.00"
                                 className="w-full pl-10 p-4 border border-green-300 rounded-xl text-2xl font-bold text-green-900 bg-white outline-none focus:ring-2 focus:ring-green-500"
                             />
                         </div>
                         <label className="flex items-center gap-2 mt-4 cursor-pointer w-max">
                             <input
                                 type="checkbox"
-                                checked={orderData.isPaidInFull || (advance >= total && total > 0)}
+                                checked={remaining <= 0 && total > 0}
                                 onChange={handlePaidInFull}
                                 className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
                             />
-                            <span className="font-bold text-green-800 hover:text-green-900 transition">Pagado Total</span>
+                            <span className="font-bold text-green-800 hover:text-green-900 transition">Liquidar Restante</span>
                         </label>
                     </div>
 
                     <div className="bg-gray-100 p-6 rounded-2xl text-center">
                         <p className="text-sm font-bold text-gray-500 uppercase">Resta por Pagar</p>
-                        <p className={`text-4xl font-black ${remaining > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                        <p className={`text-4xl font-black ${remaining > 0 ? 'text-red-500' : 'text-green-600'}`}>
                             ${Math.max(0, remaining).toFixed(2)}
                         </p>
                     </div>
