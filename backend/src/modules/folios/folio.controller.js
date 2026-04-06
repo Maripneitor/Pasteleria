@@ -155,6 +155,27 @@ exports.getDashboardStats = asyncHandler(async (req, res) => {
     res.json(stats);
 });
 
+// ✅ GET AUDITS (HISTORIAL DE CAMBIOS)
+exports.getFolioAudits = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const AuditLog = require('../../../models/AuditLog');
+    const User = require('../../../models/user');
+
+    const logs = await AuditLog.findAll({
+        where: { entity: 'FOLIO', entityId: id },
+        order: [['createdAt', 'DESC']],
+        include: [{ model: User, as: 'actor', attributes: ['name', 'email'] }]
+    });
+
+    const result = logs.map((log) => {
+        const j = log.toJSON();
+        j.details = j.meta; // Mantenemos la compatibilidad
+        return j;
+    });
+
+    res.json(result);
+});
+
 // ✅ PDF Single
 exports.generarPDF = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);

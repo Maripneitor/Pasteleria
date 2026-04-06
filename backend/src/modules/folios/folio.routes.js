@@ -36,6 +36,7 @@ router.get('/:id/label-pdf', folioController.generarEtiqueta);
 
 // ✅ CRUD Operations
 router.get('/', folioController.listFolios);
+router.get('/:id/audits', folioController.getFolioAudits); // 🔥 NUEVA RUTA AQUÍ
 router.post('/', 
     uploadReference.array('referenceImages', 5), 
     parseBodyMiddleware, // ✅ Ahora es una función middleware válida

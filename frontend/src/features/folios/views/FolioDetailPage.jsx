@@ -1,9 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-// Asegúrate de que esta ruta sea la correcta en tu estructura de carpetas
 import foliosApi, { downloadPdfBlob } from '@/features/folios/api/folios.api'; 
 import { ArrowLeft, FileText, Calendar, User, DollarSign, Package, Edit, History } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// 🎨 DICCIONARIO PARA EMBELLECER LAS VARIABLES DE LA BD
+const dictionary = {
+    total: 'Total a Pagar',
+    anticipo: 'Anticipo / Abono',
+    costo_base: 'Precio Total del Pastel',
+    costo_envio: 'Costo de Envío',
+    fecha_entrega: 'Fecha de Entrega',
+    hora_entrega: 'Hora de Entrega',
+    cliente_nombre: 'Nombre del Cliente',
+    cliente_telefono: 'Teléfono',
+    estatus_pago: 'Estatus de Pago',
+    estatus_produccion: 'Estatus de Producción',
+    descripcion_diseno: 'Descripción General',
+    dedicatoria: 'Dedicatoria',
+    complementarios: 'Complementarios',
+    complementsList: 'Complementarios',
+    detallesPisos: 'Pisos del Pastel',
+    sabores_pan: 'Sabores del Pan',
+    rellenos: 'Rellenos',
+    accesorios: 'Accesorios/Extras',
+    diseno_metadata: 'Metadatos de Diseño'
+};
+
+// 🎨 FORMATEADOR INTELIGENTE DE VALORES
+const formatAuditValue = (key, val) => {
+    if (val === null || val === undefined || val === '') return 'Ninguno';
+    
+    if (['total', 'anticipo', 'costo_base', 'costo_envio'].includes(key)) {
+        const num = parseFloat(val);
+        return isNaN(num) ? val : `$${num.toFixed(2)}`;
+    }
+    
+    if (key === 'complementarios' || key === 'complementsList' || key === 'detallesPisos') {
+        const arr = typeof val === 'string' ? JSON.parse(val) : val;
+        return Array.isArray(arr) ? `${arr.length} elementos` : 'Modificado';
+    }
+    
+    if (typeof val === 'object') return 'Datos actualizados';
+    
+    return String(val);
+};
 
 const FolioDetailPage = () => {
     const { id } = useParams();
@@ -13,7 +54,6 @@ const FolioDetailPage = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // 🛡️ Evitamos peticiones a IDs basura
         if (!id || id === ':id' || id === 'undefined') return;
 
         const fetchFolio = async () => {
@@ -26,19 +66,12 @@ const FolioDetailPage = () => {
                     })
                 ]);
                 
-                // Forzamos la actualización del estado
                 setFolio(data.folio || data);
-                
-                // AJUSTE 1: Protegemos el setAudits para asegurar que siempre sea un Array
-                const auditsArray = Array.isArray(auditsData) 
-                    ? auditsData 
-                    : (auditsData?.audits || auditsData?.data || []);
+                const auditsArray = Array.isArray(auditsData) ? auditsData : (auditsData?.audits || auditsData?.data || []);
                 setAudits(auditsArray);
-
             } catch (error) {
                 console.error("❌ Error fetchFolio:", error);
                 toast.error('No se pudo cargar la información del pedido');
-                // navigate('/pedidos'); // Comenta esto temporalmente para ver el error
             } finally {
                 setLoading(false);
             }
@@ -80,10 +113,7 @@ const FolioDetailPage = () => {
             </div>
             <h2 className="text-2xl font-bold text-gray-800">Pedido no encontrado</h2>
             <p className="text-gray-500 text-center max-w-md">No pudimos cargar la información de este pedido. Puede que haya sido eliminado o no tengas acceso.</p>
-            <button
-                onClick={() => navigate('/pedidos')}
-                className="mt-4 px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition shadow-lg"
-            >
+            <button onClick={() => navigate('/pedidos')} className="mt-4 px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition shadow-lg">
                 Regresar a Pedidos
             </button>
         </div>
@@ -91,12 +121,8 @@ const FolioDetailPage = () => {
 
     return (
         <div className="p-6 max-w-5xl mx-auto animate-in fade-in duration-500">
-            <button
-                onClick={() => navigate('/pedidos')}
-                className="flex items-center text-gray-500 hover:text-gray-800 mb-6 transition"
-            >
-                <ArrowLeft size={20} className="mr-2" />
-                Volver a Pedidos
+            <button onClick={() => navigate('/pedidos')} className="flex items-center text-gray-500 hover:text-gray-800 mb-6 transition">
+                <ArrowLeft size={20} className="mr-2" /> Volver a Pedidos
             </button>
 
             {/* Header Card */}
@@ -104,40 +130,24 @@ const FolioDetailPage = () => {
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
                         Folio #{folio.folio_numero || folio.id}
-                        <span className={`text-sm px-3 py-1 rounded-full ${
-                            folio.estatus_folio === 'Cancelado' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-800'
-                        }`}>
+                        <span className={`text-sm px-3 py-1 rounded-full ${folio.estatus_folio === 'Cancelado' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-800'}`}>
                             {folio.estatus_folio || 'Activo'}
                         </span>
                     </h1>
                     <p className="text-gray-500 mt-1">
-                        Creado el {new Date(folio.createdAt).toLocaleDateString('es-MX', { 
-                            year: 'numeric', month: 'long', day: 'numeric' 
-                        })}
+                        Creado el {new Date(folio.createdAt).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={() => navigate(`/pedidos/${id}/editar`)}
-                        className="flex items-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium shadow-sm transition"
-                    >
-                        <Edit size={18} />
-                        Editar
+                    <button onClick={() => navigate(`/pedidos/${id}/editar`)} className="flex items-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium shadow-sm transition">
+                        <Edit size={18} /> Editar
                     </button>
-                    <button
-                        onClick={handleOpenComanda}
-                        className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition"
-                    >
-                        <FileText size={18} />
-                        Descargar Comanda
+                    <button onClick={handleOpenComanda} className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition">
+                        <FileText size={18} /> Descargar Comanda
                     </button>
-                    <button
-                        onClick={handleOpenNota}
-                        className="flex items-center gap-2 bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg font-medium shadow-md transition"
-                    >
-                        <DollarSign size={18} />
-                        Descargar Nota
+                    <button onClick={handleOpenNota} className="flex items-center gap-2 bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg font-medium shadow-md transition">
+                        <DollarSign size={18} /> Descargar Nota
                     </button>
                 </div>
             </div>
@@ -147,8 +157,7 @@ const FolioDetailPage = () => {
                 <div className="md:col-span-2 space-y-6">
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <Package size={20} className="text-pink-500" />
-                            Detalles del Pedido Principal
+                            <Package size={20} className="text-pink-500" /> Detalles del Pedido Principal
                         </h2>
                         <div className="space-y-4">
                             <div className="p-4 bg-gray-50 rounded-xl">
@@ -162,20 +171,15 @@ const FolioDetailPage = () => {
                                 )}
                             </div>
                             
-                            {/* Mostrar Sabores Generales SOLO si es un pastel Normal (1 piso) */}
                             {folio.tipo_folio !== 'Base' && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-sm text-gray-500 font-semibold uppercase">Sabores de Pan</p>
-                                        <p className="font-medium text-gray-800">
-                                            {Array.isArray(folio.sabores_pan) ? folio.sabores_pan.join(', ') : folio.sabores_pan || 'N/A'}
-                                        </p>
+                                        <p className="font-medium text-gray-800">{Array.isArray(folio.sabores_pan) ? folio.sabores_pan.join(', ') : folio.sabores_pan || 'N/A'}</p>
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 font-semibold uppercase">Rellenos</p>
-                                        <p className="font-medium text-gray-800">
-                                            {Array.isArray(folio.rellenos) ? folio.rellenos.join(', ') : folio.rellenos || 'N/A'}
-                                        </p>
+                                        <p className="font-medium text-gray-800">{Array.isArray(folio.rellenos) ? folio.rellenos.join(', ') : folio.rellenos || 'N/A'}</p>
                                     </div>
                                 </div>
                             )}
@@ -191,9 +195,7 @@ const FolioDetailPage = () => {
                                     <div key={index} className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm">
                                         <div className="flex justify-between items-center mb-2 border-b border-purple-50 pb-2">
                                             <span className="font-bold text-purple-800">Piso {index + 1}</span>
-                                            <span className="text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded-md font-medium">
-                                                {piso.personas || piso.persons} pax
-                                            </span>
+                                            <span className="text-sm bg-purple-100 text-purple-700 px-2 py-1 rounded-md font-medium">{piso.personas || piso.persons} pax</span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2 text-sm">
                                             <div><span className="text-gray-500">Pan:</span> <span className="font-medium">{Array.isArray(piso.panes || piso.flavor) ? (piso.panes || piso.flavor).join(', ') : (piso.panes || piso.flavor)}</span></div>
@@ -235,7 +237,6 @@ const FolioDetailPage = () => {
                                                     <p className="text-sm text-gray-500 italic mt-1">"{comp.descripcion || comp.description}"</p>
                                                 )}
                                             </div>
-                                            {/* 🔥 EL DIV DEL PRECIO $0.00 FUE ELIMINADO AQUÍ */}
                                         </div>
                                     ))}
                                 </div>
@@ -253,7 +254,6 @@ const FolioDetailPage = () => {
                         </h3>
                         <p className="text-xl font-bold text-gray-900">{folio.cliente_nombre}</p>
                         <p className="text-gray-600 font-medium">{folio.cliente_telefono || 'Sin teléfono'}</p>
-                        {folio.client?.email && <p className="text-gray-500 text-sm mt-1">{folio.client.email}</p>}
                     </div>
 
                     {/* Entrega */}
@@ -277,18 +277,11 @@ const FolioDetailPage = () => {
                         </div>
                         <div className="border-t border-gray-700 pt-3 flex justify-between items-center font-bold">
                             <span className="text-gray-200">Resta por Pagar</span>
-                            <span className="text-xl text-pink-400">
-                                $ {(parseFloat(folio.total || 0) - parseFloat(folio.anticipo || 0)).toFixed(2)}
-                            </span>
-                        </div>
-                        <div className={`mt-4 text-center py-2 rounded-lg font-black text-xs tracking-widest ${
-                            folio.estatus_pago === 'Pagado' ? 'bg-green-600' : 'bg-yellow-600 text-yellow-950'
-                        }`}>
-                            {folio.estatus_pago?.toUpperCase() || 'PENDIENTE'}
+                            <span className="text-xl text-pink-400">$ {(parseFloat(folio.total || 0) - parseFloat(folio.anticipo || 0)).toFixed(2)}</span>
                         </div>
                     </div>
 
-                    {/* Historial de Edición */}
+                    {/* 🔥 HISTORIAL DE EDICIÓN EMBELLECIDO Y SUPER FILTRADO 🔥 */}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2 uppercase text-xs tracking-wider">
                             <History size={18} /> Historial de Cambios
@@ -298,37 +291,79 @@ const FolioDetailPage = () => {
                             <p className="text-gray-400 text-sm text-center py-4">No hay cambios registrados.</p>
                         ) : (
                             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                                {audits.map((audit) => (
-                                    <div key={audit.id} className="relative pl-4 border-l-2 border-gray-100 pb-2 last:pb-0">
-                                        <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-pink-400"></div>
-                                        <div className="text-xs font-bold text-gray-800 flex justify-between">
-                                            <span>
-                                                {audit.action === 'CREATE' ? 'Creado' : audit.action === 'UPDATE' ? 'Actualizado' : audit.action}
-                                            </span>
-                                            <span className="text-gray-400 font-normal">{new Date(audit.createdAt).toLocaleString('es-MX', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}</span>
-                                        </div>
-                                        <div className="text-sm text-gray-600 mt-1">
-                                            Por: <span className="font-medium text-gray-800">{audit.actor?.name || 'Sistema'}</span>
-                                        </div>
-                                        {audit.meta?.changes && Object.keys(audit.meta.changes).length > 0 && (
-                                            <div className="mt-2 bg-gray-50 text-[10px] p-2 rounded border border-gray-100 space-y-1">
-                                                {Object.keys(audit.meta.changes).map(key => {
-                                                    let from = audit.meta.changes[key].from;
-                                                    let to = audit.meta.changes[key].to;
-                                                    if (typeof from === 'object') from = JSON.stringify(from);
-                                                    if (typeof to === 'object') to = JSON.stringify(to);
-                                                    return (
-                                                        <div key={key}>
-                                                            <span className="font-bold text-gray-700 mr-1">{key}:</span>
-                                                            <span className="text-gray-400 line-through">{from || 'vacío'}</span>
-                                                            <span className="text-green-600 ml-1">➔ {to || 'vacío'}</span>
-                                                        </div>
-                                                    );
-                                                })}
+                                {audits.map((audit) => {
+                                    const validChanges = [];
+                                    
+                                    if (audit.meta?.changes) {
+                                        Object.keys(audit.meta.changes).forEach(key => {
+                                            const fromRaw = audit.meta.changes[key].from;
+                                            const toRaw = audit.meta.changes[key].to;
+                                            
+                                            // 1. Ignorar la basura
+                                            if (key === 'diseno_metadata') return;
+                                            
+                                            // 2. Convertir objetos de texto a JSON real para compararlos bien
+                                            let fromParsed = fromRaw;
+                                            let toParsed = toRaw;
+                                            try { if (typeof fromRaw === 'string') fromParsed = JSON.parse(fromRaw); } catch(e) {}
+                                            try { if (typeof toRaw === 'string') toParsed = JSON.parse(toRaw); } catch(e) {}
+                                            
+                                            // 3. FALSO POSITIVO: Si convertidos a JSON son exactamente iguales, ignorar.
+                                            if (JSON.stringify(fromParsed) === JSON.stringify(toParsed)) return;
+
+                                            // 4. FALSO POSITIVO NUMÉRICO: (ej. 1200.00 a 1200)
+                                            if (['total', 'anticipo', 'costo_base', 'costo_envio'].includes(key)) {
+                                                if (parseFloat(fromRaw || 0) === parseFloat(toRaw || 0)) return;
+                                            }
+                                            
+                                            // Si pasa los filtros, es un cambio real
+                                            validChanges.push({ key, from: fromParsed, to: toParsed });
+                                        });
+                                    }
+
+                                    // Si todos los cambios eran falsos positivos, ocultamos esta "actualización" vacía
+                                    if (audit.action === 'UPDATE' && validChanges.length === 0) return null;
+
+                                    return (
+                                        <div key={audit.id} className="relative pl-4 border-l-2 border-gray-100 pb-2 last:pb-0">
+                                            <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-pink-400"></div>
+                                            <div className="text-xs font-bold text-gray-800 flex justify-between">
+                                                <span>{audit.action === 'CREATE' ? 'Creado' : audit.action === 'UPDATE' ? 'Actualizado' : audit.action}</span>
+                                                <span className="text-gray-400 font-normal">{new Date(audit.createdAt).toLocaleString('es-MX', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}</span>
                                             </div>
-                                        )}
-                                    </div>
-                                ))}
+                                            <div className="text-sm text-gray-600 mt-1">
+                                                Por: <span className="font-medium text-gray-800">{audit.actor?.name || 'Sistema'}</span>
+                                            </div>
+                                            
+                                            {validChanges.length > 0 && (
+                                                <div className="mt-2 bg-gray-50 text-[11px] p-2 rounded-lg border border-gray-200 space-y-1.5">
+                                                    {validChanges.map(({ key, from, to }) => {
+                                                        let fromText = formatAuditValue(key, from);
+                                                        let toText = formatAuditValue(key, to);
+                                                        
+                                                        // 🔥 MAGIA FINAL: Si el texto dice "2 elementos ➔ 2 elementos" 
+                                                        // significa que cambió el sabor/relleno interno pero no la cantidad.
+                                                        if (fromText === toText && ['complementarios', 'complementsList', 'detallesPisos'].includes(key)) {
+                                                            fromText = 'Versión anterior';
+                                                            toText = 'Contenido Modificado';
+                                                        }
+
+                                                        return (
+                                                            <div key={key} className="flex flex-col">
+                                                                <span className="font-bold text-gray-700">{dictionary[key] || key}:</span>
+                                                                <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                                                                    <span className="text-red-400 line-through bg-red-50 px-1 rounded">{fromText}</span>
+                                                                    <span className="text-gray-400">➔</span>
+                                                                    <span className="text-green-600 font-medium bg-green-50 px-1 rounded">{toText}</span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
                             </div>
                         )}
                     </div>
