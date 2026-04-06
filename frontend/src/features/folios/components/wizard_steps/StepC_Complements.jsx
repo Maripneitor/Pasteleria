@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
-import { PlusCircle, Trash2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import catalogApi from '@/features/catalogs/api/catalogs.api';
 
 const StepC_Complements = ({ next, prev }) => {
@@ -11,25 +11,21 @@ const StepC_Complements = ({ next, prev }) => {
     const [sizes, setSizes] = useState([]);   
     const [loading, setLoading] = useState(true);
 
-    // 🔥 ¡RECUPERADO Y BLINDADO! ESTADO LOCAL CON MAPEO DE EDICIÓN
     const [localComps, setLocalComps] = useState(() => {
-        // En edición, el backend puede mandar "complements", "complementosList" o "complementarios"
         const ctxComps = orderData.complements || orderData.complementosList || orderData.complementarios || [];
         
         return Array.from({ length: 3 }, (_, i) => {
             const c = ctxComps[i] || {};
-            
-            // 🚀 INTERCEPTOR: Traduce los nombres de la Base de Datos a los nombres del Formulario
             const saborReal = c.sabor || c.sabor_pan || (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : '') || '';
             const rellenoReal = c.relleno || (Array.isArray(c.rellenos) ? c.rellenos[0] : '') || '';
 
             return {
                 personas: c.personas || c.numero_personas || '',
                 forma: c.forma || 'Redondo',
-                sabor: saborReal,     // 🔥 Aquí inyectamos el valor correcto
+                sabor: saborReal,     
                 relleno: rellenoReal, 
                 descripcion: c.descripcion || '',
-                precio: c.precio || 0
+                precio: 0 // 🔥 Siempre 0, el usuario lo cobra en el Precio Total del Pastel
             };
         });
     });
@@ -56,7 +52,6 @@ const StepC_Complements = ({ next, prev }) => {
         load();
     }, []);
 
-    // 🔄 ¡RECUPERADO! SINCRONIZADOR SILENCIOSO AL CONTEXTO
     useEffect(() => {
         updateOrder({ complements: localComps });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,7 +73,7 @@ const StepC_Complements = ({ next, prev }) => {
                 <span className="bg-pink-100 text-pink-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">C</span>
                 Pasteles Complementarios (Opcional)
             </h2>
-            <p className="text-gray-500 text-sm">El bot puede llenar hasta 3 pasteles complementarios automáticamente. Los vacíos se ignorarán.</p>
+            <p className="text-gray-500 text-sm">El precio de estos pasteles deberá sumarse manualmente al 'Precio Total del Pastel' en el último paso.</p>
 
             {localComps.map((comp, idx) => (
                 <div key={idx} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm relative animate-in fade-in slide-in-from-bottom-2">
@@ -86,7 +81,7 @@ const StepC_Complements = ({ next, prev }) => {
                         COMPLEMENTO {idx + 1}
                     </span>
 
-                    <div className="grid md:grid-cols-4 gap-4 mb-3">
+                    <div className="grid md:grid-cols-4 gap-4 mb-3 mt-2">
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase">Personas</label>
                             <select

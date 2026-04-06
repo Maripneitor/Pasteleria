@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useOrder } from '@/context/OrderContext';
-import { Upload, Sparkles, Image as ImageIcon, Trash2, Loader2 } from 'lucide-react';
+import { Upload, Sparkles, Image as ImageIcon, Trash2, Loader2, PlusCircle } from 'lucide-react';
 import api from '@/config/axios';
 import toast from 'react-hot-toast';
 
@@ -9,7 +9,6 @@ const StepD_Design = ({ next, prev }) => {
     const [uploading, setUploading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
 
-    // Image Upload
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -23,7 +22,6 @@ const StepD_Design = ({ next, prev }) => {
             const res = await api.post('/upload/reference', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            // Support multiple images if needed, prompt said "up to 5". Array logic.
             const currentImages = orderData.referenceImages || [];
             if (currentImages.length >= 5) {
                 toast.error('Máximo 5 imágenes permitidas', { id: toastId });
@@ -68,9 +66,23 @@ const StepD_Design = ({ next, prev }) => {
         }
     };
 
-    // Extras / Accessories logic (Simple array or text?)
-    // Prompt: "Gestión de Accesorios (Obleas, figuras de fondant, etc.)"
-    // Ideally reuse StepProduct logic but simpler for Step D. We can use the existing 'extras' array.
+    // 🔥 NUEVA LÓGICA DE EXTRAS / ACCESORIOS
+    const extras = orderData.extras || [];
+
+    const addExtra = () => {
+        updateOrder({ extras: [...extras, { nombre: '', cantidad: 1, precio: '' }] });
+    };
+
+    const updateExtra = (index, field, value) => {
+        const newExtras = [...extras];
+        newExtras[index][field] = value;
+        updateOrder({ extras: newExtras });
+    };
+
+    const removeExtra = (index) => {
+        const newExtras = extras.filter((_, i) => i !== index);
+        updateOrder({ extras: newExtras });
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
@@ -79,7 +91,6 @@ const StepD_Design = ({ next, prev }) => {
                 Diseño y Adicionales
             </h2>
 
-            {/* General Description */}
             <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Descripción General del Diseño</label>
                 <textarea
@@ -90,7 +101,6 @@ const StepD_Design = ({ next, prev }) => {
                 />
             </div>
 
-            {/* Dedication */}
             <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Dedicatoria</label>
                 <input
@@ -102,9 +112,7 @@ const StepD_Design = ({ next, prev }) => {
                 />
             </div>
 
-            {/* Extra Height & Image */}
             <div className="grid md:grid-cols-2 gap-6">
-                {/* Height Checkbox */}
                 <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 flex items-center gap-3">
                     <input
                         type="checkbox"
@@ -119,7 +127,6 @@ const StepD_Design = ({ next, prev }) => {
                     </div>
                 </div>
 
-                {/* Images */}
                 <div className="space-y-2">
                     <label className="block text-sm font-bold text-gray-700">Imágenes de Referencia (Máx 5)</label>
                     <div className="flex flex-wrap gap-2">
@@ -150,12 +157,61 @@ const StepD_Design = ({ next, prev }) => {
                 </div>
             </div>
 
-            {/* AI Analyze Button */}
+            {/* 🔥 SECCIÓN DE ACCESORIOS Y EXTRAS */}
+            <div className="pt-6 border-t border-gray-200 mt-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-gray-800">Accesorios y Extras (Cobro Adicional)</h3>
+                    <button type="button" onClick={addExtra} className="text-sm bg-pink-100 text-pink-700 px-3 py-1.5 rounded-lg font-bold hover:bg-pink-200 transition flex items-center gap-1">
+                        <PlusCircle size={16} /> Agregar Extra
+                    </button>
+                </div>
+                
+                {extras.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic">No hay accesorios adicionales. (Ej. Velas, Toppers, Obleas)</p>
+                ) : (
+                    <div className="space-y-3">
+                        {extras.map((extra, idx) => (
+                            <div key={idx} className="flex flex-wrap md:flex-nowrap gap-3 items-center bg-gray-50 p-3 rounded-xl border border-gray-200 animate-in fade-in">
+                                <input
+                                    type="text"
+                                    placeholder="Nombre (Ej. Vela Chispera)"
+                                    value={extra.nombre || ''}
+                                    onChange={(e) => updateExtra(idx, 'nombre', e.target.value)}
+                                    className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 outline-none"
+                                />
+                                <div className="w-24">
+                                    <input
+                                        type="number"
+                                        placeholder="Cant."
+                                        value={extra.cantidad}
+                                        onChange={(e) => updateExtra(idx, 'cantidad', parseInt(e.target.value) || 1)}
+                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-pink-500 outline-none"
+                                    />
+                                </div>
+                                <div className="w-32 relative">
+                                    <span className="absolute left-3 top-2.5 text-green-700 font-bold">$</span>
+                                    <input
+                                        type="number"
+                                        placeholder="Precio"
+                                        value={extra.precio}
+                                        onChange={(e) => updateExtra(idx, 'precio', parseFloat(e.target.value) || 0)}
+                                        className="w-full pl-7 p-2 border border-green-300 bg-green-50 text-green-700 font-bold rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                                    />
+                                </div>
+                                <button type="button" onClick={() => removeExtra(idx)} className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition">
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             {(orderData.referenceImages?.length > 0) && (
                 <button
                     onClick={handleAnalyzeAI}
                     disabled={analyzing}
-                    className="w-full py-3 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-200 hover:shadow-xl transition flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-200 hover:shadow-xl transition flex items-center justify-center gap-2 mt-4"
                 >
                     {analyzing ? (
                         <> <Loader2 className="animate-spin" /> Analizando Diseño... </>

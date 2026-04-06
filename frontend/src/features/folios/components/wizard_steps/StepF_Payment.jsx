@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOrder } from '@/context/OrderContext';
 import { Calculator, CheckCircle, DollarSign, Loader2, X, Save, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import foliosApi from '@/features/folios/api/folios.api';
+import catalogApi from '@/features/catalogs/api/catalogs.api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-// 🔥 Helper Blindado para números (Evita NaNs y redondea a 2 decimales para MySQL)
 const getValidMoney = (val) => {
     const parsed = parseFloat(val);
     return isNaN(parsed) ? 0 : Number(parsed.toFixed(2));
@@ -18,20 +18,75 @@ const StepF_Payment = ({ prev }) => {
     const queryClient = useQueryClient();
     
     const [nuevoAbono, setNuevoAbono] = useState(''); 
-
-    // --- CÁLCULOS MATEMÁTICOS SEGUROS ---
-    const baseCost = getValidMoney(orderData.costo_base);
-    const shipping = getValidMoney(orderData.costo_envio);
     
-    const extrasTotal = (orderData.extras || []).reduce((acc, curr) => {
+    // 🔥 ESTADO PARA CARGAR LOS PRECIOS DE CATÁLOGOS EN SEGUNDO PLANO
+    const [catalogPrices, setCatalogPrices] = useState({ flavors: [], shapes: [] });
+
+    useEffect(() => {
+        const fetchCatalogsForMath = async () => {
+            try {
+                const [f, sh1, sh2] = await Promise.all([
+                    catalogApi.getFlavors(false).catch(() => []),
+                    catalogApi.getShapes('MAIN', false).catch(() => []),
+                    catalogApi.getShapes('COMPLEMENTARY', false).catch(() => [])
+                ]);
+                setCatalogPrices({ flavors: f || [], shapes: [...sh1, ...sh2] });
+            } catch (e) {
+                console.error("Error cargando precios para matemáticas:", e);
+            }
+        };
+        fetchCatalogsForMath();
+    }, []);
+
+    const sanitizeNumber = (val) => {
+        if (!val) return 0;
+        const num = parseInt(val.toString().replace(/\D/g, ''), 10);
+        return isNaN(num) ? 0 : num;
+    };
+
+    // --- MAGIA DE CÁLCULO DE EXTRAS ---
+    const getCatalogExtraCost = (itemName, catalogList) => {
+        if (!itemName || !Array.isArray(catalogList)) return 0;
+        const item = catalogList.find(i => i.name === itemName);
+        if (!item) return 0;
+        // Busca cualquier propiedad que pueda indicar precio extra
+        return getValidMoney(item.price || item.precio || item.extraPrice || item.precio_extra || 0);
+    };
+
+    let shapeExtraMath = getCatalogExtraCost(orderData.shape, catalogPrices.shapes);
+    let flavorExtraMath = (orderData.panes || []).reduce((acc, pan) => acc + getCatalogExtraCost(pan, catalogPrices.flavors), 0);
+
+    // Suma Sabores en Pisos
+    (orderData.pisos || []).forEach(piso => {
+        if (piso.personas && sanitizeNumber(piso.personas) > 0) {
+            const panesArr = Array.isArray(piso.panes) ? piso.panes : (piso.panes ? [piso.panes] : []);
+            panesArr.forEach(pan => {
+                flavorExtraMath += getCatalogExtraCost(pan, catalogPrices.flavors);
+            });
+        }
+    });
+
+    // Suma Sabores y Formas de Complementos
+    (orderData.complements || []).forEach(comp => {
+        if (comp.personas || comp.sabor || comp.forma) {
+            shapeExtraMath += getCatalogExtraCost(comp.forma, catalogPrices.shapes);
+            flavorExtraMath += getCatalogExtraCost(comp.sabor, catalogPrices.flavors);
+        }
+    });
+
+    // Suma de Accesorios (Paso de Diseño)
+    const accesoriosTotal = (orderData.extras || []).reduce((acc, curr) => {
         const p = getValidMoney(curr.precio || curr.price);
         const q = parseInt(curr.cantidad || curr.qty, 10) || 1;
         return acc + (p * q);
     }, 0);
-    
-    const complementsTotal = (orderData.complements || []).reduce((acc, curr) => acc + getValidMoney(curr.precio), 0);
 
-    const subTotal = baseCost + shipping + extrasTotal + complementsTotal;
+    const grandExtrasTotal = shapeExtraMath + flavorExtraMath + accesoriosTotal;
+    // ------------------------------------
+
+    const baseCost = getValidMoney(orderData.costo_base);
+    const shipping = getValidMoney(orderData.costo_envio);
+    const subTotal = baseCost + shipping + grandExtrasTotal;
     const commissionAmount = orderData.aplica_comision ? getValidMoney(subTotal * 0.04) : 0;
     const total = getValidMoney(subTotal + commissionAmount);
 
@@ -64,14 +119,9 @@ const StepF_Payment = ({ prev }) => {
             navigate(`/folios/${result?.id || orderData.id}`);
         },
         onError: (error) => {
-            // 🔥 DETECTOR DE ERRORES EXACTO DE ZOD
             const backendErrors = error.response?.data?.errors;
             const backendMessage = error.response?.data?.message;
-            
-            console.error("❌ RECHAZO DEL BACKEND (Detalles):", error.response?.data);
-            
             if (Array.isArray(backendErrors)) {
-                // Si Zod nos da una lista de campos fallidos, los mostramos todos
                 const errorText = backendErrors.map(e => `${e.path || 'Campo'}: ${e.message}`).join(', ');
                 toast.error(`Error de validación: ${errorText}`, { duration: 6000 });
             } else {
@@ -79,12 +129,6 @@ const StepF_Payment = ({ prev }) => {
             }
         }
     });
-
-    const sanitizeNumber = (val) => {
-        if (!val) return 0;
-        const num = parseInt(val.toString().replace(/\D/g, ''), 10);
-        return isNaN(num) ? 0 : num;
-    };
 
     const handleFinish = () => {
         const pisosValidos = (orderData.pisos || []).filter(p => p.personas && sanitizeNumber(p.personas) > 0);
@@ -108,7 +152,7 @@ const StepF_Payment = ({ prev }) => {
             relleno: c.relleno || '',
             rellenos: c.relleno ? [c.relleno] : [],
             descripcion: c.descripcion || '',
-            precio: getValidMoney(c.precio)
+            precio: 0 // El precio ya se suma al Pastel Principal
         }));
 
         let hora_limpia = orderData.deliveryTime || '';
@@ -116,7 +160,6 @@ const StepF_Payment = ({ prev }) => {
         let tipoFolioSeguro = orderData.tipo_folio || 'Normal';
         if (tipoFolioSeguro === 'Base' || tipoFolioSeguro === 'Especial') tipoFolioSeguro = 'Base/Especial';
 
-        // 🔥 LÓGICA DE ESTATUS CORRECTA PARA EL NEGOCIO
         let estatusCalculado = 'Pendiente';
         if (remaining <= 0) estatusCalculado = 'Pagado';
         else if (totalPaid > 0) estatusCalculado = 'Anticipo';
@@ -127,7 +170,7 @@ const StepF_Payment = ({ prev }) => {
             cliente_telefono_extra: orderData.clientPhoneExtra || '', 
             clientId: orderData.clientId || null,
 
-            fecha_entrega: orderData.deliveryDate || undefined, // Zod odia strings vacíos en fechas
+            fecha_entrega: orderData.deliveryDate || undefined, 
             hora_entrega: hora_limpia || undefined,
             
             tipo_folio: tipoFolioSeguro, 
@@ -182,26 +225,28 @@ const StepF_Payment = ({ prev }) => {
             </h2>
 
             <div className="grid md:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
                     <h3 className="font-bold text-gray-700 border-b pb-2 mb-2">Desglose</h3>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Costo Base Pastel</span>
+                    
+                    {/* 🔥 1. PRECIO TOTAL DEL PASTEL (Usuario captura) */}
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-pink-700 font-bold">Precio Total del Pastel</span>
                         <input
                             type="number"
                             value={orderData.costo_base ?? ''}
                             onChange={(e) => updateOrder({ costo_base: parseFloat(e.target.value) || 0 })}
-                            className="w-24 p-1 border rounded text-right font-medium focus:ring-2 focus:ring-pink-500 outline-none"
+                            placeholder="0.00"
+                            className="w-28 p-2 border-2 border-pink-200 bg-pink-50 rounded-lg text-right font-black text-pink-800 focus:ring-2 focus:ring-pink-500 outline-none"
                         />
                     </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Complementos</span>
-                        <span className="font-medium">${complementsTotal.toFixed(2)}</span>
+                    
+                    {/* 🔥 2. EXTRAS (Cálculo automático de Sabores, Formas y Accesorios) */}
+                    <div className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <span className="text-gray-600">Extras (Accesorios + Sabores/Formas)</span>
+                        <span className="font-bold text-gray-800">${grandExtrasTotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Extras</span>
-                        <span className="font-medium">${extrasTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
+
+                    <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-600">Envío</span>
                         <span className="font-medium">${shipping.toFixed(2)}</span>
                     </div>
@@ -225,7 +270,7 @@ const StepF_Payment = ({ prev }) => {
                 </div>
 
                 <div className="space-y-6">
-                    <div className="bg-green-50 p-6 rounded-2xl border border-green-200">
+                    <div className="bg-green-50 p-6 rounded-2xl border border-green-200 shadow-sm">
                         
                         {historicalAdvance > 0 && (
                             <div className="flex justify-between items-center mb-4 text-green-700 bg-green-100 p-3 rounded-lg text-sm font-bold shadow-sm">
@@ -242,7 +287,7 @@ const StepF_Payment = ({ prev }) => {
                                 value={nuevoAbono}
                                 onChange={(e) => setNuevoAbono(e.target.value)}
                                 placeholder="0.00"
-                                className="w-full pl-10 p-4 border border-green-300 rounded-xl text-2xl font-bold text-green-900 bg-white outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full pl-10 p-4 border border-green-300 rounded-xl text-2xl font-bold text-green-900 bg-white outline-none focus:ring-2 focus:ring-green-500 transition-all"
                             />
                         </div>
                         <label className="flex items-center gap-2 mt-4 cursor-pointer w-max">
@@ -256,9 +301,9 @@ const StepF_Payment = ({ prev }) => {
                         </label>
                     </div>
 
-                    <div className="bg-gray-100 p-6 rounded-2xl text-center">
-                        <p className="text-sm font-bold text-gray-500 uppercase">Resta por Pagar</p>
-                        <p className={`text-4xl font-black ${remaining > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                    <div className="bg-gray-100 p-6 rounded-2xl text-center shadow-inner">
+                        <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Resta por Pagar</p>
+                        <p className={`text-5xl font-black ${remaining > 0 ? 'text-red-500' : 'text-green-600'}`}>
                             ${Math.max(0, remaining).toFixed(2)}
                         </p>
                     </div>
@@ -270,7 +315,7 @@ const StepF_Payment = ({ prev }) => {
                 <button
                     onClick={handleFinish}
                     disabled={mutation.isPending}
-                    className="bg-gradient-to-r from-pink-600 to-rose-600 text-white px-10 py-4 rounded-xl font-bold hover:shadow-xl transition flex items-center gap-3 shadow-lg"
+                    className="bg-gradient-to-r from-pink-600 to-rose-600 text-white px-10 py-4 rounded-xl font-bold hover:shadow-xl transition flex items-center gap-3 shadow-lg hover:-translate-y-1"
                 >
                     {mutation.isPending ? <Loader2 className="animate-spin" /> : <Check size={24} />}
                     {mutation.isPending ? 'Guardando...' : orderData.id ? 'Actualizar Pedido' : 'Finalizar Pedido'}

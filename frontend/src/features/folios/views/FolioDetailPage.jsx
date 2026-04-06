@@ -182,7 +182,7 @@ const FolioDetailPage = () => {
                         </div>
                     </div>
 
-                    {/* SECCIÓN DINÁMICA: PISOS (Solo si el tipo es Base o si hay detallesPisos) */}
+                    {/* SECCIÓN DINÁMICA: PISOS */}
                     {(folio.tipo_folio === 'Base' || (folio.detallesPisos && folio.detallesPisos.length > 0)) && (
                         <div className="bg-purple-50 rounded-2xl shadow-sm border border-purple-100 p-6">
                             <h2 className="text-lg font-bold text-purple-900 mb-4">Estructura por Pisos</h2>
@@ -208,7 +208,6 @@ const FolioDetailPage = () => {
 
                     {/* SECCIÓN DINÁMICA: COMPLEMENTARIOS */}
                     {(() => {
-                        // Unificamos las fuentes posibles igual que en el Context
                         let rawComps = folio.complementosList || folio.complementarios || folio.complementos || [];
                         try { if (typeof rawComps === 'string') rawComps = JSON.parse(rawComps); } catch(e) {}
                         const compsArray = Array.isArray(rawComps) ? rawComps : [];
@@ -236,9 +235,7 @@ const FolioDetailPage = () => {
                                                     <p className="text-sm text-gray-500 italic mt-1">"{comp.descripcion || comp.description}"</p>
                                                 )}
                                             </div>
-                                            <div className="text-right font-bold text-blue-700 bg-blue-50 px-3 py-2 rounded-lg self-start">
-                                                ${parseFloat(comp.precio || comp.price || 0).toFixed(2)}
-                                            </div>
+                                            {/* 🔥 EL DIV DEL PRECIO $0.00 FUE ELIMINADO AQUÍ */}
                                         </div>
                                     ))}
                                 </div>
@@ -297,7 +294,6 @@ const FolioDetailPage = () => {
                             <History size={18} /> Historial de Cambios
                         </h3>
                         
-                        {/* AJUSTE 2: Protegemos el render con Array.isArray() */}
                         {!Array.isArray(audits) || audits.length === 0 ? (
                             <p className="text-gray-400 text-sm text-center py-4">No hay cambios registrados.</p>
                         ) : (
