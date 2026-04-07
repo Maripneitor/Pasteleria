@@ -189,16 +189,35 @@ class FolioService {
         const row = await this.getFolioById(id, tenantFilter, false);
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
 
-        // 🔥 FIX 1: Forzar la asignación del teléfono extra (Obliga a Sequelize a guardarlo)
+        // 🔥 FIX 1: Forzar la asignación del teléfono extra
         if (data.cliente_telefono_extra !== undefined) {
             row.cliente_telefono_extra = data.cliente_telefono_extra ? String(data.cliente_telefono_extra).trim() : null;
+        }
+
+        // 🚀 FIX CRÍTICO: SANEAMIENTO EXTREMO DE LOGÍSTICA (MATAR DATOS FANTASMA)
+        // Verificamos si el frontend nos está enviando el estatus de entrega
+        if (data.is_delivery !== undefined) {
+            const isDelivery = data.is_delivery === true || data.is_delivery === 'true' || data.is_delivery === 1 || data.is_delivery === '1';
+            data.is_delivery = isDelivery; // Estandarizamos a booleano real
+            
+            if (!isDelivery) {
+                // ¡AQUÍ ESTÁ LA MAGIA! Si es "Recolección en tienda", 
+                // forzamos la destrucción de la basura que el frontend haya olvidado borrar.
+                data.costo_envio = 0;
+                data.calle = null;
+                data.num_ext = null;
+                data.num_int = null;
+                data.colonia = null;
+                data.referencias = null;
+                data.ubicacion_maps = null;
+                data.ubicacion_entrega = 'Recolección en tienda';
+            }
         }
 
         const before = row.toJSON();
         await row.update(data, { transaction: t });
 
         // 🔥 FIX 2: Guardar los cambios de Complementos al Editar (A prueba de balas)
-        // Intentamos leer de complementsList, y si Zod lo borró, caemos en complementarios
         const compsData = data.complementsList || data.complementarios;
         
         if (Array.isArray(compsData)) {
@@ -207,7 +226,6 @@ class FolioService {
             
             if (compsData.length > 0) {
                 const compsToCreate = compsData.map(c => {
-                    // 🚀 SÚPER EXTRACTOR: Atrapa el valor venga como string o como array
                     const saborReal = c.sabor || c.sabor_pan || (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : '') || '';
                     const rellenoReal = c.relleno || (Array.isArray(c.rellenos) ? c.rellenos[0] : '') || '';
 
@@ -215,7 +233,7 @@ class FolioService {
                         folioId: id,
                         personas: safeNum(c.personas || c.numero_personas),
                         forma: c.forma,
-                        sabor_pan: saborReal, // ✅ Mapeado directo a la columna de MySQL
+                        sabor_pan: saborReal, 
                         relleno: rellenoReal,
                         precio: safeNum(c.precio),
                         descripcion: c.descripcion
@@ -326,8 +344,26 @@ class FolioService {
             try { return JSON.parse(val) || []; } catch { return []; }
         };
 
-        // 🔥 EXTRAEMOS EL USUARIO LOGUEADO
-        // Buscamos 'nombre', 'name' o fallamos a 'Vendedor' por defecto
+        // 🚀 SÚPER ENSAMBLADOR DE DIRECCIÓN (A PRUEBA DE BALAS)
+        // Convertimos de forma estricta a booleano real por si viene como string "false" o "0"
+        const isDelivery = f.is_delivery === true || f.is_delivery === 'true' || f.is_delivery === 1 || f.is_delivery === '1';
+        const envioCosto = parseFloat(f.costo_envio || 0);
+
+        let addressStr = 'Recolección en tienda'; // Valor por defecto seguro
+
+        if (isDelivery || envioCosto > 0) {
+            const parts = [];
+            if (f.calle) parts.push(f.calle);
+            if (f.num_ext) parts.push(`#${f.num_ext}`);
+            if (f.num_int) parts.push(`Int. ${f.num_int}`);
+            if (f.colonia) parts.push(`Col. ${f.colonia}`);
+            
+            let baseAddr = parts.join(', ');
+            if (f.referencias) baseAddr += `<br><small style="color:#555;"><b>Ref:</b> ${f.referencias}</small>`;
+            
+            addressStr = baseAddr || f.ubicacion_entrega || 'Dirección no detallada';
+        }
+
         const nombreVendedor = user?.nombre || user?.name || 'Vendedor no asignado';
 
         const folioData = {
@@ -348,9 +384,11 @@ class FolioService {
             anticipo: f.anticipo,
             balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
             
-            is_delivery: f.is_delivery || false,
-            ubicacion_entrega: f.ubicacion_entrega || 'Recolección en tienda',
-            costo_envio: f.costo_envio || 0,
+            // 🔥 AQUÍ ENVIAMOS LAS BANDERAS LIMPIAS Y SEGURAS AL EJS
+            is_delivery: isDelivery,
+            ubicacion_entrega: addressStr, 
+            costo_envio: envioCosto,
+            ubicacion_maps_link: (isDelivery || envioCosto > 0) && f.ubicacion_maps && f.ubicacion_maps.startsWith('http') ? f.ubicacion_maps : null,
             
             imagenes_referencia: (() => {
                 const imgs = [];

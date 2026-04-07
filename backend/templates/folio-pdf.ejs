@@ -100,14 +100,26 @@
             </tr>
             <tr>
                 <th>Método de Entrega</th>
-                <td><%= (folio.is_delivery || folio.costo_envio > 0 || folio.deliveryLocation !== 'En Sucursal') ? 'Envío a Domicilio' : 'Recolección en Tienda' %></td>
+                <td><%= (folio.is_delivery || folio.costo_envio > 0) ? 'Envío a Domicilio' : 'Recolección en Tienda' %></td>
                 <th>Costo de Envío</th>
                 <td>$<%= parseFloat(folio.costo_envio || 0).toFixed(2) %></td>
             </tr>
-            <% if (folio.is_delivery || folio.ubicacion_entrega || (folio.deliveryLocation && folio.deliveryLocation !== 'En Sucursal')) { %>
+            
+            <% if (folio.is_delivery || folio.costo_envio > 0) { %>
             <tr>
                 <th>Dirección de Entrega</th>
-                <td colspan="3"><%= folio.deliveryLocation || folio.ubicacion_entrega || 'No especificada' %></td>
+                <td colspan="3" style="line-height: 1.4;">
+                    <%- folio.deliveryLocation || folio.ubicacion_entrega || 'No especificada' %>
+                    
+                    <% if (folio.ubicacion_maps_link) { %>
+                        <div style="margin-top: 8px; border-top: 1px dashed #ddd; padding-top: 5px;">
+                            <span style="color: var(--primary-color); font-weight: bold; font-size: 10px;">📍 Enlace para el repartidor:</span><br>
+                            <div style="font-size: 9px; color: #666; word-break: break-all; font-family: monospace; background: #f0f0f0; padding: 4px; border-radius: 4px; margin-top: 2px;">
+                                <%= folio.ubicacion_maps_link %>
+                            </div>
+                        </div>
+                    <% } %>
+                </td>
             </tr>
             <% } %>
         </table>
