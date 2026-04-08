@@ -21,6 +21,32 @@ const safeNum = (v) => {
     return isNaN(n) ? 0 : n;
 };
 
+// 🚀 HELPER CRÍTICO: Saneamiento Extremo de Logística (Kill Ghost Data)
+function sanitizeLogistics(data, isUpdate = false) {
+    // Si es un update parcial que no envía la bandera, no tocamos la logística
+    if (isUpdate && data.is_delivery === undefined) {
+        return data;
+    }
+
+    // Estandarizamos a booleano estricto
+    const isDelivery = data.is_delivery === true || data.is_delivery === 'true' || data.is_delivery === 1 || data.is_delivery === '1';
+    data.is_delivery = isDelivery;
+
+    if (!isDelivery) {
+        // 🔥 ANIQUILACIÓN DE DATOS FANTASMA
+        data.costo_envio = 0;
+        data.calle = null;
+        data.num_ext = null;
+        data.num_int = null;
+        data.colonia = null;
+        data.referencias = null;
+        data.ubicacion_maps = null;
+        data.ubicacion_entrega = 'Recolección en tienda';
+    }
+    
+    return data;
+}
+
 // Helper: Generate Smart Folio ID
 async function generateSmartFolio(fechaEntrega, telefono, tenantId) {
     const fecha = new Date(fechaEntrega);
@@ -56,7 +82,6 @@ class FolioService {
         const where = { ...tenantFilter };
 
         if (q) {
-            // Esto permite que si buscas "Juan", lo busque en nombre, tel o folio
             where[Op.or] = [
                 { folioNumber: { [Op.like]: `%${q}%` } },
                 { cliente_nombre: { [Op.like]: `%${q}%` } },
@@ -66,13 +91,11 @@ class FolioService {
 
         return Folio.findAll({
             where,
-            // 🔥 CAMBIO AQUÍ: Ordenamos primero por fecha de entrega (los más próximos arriba)
-            // y luego por hora de entrega para mantener el orden exacto del día.
             order: [
                 ['fecha_entrega', 'ASC'], 
                 ['hora_entrega', 'ASC']
             ],
-            limit: 100 // Ojo: si quieres ver más de 10 pedidos a la vez, puedes aumentar este número.
+            limit: 100 
         });
     }
 
@@ -106,9 +129,12 @@ class FolioService {
             }
         }
 
+        // 🔥 FIREWALL 1: Limpiamos datos fantasma de logística antes de tocar números
+        folioData = sanitizeLogistics(folioData, false);
+
         const folioNumber = await generateSmartFolio(folioData.fecha_entrega, folioData.cliente_telefono, tenantId);
         const costo_base = safeNum(folioData.costo_base);
-        const costo_envio = safeNum(folioData.costo_envio);
+        const costo_envio = safeNum(folioData.costo_envio); // Ya estará en 0 si no es delivery
         const anticipo = safeNum(folioData.anticipo);
         const total = folioData.total ? safeNum(folioData.total) : (costo_base + costo_envio);
         const estatus_pago = (folioData.estatus_pago) || (total - anticipo <= 0.01 ? 'Pagado' : 'Pendiente');
@@ -189,39 +215,19 @@ class FolioService {
         const row = await this.getFolioById(id, tenantFilter, false);
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
 
-        // 🔥 FIX 1: Forzar la asignación del teléfono extra
         if (data.cliente_telefono_extra !== undefined) {
             row.cliente_telefono_extra = data.cliente_telefono_extra ? String(data.cliente_telefono_extra).trim() : null;
         }
 
-        // 🚀 FIX CRÍTICO: SANEAMIENTO EXTREMO DE LOGÍSTICA (MATAR DATOS FANTASMA)
-        // Verificamos si el frontend nos está enviando el estatus de entrega
-        if (data.is_delivery !== undefined) {
-            const isDelivery = data.is_delivery === true || data.is_delivery === 'true' || data.is_delivery === 1 || data.is_delivery === '1';
-            data.is_delivery = isDelivery; // Estandarizamos a booleano real
-            
-            if (!isDelivery) {
-                // ¡AQUÍ ESTÁ LA MAGIA! Si es "Recolección en tienda", 
-                // forzamos la destrucción de la basura que el frontend haya olvidado borrar.
-                data.costo_envio = 0;
-                data.calle = null;
-                data.num_ext = null;
-                data.num_int = null;
-                data.colonia = null;
-                data.referencias = null;
-                data.ubicacion_maps = null;
-                data.ubicacion_entrega = 'Recolección en tienda';
-            }
-        }
+        // 🔥 FIREWALL 1: Saneamos antes de hacer merge con row.update()
+        data = sanitizeLogistics(data, true);
 
         const before = row.toJSON();
         await row.update(data, { transaction: t });
 
-        // 🔥 FIX 2: Guardar los cambios de Complementos al Editar (A prueba de balas)
         const compsData = data.complementsList || data.complementarios;
         
         if (Array.isArray(compsData)) {
-            // Borramos los viejos y metemos los nuevos para evitar duplicados
             await FolioComplemento.destroy({ where: { folioId: id }, transaction: t });
             
             if (compsData.length > 0) {
@@ -293,11 +299,9 @@ class FolioService {
         const sumTotal = await Folio.sum('total', { where: baseWhere }) || 0;
         const sumAnticipo = await Folio.sum('anticipo', { where: baseWhere }) || 0;
 
-        // 🔥 CAMBIO AQUÍ: Próximas entregas en lugar de los últimos creados
         const recientes = await Folio.findAll({
-            // Es buena idea usar baseWhere para que no te salgan los cancelados aquí
             where: baseWhere, 
-            limit: 5, // Muestra los próximos 5 pedidos
+            limit: 5, 
             order: [
                 ['fecha_entrega', 'ASC'], 
                 ['hora_entrega', 'ASC']
@@ -344,14 +348,14 @@ class FolioService {
             try { return JSON.parse(val) || []; } catch { return []; }
         };
 
-        // 🚀 SÚPER ENSAMBLADOR DE DIRECCIÓN (A PRUEBA DE BALAS)
-        // Convertimos de forma estricta a booleano real por si viene como string "false" o "0"
         const isDelivery = f.is_delivery === true || f.is_delivery === 'true' || f.is_delivery === 1 || f.is_delivery === '1';
-        const envioCosto = parseFloat(f.costo_envio || 0);
+        
+        // 🔥 FIREWALL 2: Filtramos al vuelo en caso de registros antiguos bugeados en la BD
+        const envioCosto = isDelivery ? parseFloat(f.costo_envio || 0) : 0;
 
-        let addressStr = 'Recolección en tienda'; // Valor por defecto seguro
+        let addressStr = 'Recolección en tienda'; 
 
-        if (isDelivery || envioCosto > 0) {
+        if (isDelivery) {
             const parts = [];
             if (f.calle) parts.push(f.calle);
             if (f.num_ext) parts.push(`#${f.num_ext}`);
@@ -384,11 +388,10 @@ class FolioService {
             anticipo: f.anticipo,
             balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
             
-            // 🔥 AQUÍ ENVIAMOS LAS BANDERAS LIMPIAS Y SEGURAS AL EJS
             is_delivery: isDelivery,
             ubicacion_entrega: addressStr, 
             costo_envio: envioCosto,
-            ubicacion_maps_link: (isDelivery || envioCosto > 0) && f.ubicacion_maps && f.ubicacion_maps.startsWith('http') ? f.ubicacion_maps : null,
+            ubicacion_maps_link: isDelivery && f.ubicacion_maps && f.ubicacion_maps.startsWith('http') ? f.ubicacion_maps : null,
             
             imagenes_referencia: (() => {
                 const imgs = [];
@@ -402,19 +405,13 @@ class FolioService {
             })(),
             
             tiers: safeParse(f.detallesPisos || (f.diseno_metadata ? f.diseno_metadata.pisos : []) || []),
-            
-            // CORRECCIÓN CRÍTICA 1: Leer también 'complementarios' (la columna directa en MySQL)
             complements: safeParse(f.complementarios || f.complementosList || f.complementos),
-            
             additionals: safeParse(f.accesorios || f.complementos),
-
-            // 🔥 INYECTAMOS AL VENDEDOR AL PAYLOAD
             vendedor: nombreVendedor 
         };
 
         const buffer = await renderPdf({
             templateName: 'folio-pdf', 
-            // CORRECCIÓN CRÍTICA 2: Añadido "config: branding" para que el EJS se pinte correctamente
             data: { folio: folioData, watermark: computeWatermark(f), config: branding },
             branding: branding,
             options: { format: 'A4', printBackground: true, margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' } }
@@ -459,7 +456,11 @@ class FolioService {
         const foliosData = folios.map(f => {
             const json = f.toJSON();
             const base = Number(json.costo_base || 0);
-            const envio = Number(json.costo_envio || 0);
+            
+            // 🔥 Evitar datos fantasma en el reporte del día
+            const isDelivery = json.is_delivery === true || json.is_delivery === 'true' || json.is_delivery === 1;
+            const envio = isDelivery ? Number(json.costo_envio || 0) : 0;
+            
             const total = Number(json.total || 0);
             const adicionales = total - base - envio;
 

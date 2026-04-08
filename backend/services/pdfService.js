@@ -12,9 +12,6 @@ const QRCode = require('qrcode');
 
 /* --- HELPERS --- */
 
-/**
- * Normaliza la configuración de branding asegurando valores por defecto.
- */
 async function getTenantBranding(tenantId) {
     try {
         const config = await TenantConfig.findOne({ where: { tenantId } });
@@ -62,9 +59,6 @@ function normalizeLogo(url) {
     return null;
 }
 
-/**
- * Busca pedidos asegurando el alcance (scope) por Tenant y Sucursal.
- */
 async function findOrderScoped(orderId, ctx) {
     const { tenantId, branchId, role } = ctx;
 
@@ -111,7 +105,9 @@ async function toOrderDTO(order, branding) {
     const plain = order.get({ plain: true });
     const baseUrl = process.env.PUBLIC_APP_URL || 'http://localhost:5173';
     const qrUrl = await QRCode.toDataURL(`${baseUrl}/folios/${plain.id}`, { margin: 2, scale: 4 });
-    const mapsLink = plain.ubicacion_maps && plain.ubicacion_maps.startsWith('http') ? plain.ubicacion_maps : null;
+    
+    const isDelivery = plain.is_delivery === true || plain.is_delivery === 'true' || plain.is_delivery === 1 || plain.is_delivery === '1';
+    const mapsLink = isDelivery && plain.ubicacion_maps && plain.ubicacion_maps.startsWith('http') ? plain.ubicacion_maps : null;
 
     const parseList = (val) => {
         if (!val) return [];
@@ -122,7 +118,6 @@ async function toOrderDTO(order, branding) {
         return [];
     };
 
-    // 🔥 FIX: Helper blindado para extraer valores vengan como vengan
     const extractValue = (val) => {
         if (!val) return 'N/A';
         if (Array.isArray(val)) return val.length > 0 ? val.join(', ') : 'N/A';
@@ -141,18 +136,16 @@ async function toOrderDTO(order, branding) {
         ...parseList(plain.accesorios).map(c => ({ name: c.name || c, price: c.price || 0 }))
     ];
 
-    // 🚀 1. LECTURA SEGURA DE COMPLEMENTARIOS
     const complementosJSON = parseList(plain.complementarios || plain.complementosList || plain.complementos);
     const complementosList = complementosJSON.map(c => ({
         persons: c.numero_personas || c.personas || 'N/A',
         shape: c.forma || 'N/A',
-        flavor: extractValue(c.sabores_pan || c.sabor_pan || c.sabor || c.flavor), // 🔥 Extrae perfecto
-        filling: extractValue(c.rellenos || c.relleno || c.filling),               // 🔥 Extrae perfecto
+        flavor: extractValue(c.sabores_pan || c.sabor_pan || c.sabor || c.flavor), 
+        filling: extractValue(c.rellenos || c.relleno || c.filling),               
         description: c.descripcion || 'Sin descripción',
         price: c.precio || 0
     }));
 
-    // 🚀 2. LECTURA SEGURA DE PISOS
     const pisosJSON = parseList(plain.detallesPisos || (plain.diseno_metadata ? plain.diseno_metadata.pisos : []) || (plain.diseno_metadata ? plain.diseno_metadata.tiers : []));
     const tiersList = pisosJSON.map((t, idx) => ({
         piso: t.piso || idx + 1,
@@ -175,28 +168,36 @@ async function toOrderDTO(order, branding) {
         createdAt: plain.createdAt,
         formattedDeliveryDate: plain.fecha_entrega,
         formattedDeliveryTime: plain.hora_entrega,
-        deliveryLocation: plain.ubicacion_entrega || 'En Sucursal',
+        
+        // 🔥 FIREWALL 2: Filtramos valores de entrega en la lectura
+        is_delivery: isDelivery,
+        deliveryLocation: isDelivery ? (plain.ubicacion_entrega || 'Dirección no especificada') : 'En Sucursal',
         ubicacion_maps_link: mapsLink,
+        
         sabores: parseList(plain.sabores_pan),
         rellenos: parseList(plain.rellenos),
         cubierta: plain.diseno_metadata?.cubierta || null,
         designDescription: plain.descripcion_diseno,
         
         dedicatoria: plain.dedicatoria,
-        dedication: plain.dedicatoria, // 🔥 FIX 2: comanda.ejs espera la variable en inglés
+        dedication: plain.dedicatoria,
         
-        imageUrls: safeImages, // 🔥 FIX 1: Mandar el array procesado
+        imageUrls: safeImages, 
         
         tiers: tiersList,
         complements: complementosList, 
         
+        // 🔥 Inyectando variables faltantes para nota-venta.ejs
+        basePrice: plain.costo_base || 0,
+        deliveryCost: isDelivery ? parseFloat(plain.costo_envio || 0) : 0,
+
         total: plain.total,
         advancePayment: plain.anticipo,
         balance: plain.total - plain.anticipo,
         client: {
             name: plain.cliente_nombre || 'Cliente General',
             phone: plain.cliente_telefono || '',
-            phoneExtra: plain.cliente_telefono_extra || '', // 🔥 FIX 3: Inyectar teléfono adicional
+            phoneExtra: plain.cliente_telefono_extra || '', 
             email: plain.client?.email || ''
         },
         additionals,
@@ -267,18 +268,13 @@ exports.renderOrdersPdf = async ({ folios, date, branches }) => {
     }
 };
 
-/**
- * Genera el reporte de comisiones en PDF.
- * Corregido: 'reportData' es el nombre que espera la plantilla EJS.
- */
 exports.renderCommissionsPdf = async ({ reportData, from, to }) => {
     const branding = getDefaultBranding();
     
-    // Sincronizamos los nombres con lo que pide la plantilla commissionReport.ejs
     const data = {
         from,
         to,
-        reportData: reportData, // <--- Cambiamos 'details' por 'reportData'
+        reportData: reportData, 
         generatedAt: new Date().toLocaleString(),
         branding
     };
