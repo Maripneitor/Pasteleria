@@ -132,6 +132,12 @@ class FolioService {
         // 🔥 FIREWALL 1: Limpiamos datos fantasma de logística antes de tocar números
         folioData = sanitizeLogistics(folioData, false);
 
+        // 🔥 FIX ALTURA EXTRA: Mapeo de extraHeight (Booleano frontend) a altura_extra (String BD)
+        if (folioData.extraHeight !== undefined) {
+            const isExtra = folioData.extraHeight === true || folioData.extraHeight === 'true';
+            folioData.altura_extra = isExtra ? 'Sí' : 'No';
+        }
+
         const folioNumber = await generateSmartFolio(folioData.fecha_entrega, folioData.cliente_telefono, tenantId);
         const costo_base = safeNum(folioData.costo_base);
         const costo_envio = safeNum(folioData.costo_envio); // Ya estará en 0 si no es delivery
@@ -219,8 +225,14 @@ class FolioService {
             row.cliente_telefono_extra = data.cliente_telefono_extra ? String(data.cliente_telefono_extra).trim() : null;
         }
 
-        // 🔥 FIREWALL 1: Saneamos antes de hacer merge con row.update()
+        // 🔥 FIREWALL 1: Saneamos logística
         data = sanitizeLogistics(data, true);
+
+        // 🔥 FIX ALTURA EXTRA: Mapeo para Update
+        if (data.extraHeight !== undefined) {
+            const isExtra = data.extraHeight === true || data.extraHeight === 'true';
+            data.altura_extra = isExtra ? 'Sí' : 'No';
+        }
 
         const before = row.toJSON();
         await row.update(data, { transaction: t });

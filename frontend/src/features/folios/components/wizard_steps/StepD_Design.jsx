@@ -117,8 +117,12 @@ const StepD_Design = ({ next, prev }) => {
                     <input
                         type="checkbox"
                         id="extraHeight"
-                        checked={orderData.extraHeight || false}
-                        onChange={(e) => updateOrder({ extraHeight: e.target.checked })}
+                        // 🔥 FIX: Lee tanto el valor del frontend como el de la BD
+                        checked={orderData.extraHeight === true || orderData.altura_extra === 'Sí'} 
+                        onChange={(e) => updateOrder({ 
+                            extraHeight: e.target.checked, 
+                            altura_extra: e.target.checked ? 'Sí' : 'No' 
+                        })}
                         className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
                     />
                     <div>

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { useOrder } from '@/context/OrderContext';
 import ClientAutocomplete from '../wizard/ClientAutocomplete';
-import { User, Phone } from 'lucide-react';
+import { User, Phone, UserPlus } from 'lucide-react';
+import CreateClientModal from '@/features/clients/components/CreateClientModal'; // 🔥 Importamos el Modal
 
 const StepA_Client = ({ next, prev }) => {
     const { orderData, updateOrder } = useOrder();
     const [isRegistered, setIsRegistered] = useState(!!orderData.selectedClient);
+    
+    // 🔥 Estado para controlar el modal
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleRegisterToggle = (e) => {
         const checked = e.target.checked;
@@ -13,6 +17,19 @@ const StepA_Client = ({ next, prev }) => {
         if (!checked) {
             updateOrder({ selectedClient: null });
         }
+    };
+
+    // 🔥 Callback mágico: Se dispara cuando el modal crea el cliente con éxito en BD
+    const handleClientCreated = (newClient) => {
+        // Autoseleccionamos al cliente en el contexto Global (El Carrito)
+        updateOrder({
+            selectedClient: newClient,
+            clientName: newClient.name,
+            clientPhone: newClient.phone,
+            clientPhoneExtra: newClient.phone2 || newClient.cliente_telefono_extra || ''
+        });
+        // Nos aseguramos de estar en la vista de búsqueda/registro
+        setIsRegistered(true);
     };
 
     // ✅ Verifica que tenga nombre y que el teléfono principal (limpio) tenga al menos 10 dígitos
@@ -84,7 +101,7 @@ const StepA_Client = ({ next, prev }) => {
                     </div>
                 </div>
             ) : (
-                // Autocomplete
+                // Autocomplete & Create New Client Logic
                 <div>
                     <ClientAutocomplete
                         selectedClient={orderData.selectedClient}
@@ -102,6 +119,19 @@ const StepA_Client = ({ next, prev }) => {
                             }
                         }}
                     />
+
+                    {/* 🔥 BOTÓN PARA ABRIR MODAL (Se oculta si ya seleccionó a alguien) */}
+                    {!orderData.selectedClient && (
+                        <button
+                            type="button"
+                            onClick={() => setIsModalOpen(true)}
+                            className="mt-3 text-sm font-semibold text-pink-600 hover:text-pink-800 transition-colors flex items-center gap-1.5"
+                        >
+                            <UserPlus size={16} />
+                            ¿No encuentras al cliente? Regístralo aquí
+                        </button>
+                    )}
+
                     {orderData.selectedClient && (
                         <div className="mt-4 p-4 bg-green-50 border border-green-100 rounded-xl flex items-center gap-3">
                             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold uppercase">
@@ -113,7 +143,7 @@ const StepA_Client = ({ next, prev }) => {
                                     Principal: {orderData.clientPhone}
                                     {orderData.clientPhoneExtra && ` | Alt: ${orderData.clientPhoneExtra}`}
                                 </p>
-                                <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full mt-1 inline-block">Registrado</span>
+                                <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full mt-1 inline-block">Registrado en Sistema</span>
                             </div>
                         </div>
                     )}
@@ -129,6 +159,13 @@ const StepA_Client = ({ next, prev }) => {
                     Siguiente
                 </button>
             </div>
+
+            {/* 🔥 EL MODAL DE CREACIÓN */}
+            <CreateClientModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onClientCreated={handleClientCreated}
+            />
         </div>
     );
 };

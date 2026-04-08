@@ -78,6 +78,8 @@ const createFolioSchema = z.object({
         .optional(),
 
     forma: z.string().trim().optional(),
+    altura_extra: z.string().optional(), // 🔥 FIX: Le decimos a Zod que acepte altura_extra
+    extraHeight: z.boolean().or(z.string()).optional(), // 🔥 FIX: También aceptamos extraHeight por si el frontend lo manda así
 
     detallesPisos: z.array(
         z.object({

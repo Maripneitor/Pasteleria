@@ -32,8 +32,8 @@ export const OrderProvider = ({ children }) => {
 
         costo_base: 0,
         total: 0,
-        anticipo: 0, // 🔥 FIX 3: Estandarizado a "anticipo" (antes era advance)
-        aplica_comision: false, // 🔥 FIX 2: Guardamos el estado de la comisión en el Contexto
+        anticipo: 0, 
+        aplica_comision: false, 
         
         descripcion_diseno: '',
         dedicatoria: '',
@@ -72,8 +72,8 @@ export const OrderProvider = ({ children }) => {
             ubicacion_maps: '',
             costo_envio: 0,
             total: 0,
-            anticipo: 0, // 🔥 FIX 3
-            aplica_comision: false, // 🔥 FIX 2
+            anticipo: 0, 
+            aplica_comision: false, 
             descripcion_diseno: '',
             dedicatoria: '',
             extraHeight: false,
@@ -94,7 +94,7 @@ export const OrderProvider = ({ children }) => {
             sabor: (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : (c.sabor || c.sabor_pan)) || '',
             relleno: (Array.isArray(c.rellenos) ? c.rellenos[0] : c.relleno) || '',
             descripcion: c.descripcion || '',
-            precio: parseFloat(c.precio) || 0 // 🔥 FIX 4: Asegurar casteo de precios en complementos
+            precio: parseFloat(c.precio) || 0 
         }));
 
         setOrderData({
@@ -133,12 +133,15 @@ export const OrderProvider = ({ children }) => {
             
             descripcion_diseno: folio.descripcion_diseno || '',
             dedicatoria: folio.dedicatoria || '',
-            extraHeight: folio.altura_extra === 'Si',
+            
+            // 🔥 FIX DEFINITIVO ALTURA EXTRA: Verifica "Sí" (con acento), "Si" (sin acento) y booleanos verdaderos
+            extraHeight: folio.altura_extra === 'Sí' || folio.altura_extra === 'Si' || folio.extraHeight === true,
+            
             referenceImages: folio.diseno_metadata?.allImages || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : []),
             
             total: folio.total || 0,
-            anticipo: folio.anticipo || 0, // 🔥 FIX 3: Alineado con Backend y StepF_Payment
-            aplica_comision: !!folio.aplica_comision, // 🔥 FIX 2: Rehidratamos el estado del checkbox
+            anticipo: folio.anticipo || 0, 
+            aplica_comision: !!folio.aplica_comision, 
             
             pisos: (folio.diseno_metadata?.pisos?.length === 8) 
                 ? folio.diseno_metadata.pisos 

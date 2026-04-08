@@ -74,6 +74,10 @@ const foliosApi = {
             }
         });
 
+        // 🔥 FIX: Asegurarnos de que el booleano vieja explícitamente como string
+        form.append('extraHeight', data.extraHeight ? 'true' : 'false');
+        form.append('altura_extra', data.extraHeight ? 'Sí' : 'No');
+
         if (data.referenceImages?.length > 0) {
             data.referenceImages.forEach((file) => {
                 form.append('referenceImages', file);
@@ -100,13 +104,15 @@ const foliosApi = {
             }
         });
 
+        // 🔥 FIX: Asegurarnos de que el booleano vieja explícitamente como string al actualizar
+        form.append('extraHeight', data.extraHeight ? 'true' : 'false');
+        form.append('altura_extra', data.extraHeight ? 'Sí' : 'No');
+
         if (data.referenceImages?.length > 0) {
             data.referenceImages.forEach((file) => {
                 if (file instanceof File) {
                     form.append('referenceImages', file);
                 } else {
-                    // If it's a URL string from existing images, we might want to handle it 
-                    // or just ignore if the backend handles existing images via diseno_metadata
                     form.append('existingImages', file);
                 }
             });
