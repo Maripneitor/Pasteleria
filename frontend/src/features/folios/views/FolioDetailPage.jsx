@@ -143,9 +143,14 @@ const FolioDetailPage = () => {
                     <button onClick={() => navigate(`/pedidos/${id}/editar`)} className="flex items-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium shadow-sm transition">
                         <Edit size={18} /> Editar
                     </button>
-                    <button onClick={handleOpenComanda} className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition">
-                        <FileText size={18} /> Descargar Comanda
-                    </button>
+                    
+                    {/* LÓGICA DE VISIBILIDAD: Sólo mostrar "Descargar Comanda" si es envío a domicilio */}
+                    {(folio.is_delivery === true || parseFloat(folio.costo_envio || 0) > 0 || ['Domicilio', 'Envío'].includes(folio.metodo_entrega)) && (
+                        <button onClick={handleOpenComanda} className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium shadow-sm transition">
+                            <FileText size={18} /> Descargar Comanda
+                        </button>
+                    )}
+
                     <button onClick={handleOpenNota} className="flex items-center gap-2 bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg font-medium shadow-md transition">
                         <DollarSign size={18} /> Descargar Nota
                     </button>

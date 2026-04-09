@@ -79,13 +79,17 @@ const FolioDetailPage = () => {
                 </button>
 
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <button
-                        onClick={handleOpenComanda}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 text-white hover:shadow-lg hover:scale-105 px-4 py-2 rounded-xl font-bold shadow-md transition-all"
-                    >
-                        <FileText size={18} />
-                        <span className="hidden sm:inline">Comanda</span>
-                    </button>
+                    {/* LÓGICA DE VISIBILIDAD: Sólo mostrar "Comanda" si es envío a domicilio */}
+                    {(folio.is_delivery === true || parseFloat(folio.costo_envio || 0) > 0 || ['Domicilio', 'Envío'].includes(folio.metodo_entrega)) && (
+                        <button
+                            onClick={handleOpenComanda}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 text-white hover:shadow-lg hover:scale-105 px-4 py-2 rounded-xl font-bold shadow-md transition-all"
+                        >
+                            <FileText size={18} />
+                            <span className="hidden sm:inline">Comanda</span>
+                        </button>
+                    )}
+
                     <button
                         onClick={handleOpenNota}
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg hover:shadow-pink-200 hover:scale-105 px-4 py-2 rounded-xl font-bold shadow-md transition-all"
