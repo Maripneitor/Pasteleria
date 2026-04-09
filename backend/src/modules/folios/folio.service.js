@@ -332,14 +332,47 @@ class FolioService {
 
         const nombreVendedor = user?.nombre || user?.name || 'Vendedor no asignado';
 
+        // 🚀 LÓGICA DE ALTURA EXTRA: Parseo a prueba de balas
+        const checkBool = (val) => {
+            if (val === true || val === 1) return true;
+            if (!val) return false;
+            const s = String(val).toLowerCase().trim();
+            return s === 'true' || s === '1' || s === 'sí' || s === 'si' || s === 'yes';
+        };
+
+        const isExtraHeight = 
+            checkBool(f.extraHeight) || 
+            checkBool(f.altura_extra) || 
+            (f.diseno_metadata && checkBool(f.diseno_metadata.extraHeight)) || 
+            (f.diseno_metadata && checkBool(f.diseno_metadata.altura_extra));
+
+        // Objeto que viaja hacia tu EJS
         const folioData = {
-            id: f.id, folio_numero: f.folioNumber || f.id, fecha_entrega: f.fecha_entrega, hora_entrega: f.hora_entrega,
-            estatus_produccion: f.estatus_produccion, tipo_folio: f.tipo_folio || 'Normal', numero_personas: f.numero_personas,
-            sabores_pan: safeParse(f.sabores_pan), rellenos: safeParse(f.rellenos), descripcion_diseno: f.descripcion_diseno || 'Sin descripción detallada',
-            cliente_nombre: f.cliente_nombre, cliente_telefono: f.cliente_telefono, cliente_telefono_extra: f.cliente_telefono_extra,
-            total: f.total, anticipo: f.anticipo, balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
-            is_delivery: isDelivery, ubicacion_entrega: addressStr, costo_envio: envioCosto,
+            id: f.id, 
+            folio_numero: f.folioNumber || f.id, 
+            fecha_entrega: f.fecha_entrega, 
+            hora_entrega: f.hora_entrega,
+            estatus_produccion: f.estatus_produccion, 
+            tipo_folio: f.tipo_folio || 'Normal', 
+            numero_personas: f.numero_personas,
+            sabores_pan: safeParse(f.sabores_pan), 
+            rellenos: safeParse(f.rellenos), 
+            descripcion_diseno: f.descripcion_diseno || 'Sin descripción detallada',
+            cliente_nombre: f.cliente_nombre, 
+            cliente_telefono: f.cliente_telefono, 
+            cliente_telefono_extra: f.cliente_telefono_extra,
+            costo_base: f.costo_base || 0,
+            total: f.total, 
+            anticipo: f.anticipo, 
+            balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
+            is_delivery: isDelivery, 
+            ubicacion_entrega: addressStr, 
+            costo_envio: envioCosto,
             ubicacion_maps_link: isDelivery && f.ubicacion_maps && f.ubicacion_maps.startsWith('http') ? f.ubicacion_maps : null,
+            
+            // 🔥 AQUÍ ESTABA EL ERROR: El archivo jamás le pasaba este dato al PDF.
+            // Ahora se lo estamos inyectando correctamente.
+            extraHeight: isExtraHeight, 
             
             imagenes_referencia: (() => {
                 const imgs = [];

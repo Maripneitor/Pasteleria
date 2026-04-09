@@ -99,29 +99,66 @@ async function toOrderDTO(order, branding) {
     if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch(e) {} }
     if (!meta || typeof meta !== 'object') meta = {};
 
-    // 🚀 LÓGICA DE ALTURA EXTRA BLINDADA
-    const isExtraHeight = 
-        plain.extraHeight === true || 
-        String(plain.extraHeight) === 'true' || 
-        String(plain.extraHeight) === '1' || 
-        plain.altura_extra === 'Sí' || 
-        plain.altura_extra === 'Si' || 
-        meta.extraHeight === true || 
-        String(meta.extraHeight) === 'true' ||
-        meta.altura_extra === 'Sí';
+    // 🚀 LÓGICA DE ALTURA EXTRA BLINDADA (Intervención Quirúrgica)
+    const parseUniversalBoolean = (val) => {
+        if (val === true || val === 1 || val === '1') return true;
+        if (typeof val === 'string') {
+            const normalized = val.toLowerCase().trim();
+            if (['true', 'sí', 'si', 'yes', 'y'].includes(normalized)) return true;
+        }
+        return false;
+    };
 
-    // 🚀 EXTRACCIÓN DE ACCESORIOS BLINDADA
-    const rawExtras = [...forceParse(plain.complementos), ...forceParse(plain.accesorios)];
-    const additionals = rawExtras.map(c => {
-        if (!c) return null;
-        if (typeof c === 'string') return { name: c, qty: 1 };
+    // 🚀 LÓGICA DE ALTURA EXTRA BLINDADA (Versión Definitiva)
+    const checkBool = (val) => {
+        if (val === true || val === 1) return true;
+        const s = String(val).toLowerCase().trim();
+        return s === 'true' || s === '1' || s === 'sí' || s === 'si' || s === 'yes';
+    };
+
+    const isExtraHeight = 
+        checkBool(plain.extraHeight) || 
+        checkBool(plain.altura_extra) || 
+        checkBool(plain.alturaExtra) || 
+        checkBool(meta.extraHeight) || 
+        checkBool(meta.altura_extra) || 
+        checkBool(meta.alturaExtra);
+
+    // 🚀 EXTRACCIÓN DE ACCESORIOS BLINDADA (Atrapando los del Wizard)
+    const rawExtras = [
+        ...forceParse(plain.complementos), 
+        ...forceParse(plain.accesorios),
+        ...forceParse(meta.accesorios),
+        ...forceParse(meta.extras),
+        ...forceParse(meta.additionals)
+    ];
+
+    const additionalsMap = new Map();
+    rawExtras.forEach(c => {
+        if (!c) return;
+        let name = '';
+        let qty = 1;
         
-        const itemName = c.nombre || c.name || c.descripcion || c.concepto || '';
-        const qty = c.cantidad || c.qty || 1;
+        if (typeof c === 'string') { 
+            name = c; 
+        } else {
+            name = c.nombre || c.name || c.descripcion || c.concepto || '';
+            qty = c.cantidad || c.qty || 1;
+        }
         
-        if (!itemName || String(itemName).trim() === '') return null;
-        return { name: String(itemName).trim(), qty: Number(qty) };
-    }).filter(a => a !== null); // Quita los nulos
+        name = String(name).trim();
+        if (!name || name.toLowerCase() === 'null' || name.toLowerCase() === 'undefined' || name === '[]' || name === '[object object]') return;
+        
+        qty = parseInt(qty, 10) || 1;
+
+        if (additionalsMap.has(name)) {
+            additionalsMap.set(name, additionalsMap.get(name) + qty);
+        } else {
+            additionalsMap.set(name, qty);
+        }
+    });
+    
+    const additionals = Array.from(additionalsMap.entries()).map(([name, qty]) => ({ name, qty }));
 
     const complementosList = forceParse(plain.complementarios || plain.complementosList || plain.complementos).map(c => ({
         persons: c.numero_personas || c.personas || 'N/A',
@@ -151,7 +188,7 @@ async function toOrderDTO(order, branding) {
         formattedDeliveryDate: plain.fecha_entrega,
         formattedDeliveryTime: plain.hora_entrega,
         
-        // Aquí pasamos las variables corregidas al PDF
+        // Variables corregidas y mapeadas exactamente como tu EJS las espera
         extraHeight: isExtraHeight,
         additionals: additionals,
         

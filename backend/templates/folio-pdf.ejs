@@ -82,7 +82,6 @@
             <div class="info">
                 <p><strong>Folio:</strong> #<%= folio.folioNumber || folio.folio_numero %></p>
                 <p><strong>Fecha Entrega:</strong> <%= folio.formattedDeliveryDate || folio.fecha_entrega %> - <%= folio.formattedDeliveryTime || folio.hora_entrega %></p>
-                <p><strong>Estado:</strong> <%= folio.status || folio.estatus_produccion %></p>
             </div>
         </div>
 
@@ -130,15 +129,12 @@
                 <th>Tipo de Orden</th><td><%= folio.folioType || folio.tipo_folio || 'Normal' %></td>
                 <th>Personas (Aprox)</th><td><%= folio.persons || folio.numero_personas || 'N/A' %></td>
             </tr>
-            <% 
-                const extraColor = folio.extraHeight ? 'var(--primary-color)' : '#555';
-                const extraWeight = folio.extraHeight ? 'bold' : 'normal';
-                const extraBg = folio.extraHeight ? 'var(--primary-light)' : 'transparent';
-                const extraStyleAttr = `style="color: ${extraColor}; font-weight: ${extraWeight}; background-color: ${extraBg};"`;
-            %>
             <tr>
                 <th>Altura Extra</th>
-                <td colspan="3" <%- extraStyleAttr %>>
+                <td colspan="3" style="color: #555;">
+                    <span style="display: inline-block; width: 12px; height: 12px; border: 1px solid #333; margin-right: 5px; text-align: center; line-height: 12px; font-weight: bold; background-color: #fff; color: #000;">
+                        <%= folio.extraHeight ? 'X' : '' %>
+                    </span>
                     <%= folio.extraHeight ? 'SÍ (Pastel con Altura Extra)' : 'No' %>
                 </td>
             </tr>
@@ -160,13 +156,49 @@
                     <p style="font-size: 10px;">Escanear Folio</p>
                 <% } %>
             </div>
-            <div class="totals">
-                <p>Subtotal / Costo Base: $<%= (parseFloat(folio.total) - parseFloat(folio.costo_envio || 0)).toFixed(2) %></p>
-                <p>Costo de Envío: $<%= parseFloat(folio.costo_envio || 0).toFixed(2) %></p>
-                <div style="border-top: 1px solid #ddd; margin: 5px 0;"></div>
-                <p><strong>Total Pedido: $<%= parseFloat(folio.total).toFixed(2) %></strong></p>
-                <p style="color: #10b981;">Anticipo (Pagado): -$<%= parseFloat(folio.advancePayment || folio.anticipo || 0).toFixed(2) %></p>
-                <p class="total-row">Resta a Pagar: $<%= parseFloat(folio.balance || (folio.total - folio.anticipo)).toFixed(2) %></p>
+            
+            <div class="totals" style="width: 320px; margin-left: auto;">
+                <table style="width: 100%; border: none; font-size: 14px; margin-bottom: 0;">
+                    <tr>
+                        <td style="border: none; padding: 4px 0; text-align: left;">Costo Pastel Base:</td>
+                        <td style="border: none; padding: 4px 0; text-align: right;">$<%= parseFloat(folio.costo_base || 0).toFixed(2) %></td>
+                    </tr>
+                    <% 
+                       const tCalc = parseFloat(folio.total || 0);
+                       const bCalc = parseFloat(folio.costo_base || 0);
+                       const eCalc = parseFloat(folio.costo_envio || 0);
+                       let extCalc = tCalc - bCalc - eCalc;
+                       if (extCalc < 0) extCalc = 0;
+                       
+                       if (extCalc > 0) { 
+                    %>
+                    <tr>
+                        <td style="border: none; padding: 4px 0; text-align: left;">Adicionales y Extras:</td>
+                        <td style="border: none; padding: 4px 0; text-align: right;">$<%= extCalc.toFixed(2) %></td>
+                    </tr>
+                    <% } %>
+                    <% if (eCalc > 0) { %>
+                    <tr>
+                        <td style="border: none; padding: 4px 0; text-align: left;">Costo de Envío:</td>
+                        <td style="border: none; padding: 4px 0; text-align: right;">$<%= eCalc.toFixed(2) %></td>
+                    </tr>
+                    <% } %>
+                    <tr>
+                        <td colspan="2" style="border: none; padding: 0;"><div style="border-top: 1px solid #ddd; margin: 5px 0;"></div></td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; padding: 4px 0; text-align: left; font-weight: bold; font-size: 15px;">Total Pedido:</td>
+                        <td style="border: none; padding: 4px 0; text-align: right; font-weight: bold; font-size: 15px;">$<%= tCalc.toFixed(2) %></td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; padding: 4px 0; text-align: left; color: #10b981;">Anticipo (Pagado):</td>
+                        <td style="border: none; padding: 4px 0; text-align: right; color: #10b981;">-$<%= parseFloat(folio.advancePayment || folio.anticipo || 0).toFixed(2) %></td>
+                    </tr>
+                    <tr>
+                        <td style="border: none; padding: 4px 0; text-align: left; font-weight: bold; font-size: 18px; color: #ec4899;">Resta a Pagar:</td>
+                        <td style="border: none; padding: 4px 0; text-align: right; font-weight: bold; font-size: 18px; color: #ec4899;">$<%= parseFloat(folio.balance || (folio.total - folio.anticipo) || 0).toFixed(2) %></td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
@@ -226,7 +258,7 @@
         <% if (hasExtras) { %>
             <div class="keep-together">
                 <div class="section-title">Accesorios y Extras de Diseño</div>
-                <table style="width: 60%;">
+                <table style="width: 100%;">
                     <tr>
                         <th style="width: 20%; text-align: center;">Cantidad</th>
                         <th style="width: 80%;">Concepto / Nombre</th>
