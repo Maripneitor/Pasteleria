@@ -2,42 +2,22 @@ import React, { createContext, useContext, useState } from 'react';
 
 const OrderContext = createContext();
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useOrder = () => useContext(OrderContext);
 
 export const OrderProvider = ({ children }) => {
     const [step, setStep] = useState(1);
     
-    // 1. ESTADO INICIAL (Nomenclatura unificada con el Backend)
     const [orderData, setOrderData] = useState({
-        clientName: '',
-        clientPhone: '',
-        clientPhoneExtra: '',
-        
+        clientName: '', clientPhone: '', clientPhoneExtra: '',
         products: [], 
         complements: Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })),
         extras: [],      
         pisos: Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' })),
-
-        deliveryDate: '',
-        deliveryTime: '',
-        is_delivery: false,
-        calle: '',
-        num_ext: '',
-        num_int: '',
-        colonia: '',
-        referencias: '',
-        ubicacion_maps: '',
-        costo_envio: 0,
-
-        costo_base: 0,
-        total: 0,
-        anticipo: 0, 
-        aplica_comision: false, 
-        
-        descripcion_diseno: '',
-        dedicatoria: '',
-        extraHeight: false,
+        deliveryDate: '', deliveryTime: '', is_delivery: false,
+        calle: '', num_ext: '', num_int: '', colonia: '', referencias: '', ubicacion_maps: '', costo_envio: 0,
+        costo_base: 0, total: 0, anticipo: 0, aplica_comision: false, 
+        descripcion_diseno: '', dedicatoria: '',
+        extraHeight: false, // 🚀 Fuente única de verdad inicializada
         referenceImages: []
     });
 
@@ -54,28 +34,15 @@ export const OrderProvider = ({ children }) => {
     const resetOrder = () => {
         setStep(1);
         setOrderData({
-            clientName: '',
-            clientPhone: '',
-            clientPhoneExtra: '', 
+            clientName: '', clientPhone: '', clientPhoneExtra: '', 
             products: [],
             complements: Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 })),
             extras: [],
             pisos: Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' })),
-            deliveryDate: '',
-            deliveryTime: '',
-            is_delivery: false,
-            calle: '',
-            num_ext: '',
-            num_int: '',
-            colonia: '',
-            referencias: '',
-            ubicacion_maps: '',
-            costo_envio: 0,
-            total: 0,
-            anticipo: 0, 
-            aplica_comision: false, 
-            descripcion_diseno: '',
-            dedicatoria: '',
+            deliveryDate: '', deliveryTime: '', is_delivery: false,
+            calle: '', num_ext: '', num_int: '', colonia: '', referencias: '', ubicacion_maps: '', costo_envio: 0,
+            total: 0, anticipo: 0, aplica_comision: false, 
+            descripcion_diseno: '', dedicatoria: '',
             extraHeight: false,
             referenceImages: []
         });
@@ -104,10 +71,7 @@ export const OrderProvider = ({ children }) => {
             clientPhoneExtra: folio.cliente_telefono_extra || '',
             clientId: folio.clientId,
             selectedClient: folio.clientId ? { 
-                id: folio.clientId, 
-                name: folio.cliente_nombre, 
-                phone: folio.cliente_telefono,
-                phone2: folio.cliente_telefono_extra
+                id: folio.clientId, name: folio.cliente_nombre, phone: folio.cliente_telefono, phone2: folio.cliente_telefono_extra
             } : null,
             
             tipo_folio: folio.tipo_folio || 'Normal',
@@ -115,33 +79,20 @@ export const OrderProvider = ({ children }) => {
             shape: folio.forma || 'Redondo',
             panes: Array.isArray(folio.sabores_pan) ? folio.sabores_pan : [],
             rellenos: Array.isArray(folio.rellenos) ? folio.rellenos : [],
-            
             extras: folio.accesorios || [],
-            
             deliveryDate: folio.fecha_entrega || '',
             deliveryTime: folio.hora_entrega || '',
-            
             is_delivery: !!folio.is_delivery,
-            calle: folio.calle || '',
-            num_ext: folio.num_ext || '',
-            num_int: folio.num_int || '', 
-            colonia: folio.colonia || '',
-            referencias: folio.referencias || '',
-            ubicacion_maps: folio.ubicacion_maps || '',
-            costo_envio: folio.costo_envio || 0,
-            costo_base: folio.costo_base || 0,
+            calle: folio.calle || '', num_ext: folio.num_ext || '', num_int: folio.num_int || '', 
+            colonia: folio.colonia || '', referencias: folio.referencias || '', ubicacion_maps: folio.ubicacion_maps || '',
+            costo_envio: folio.costo_envio || 0, costo_base: folio.costo_base || 0,
+            descripcion_diseno: folio.descripcion_diseno || '', dedicatoria: folio.dedicatoria || '',
             
-            descripcion_diseno: folio.descripcion_diseno || '',
-            dedicatoria: folio.dedicatoria || '',
-            
-            // 🔥 FIX DEFINITIVO ALTURA EXTRA: Verifica "Sí" (con acento), "Si" (sin acento) y booleanos verdaderos
-            extraHeight: folio.altura_extra === 'Sí' || folio.altura_extra === 'Si' || folio.extraHeight === true,
+            // 🚀 FIX: Única fuente de verdad en base a lo que mande el backend (booleano garantizado)
+            extraHeight: folio.altura_extra === 'Sí' || folio.altura_extra === 'Si' || String(folio.extraHeight) === 'true',
             
             referenceImages: folio.diseno_metadata?.allImages || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : []),
-            
-            total: folio.total || 0,
-            anticipo: folio.anticipo || 0, 
-            aplica_comision: !!folio.aplica_comision, 
+            total: folio.total || 0, anticipo: folio.anticipo || 0, aplica_comision: !!folio.aplica_comision, 
             
             pisos: (folio.diseno_metadata?.pisos?.length === 8) 
                 ? folio.diseno_metadata.pisos 

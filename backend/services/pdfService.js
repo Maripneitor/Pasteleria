@@ -15,7 +15,6 @@ const QRCode = require('qrcode');
 async function getTenantBranding(tenantId) {
     try {
         const config = await TenantConfig.findOne({ where: { tenantId } });
-
         if (config) {
             return {
                 businessName: config.businessName || 'La Fiesta',
@@ -24,7 +23,6 @@ async function getTenantBranding(tenantId) {
                 pdfFooterText: config.footerText || 'Gracias por su preferencia.'
             };
         }
-
         const tenant = await Tenant.findByPk(tenantId);
         if (tenant) {
             return {
@@ -34,11 +32,8 @@ async function getTenantBranding(tenantId) {
                 pdfFooterText: 'Gracias por su compra'
             };
         }
-
         return getDefaultBranding();
-
     } catch (error) {
-        console.error('Error fetching tenant branding:', error);
         return getDefaultBranding();
     }
 }
@@ -61,16 +56,10 @@ function normalizeLogo(url) {
 
 async function findOrderScoped(orderId, ctx) {
     const { tenantId, branchId, role } = ctx;
-
-    const where = {
-        id: orderId,
-        tenantId: tenantId
-    };
-
+    const where = { id: orderId, tenantId: tenantId };
     if (branchId && role !== 'SUPER_ADMIN' && role !== 'ADMIN' && role !== 'OWNER') {
         where.branchId = branchId;
     }
-
     const order = await Folio.findOne({
         where,
         include: [
@@ -78,24 +67,11 @@ async function findOrderScoped(orderId, ctx) {
             { model: FolioComplemento, as: 'complementosList', required: false }
         ]
     });
-
     if (!order) {
         const error = new Error('Pedido no encontrado o sin acceso.');
-        error.status = 404;
-        throw error;
+        error.status = 404; throw error;
     }
-
     return order;
-}
-
-function formatMoney(amount) {
-    return Number(amount || 0).toFixed(2);
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return 'N/A';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 /**
@@ -109,55 +85,61 @@ async function toOrderDTO(order, branding) {
     const isDelivery = plain.is_delivery === true || plain.is_delivery === 'true' || plain.is_delivery === 1 || plain.is_delivery === '1';
     const mapsLink = isDelivery && plain.ubicacion_maps && plain.ubicacion_maps.startsWith('http') ? plain.ubicacion_maps : null;
 
-    const parseList = (val) => {
+    // 🔥 PARSEO AGRESIVO: Destruye JSONs anidados en strings
+    const forceParse = (val) => {
         if (!val) return [];
-        if (typeof val === 'string') {
-            try { return JSON.parse(val); } catch (e) { return []; }
-        }
-        if (Array.isArray(val)) return val;
-        return [];
+        let parsed = val;
+        if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch(e) {} }
+        if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch(e) {} } // Doble capa
+        return Array.isArray(parsed) ? parsed : [];
     };
 
-    const extractValue = (val) => {
-        if (!val) return 'N/A';
-        if (Array.isArray(val)) return val.length > 0 ? val.join(', ') : 'N/A';
-        if (typeof val === 'string' && val.trim() !== '') {
-            try {
-                const parsed = JSON.parse(val);
-                if (Array.isArray(parsed)) return parsed.length > 0 ? parsed.join(', ') : 'N/A';
-            } catch(e) {}
-            return val;
-        }
-        return 'N/A';
-    };
+    let meta = plain.diseno_metadata;
+    if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch(e) {} }
+    if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch(e) {} }
+    if (!meta || typeof meta !== 'object') meta = {};
 
-    const additionals = [
-        ...parseList(plain.complementos).map(c => ({ name: c.name || c, price: c.price || 0 })),
-        ...parseList(plain.accesorios).map(c => ({ name: c.name || c, price: c.price || 0 }))
-    ];
+    // 🚀 LÓGICA DE ALTURA EXTRA BLINDADA
+    const isExtraHeight = 
+        plain.extraHeight === true || 
+        String(plain.extraHeight) === 'true' || 
+        String(plain.extraHeight) === '1' || 
+        plain.altura_extra === 'Sí' || 
+        plain.altura_extra === 'Si' || 
+        meta.extraHeight === true || 
+        String(meta.extraHeight) === 'true' ||
+        meta.altura_extra === 'Sí';
 
-    const complementosJSON = parseList(plain.complementarios || plain.complementosList || plain.complementos);
-    const complementosList = complementosJSON.map(c => ({
+    // 🚀 EXTRACCIÓN DE ACCESORIOS BLINDADA
+    const rawExtras = [...forceParse(plain.complementos), ...forceParse(plain.accesorios)];
+    const additionals = rawExtras.map(c => {
+        if (!c) return null;
+        if (typeof c === 'string') return { name: c, qty: 1 };
+        
+        const itemName = c.nombre || c.name || c.descripcion || c.concepto || '';
+        const qty = c.cantidad || c.qty || 1;
+        
+        if (!itemName || String(itemName).trim() === '') return null;
+        return { name: String(itemName).trim(), qty: Number(qty) };
+    }).filter(a => a !== null); // Quita los nulos
+
+    const complementosList = forceParse(plain.complementarios || plain.complementosList || plain.complementos).map(c => ({
         persons: c.numero_personas || c.personas || 'N/A',
         shape: c.forma || 'N/A',
-        flavor: extractValue(c.sabores_pan || c.sabor_pan || c.sabor || c.flavor), 
-        filling: extractValue(c.rellenos || c.relleno || c.filling),               
-        description: c.descripcion || 'Sin descripción',
-        price: c.precio || 0
+        flavor: Array.isArray(c.sabores_pan) ? c.sabores_pan.join(', ') : (c.sabor_pan || c.sabor || 'N/A'), 
+        filling: Array.isArray(c.rellenos) ? c.rellenos.join(', ') : (c.relleno || 'N/A'),               
+        description: c.descripcion || 'Sin descripción'
     }));
 
-    const pisosJSON = parseList(plain.detallesPisos || (plain.diseno_metadata ? plain.diseno_metadata.pisos : []) || (plain.diseno_metadata ? plain.diseno_metadata.tiers : []));
-    const tiersList = pisosJSON.map((t, idx) => ({
+    const tiersList = forceParse(plain.detallesPisos || meta.pisos || meta.tiers).map((t, idx) => ({
         piso: t.piso || idx + 1,
         persons: t.personas || t.persons || 'N/A',
-        panes: Array.isArray(t.sabores_pan) ? t.sabores_pan : parseList(t.sabores_pan || t.panes || t.sabores),
-        rellenos: Array.isArray(t.rellenos) ? t.rellenos : parseList(t.rellenos),
+        panes: Array.isArray(t.sabores_pan) ? t.sabores_pan : forceParse(t.panes),
+        rellenos: Array.isArray(t.rellenos) ? t.rellenos : forceParse(t.rellenos),
         notas: t.notas || ''
     }));
 
-    const safeImages = (plain.diseno_metadata?.allImages && plain.diseno_metadata.allImages.length > 0) 
-        ? plain.diseno_metadata.allImages 
-        : (plain.imagen_referencia_url ? [plain.imagen_referencia_url] : []);
+    const safeImages = (meta.allImages && meta.allImages.length > 0) ? meta.allImages : (plain.imagen_referencia_url ? [plain.imagen_referencia_url] : []);
 
     return {
         id: plain.id,
@@ -169,63 +151,46 @@ async function toOrderDTO(order, branding) {
         formattedDeliveryDate: plain.fecha_entrega,
         formattedDeliveryTime: plain.hora_entrega,
         
-        // 🔥 FIREWALL 2: Filtramos valores de entrega en la lectura
+        // Aquí pasamos las variables corregidas al PDF
+        extraHeight: isExtraHeight,
+        additionals: additionals,
+        
         is_delivery: isDelivery,
         deliveryLocation: isDelivery ? (plain.ubicacion_entrega || 'Dirección no especificada') : 'En Sucursal',
         ubicacion_maps_link: mapsLink,
         
-        sabores: parseList(plain.sabores_pan),
-        rellenos: parseList(plain.rellenos),
-        cubierta: plain.diseno_metadata?.cubierta || null,
+        sabores: forceParse(plain.sabores_pan),
+        rellenos: forceParse(plain.rellenos),
+        cubierta: meta.cubierta || null,
         designDescription: plain.descripcion_diseno,
-        
         dedicatoria: plain.dedicatoria,
         dedication: plain.dedicatoria,
-        
         imageUrls: safeImages, 
-        
         tiers: tiersList,
         complements: complementosList, 
-        
-        // 🔥 Inyectando variables faltantes para nota-venta.ejs
         basePrice: plain.costo_base || 0,
         deliveryCost: isDelivery ? parseFloat(plain.costo_envio || 0) : 0,
-
         total: plain.total,
         advancePayment: plain.anticipo,
         balance: plain.total - plain.anticipo,
         client: {
             name: plain.cliente_nombre || 'Cliente General',
             phone: plain.cliente_telefono || '',
-            phoneExtra: plain.cliente_telefono_extra || '', 
-            email: plain.client?.email || ''
+            phoneExtra: plain.cliente_telefono_extra || ''
         },
-        additionals,
-        isPaid: plain.estatus_pago === 'Pagado',
         status: plain.status
     };
 }
 
-
 /* --- EXPORTS --- */
-
 exports.generateComandaPdf = async (orderId, ctx) => {
     const order = await findOrderScoped(orderId, ctx);
     const branding = await getTenantBranding(ctx.tenantId);
     const orderDTO = await toOrderDTO(order, branding);
-
     return await renderPdf({
         templateName: 'comanda',
-        data: {
-            folio: orderDTO,
-            qrCode: await QRCode.toDataURL(`${orderDTO.folioNumber}`, { margin: 0 })
-        },
-        branding,
-        options: {
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
-        }
+        data: { folio: orderDTO, qrCode: await QRCode.toDataURL(`${orderDTO.folioNumber}`, { margin: 0 }) },
+        branding, options: { format: 'A4', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } }
     });
 };
 
@@ -233,19 +198,10 @@ exports.generateNotaVentaPdf = async (orderId, ctx) => {
     const order = await findOrderScoped(orderId, ctx);
     const branding = await getTenantBranding(ctx.tenantId);
     const orderDTO = await toOrderDTO(order, branding);
-
     return await renderPdf({
         templateName: 'nota-venta',
-        data: {
-            folio: orderDTO,
-            qrCode: await QRCode.toDataURL(process.env.PUBLIC_APP_URL ? `${process.env.PUBLIC_APP_URL}/folios/${order.id}` : `ID:${order.id}`)
-        },
-        branding,
-        options: {
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
-        }
+        data: { folio: orderDTO, qrCode: await QRCode.toDataURL(process.env.PUBLIC_APP_URL ? `${process.env.PUBLIC_APP_URL}/folios/${order.id}` : `ID:${order.id}`) },
+        branding, options: { format: 'A4', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } }
     });
 };
 
@@ -253,41 +209,17 @@ exports.renderOrdersPdf = async ({ folios, date, branches }) => {
     try {
         const branding = getDefaultBranding(); 
         return await renderPdf({
-            templateName: 'daily-cut',
-            data: { folios, date, branches },
-            options: {
-                format: 'A4',
-                printBackground: true,
-                margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
-            },
-            branding
+            templateName: 'daily-cut', data: { folios, date, branches },
+            options: { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' } }, branding
         });
-    } catch (error) {
-        console.error('Error detallado en renderOrdersPdf:', error.message);
-        throw error;
-    }
+    } catch (error) { throw error; }
 };
 
 exports.renderCommissionsPdf = async ({ reportData, from, to }) => {
     const branding = getDefaultBranding();
-    
-    const data = {
-        from,
-        to,
-        reportData: reportData, 
-        generatedAt: new Date().toLocaleString(),
-        branding
-    };
-
     return await renderPdf({
-        templateName: 'commissionReport', 
-        data: data,
-        branding,
-        options: {
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
-        }
+        templateName: 'commissionReport', data: { from, to, reportData, generatedAt: new Date().toLocaleString(), branding },
+        branding, options: { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' } }
     });
 };
 

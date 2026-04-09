@@ -66,12 +66,9 @@ const StepD_Design = ({ next, prev }) => {
         }
     };
 
-    // 🔥 NUEVA LÓGICA DE EXTRAS / ACCESORIOS
     const extras = orderData.extras || [];
 
-    const addExtra = () => {
-        updateOrder({ extras: [...extras, { nombre: '', cantidad: 1, precio: '' }] });
-    };
+    const addExtra = () => updateOrder({ extras: [...extras, { nombre: '', cantidad: 1, precio: '' }] });
 
     const updateExtra = (index, field, value) => {
         const newExtras = [...extras];
@@ -117,12 +114,9 @@ const StepD_Design = ({ next, prev }) => {
                     <input
                         type="checkbox"
                         id="extraHeight"
-                        // 🔥 FIX: Lee tanto el valor del frontend como el de la BD
-                        checked={orderData.extraHeight === true || orderData.altura_extra === 'Sí'} 
-                        onChange={(e) => updateOrder({ 
-                            extraHeight: e.target.checked, 
-                            altura_extra: e.target.checked ? 'Sí' : 'No' 
-                        })}
+                        // 🚀 FIX: Dependemos única y exclusivamente del booleano del contexto
+                        checked={!!orderData.extraHeight} 
+                        onChange={(e) => updateOrder({ extraHeight: e.target.checked })}
                         className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
                     />
                     <div>
@@ -141,10 +135,7 @@ const StepD_Design = ({ next, prev }) => {
                                     className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                                     alt="ref"
                                 />
-                                <button
-                                    onClick={() => removeImage(idx)}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition shadow-sm"
-                                >
+                                <button onClick={() => removeImage(idx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition shadow-sm">
                                     <Trash2 size={12} />
                                 </button>
                             </div>
@@ -161,7 +152,6 @@ const StepD_Design = ({ next, prev }) => {
                 </div>
             </div>
 
-            {/* 🔥 SECCIÓN DE ACCESORIOS Y EXTRAS */}
             <div className="pt-6 border-t border-gray-200 mt-6">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-gray-800">Accesorios y Extras (Cobro Adicional)</h3>
@@ -176,31 +166,13 @@ const StepD_Design = ({ next, prev }) => {
                     <div className="space-y-3">
                         {extras.map((extra, idx) => (
                             <div key={idx} className="flex flex-wrap md:flex-nowrap gap-3 items-center bg-gray-50 p-3 rounded-xl border border-gray-200 animate-in fade-in">
-                                <input
-                                    type="text"
-                                    placeholder="Nombre (Ej. Vela Chispera)"
-                                    value={extra.nombre || ''}
-                                    onChange={(e) => updateExtra(idx, 'nombre', e.target.value)}
-                                    className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 outline-none"
-                                />
+                                <input type="text" placeholder="Nombre" value={extra.nombre || ''} onChange={(e) => updateExtra(idx, 'nombre', e.target.value)} className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 outline-none" />
                                 <div className="w-24">
-                                    <input
-                                        type="number"
-                                        placeholder="Cant."
-                                        value={extra.cantidad}
-                                        onChange={(e) => updateExtra(idx, 'cantidad', parseInt(e.target.value) || 1)}
-                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-pink-500 outline-none"
-                                    />
+                                    <input type="number" placeholder="Cant." value={extra.cantidad} onChange={(e) => updateExtra(idx, 'cantidad', parseInt(e.target.value) || 1)} className="w-full p-2 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-pink-500 outline-none" />
                                 </div>
                                 <div className="w-32 relative">
                                     <span className="absolute left-3 top-2.5 text-green-700 font-bold">$</span>
-                                    <input
-                                        type="number"
-                                        placeholder="Precio"
-                                        value={extra.precio}
-                                        onChange={(e) => updateExtra(idx, 'precio', parseFloat(e.target.value) || 0)}
-                                        className="w-full pl-7 p-2 border border-green-300 bg-green-50 text-green-700 font-bold rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"
-                                    />
+                                    <input type="number" placeholder="Precio" value={extra.precio} onChange={(e) => updateExtra(idx, 'precio', parseFloat(e.target.value) || 0)} className="w-full pl-7 p-2 border border-green-300 bg-green-50 text-green-700 font-bold rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none" />
                                 </div>
                                 <button type="button" onClick={() => removeExtra(idx)} className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition">
                                     <Trash2 size={18} />
@@ -212,16 +184,8 @@ const StepD_Design = ({ next, prev }) => {
             </div>
 
             {(orderData.referenceImages?.length > 0) && (
-                <button
-                    onClick={handleAnalyzeAI}
-                    disabled={analyzing}
-                    className="w-full py-3 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-200 hover:shadow-xl transition flex items-center justify-center gap-2 mt-4"
-                >
-                    {analyzing ? (
-                        <> <Loader2 className="animate-spin" /> Analizando Diseño... </>
-                    ) : (
-                        <> <Sparkles size={18} /> Analizar Diseño con IA </>
-                    )}
+                <button onClick={handleAnalyzeAI} disabled={analyzing} className="w-full py-3 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-200 hover:shadow-xl transition flex items-center justify-center gap-2 mt-4">
+                    {analyzing ? ( <> <Loader2 className="animate-spin" /> Analizando Diseño... </> ) : ( <> <Sparkles size={18} /> Analizar Diseño con IA </> )}
                 </button>
             )}
 

@@ -188,8 +188,16 @@ const StepF_Payment = ({ prev }) => {
             descripcion_diseno: orderData.descripcion_diseno || '',
             dedicatoria: orderData.dedicatoria || '',
             imagen_referencia_url: orderData.imagen_referencia_url,
+
+            // 🔥 EL ESLABÓN PERDIDO: Por fin enviamos la Altura Extra al Backend
+            extraHeight: !!orderData.extraHeight,
+            altura_extra: orderData.extraHeight ? 'Sí' : 'No',
             
-            diseno_metadata: { pisos: pisosValidos, allImages: orderData.referenceImages },
+            diseno_metadata: { 
+                pisos: pisosValidos, 
+                allImages: orderData.referenceImages,
+                extraHeight: !!orderData.extraHeight // 🔥 También lo empaquetamos aquí por doble seguridad
+            },
 
             is_delivery: !!(orderData.is_delivery || orderData.isDelivery), 
             calle: orderData.calle,

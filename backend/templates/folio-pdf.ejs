@@ -26,12 +26,9 @@
         .page-break { page-break-before: always; padding-top: 20px; }
         
         .keep-together { 
-            page-break-inside: avoid !important; 
-            break-inside: avoid !important;
+            page-break-inside: avoid !important; break-inside: avoid !important;
             -webkit-column-break-inside: avoid;
-            margin-top: 20px; 
-            display: block; 
-            width: 100%;
+            margin-top: 20px; display: block; width: 100%;
         }
         .image-container { text-align: center; margin-top: 15px; page-break-inside: avoid; background: #f9fafb; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; }
         .ref-image { max-width: 100%; max-height: 350px; object-fit: contain; border-radius: 4px; }
@@ -56,8 +53,11 @@
         const safeImages = folio.imageUrls || (folio.diseno_metadata && folio.diseno_metadata.allImages) || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : (folio.imagenes_referencia || []));
         const hasImages = safeImages.length > 0;
 
-        // 🔥 FIX: Lógica dinámica delegada a CSS. Agrupamos todo en un único "Anexo".
-        const needsAnexo = hasTiers || hasComps || hasImages;
+        const safeExtras = folio.additionals || [];
+        const hasExtras = safeExtras.length > 0;
+
+        // Si existe cualquiera de estos, mostramos la hoja de Anexo
+        const needsAnexo = hasTiers || hasComps || hasImages || hasExtras;
 
         const cNombre = (folio.client && folio.client.name) ? folio.client.name : folio.cliente_nombre;
         const cTelefono = (folio.client && folio.client.phone) ? folio.client.phone : folio.cliente_telefono;
@@ -130,6 +130,18 @@
                 <th>Tipo de Orden</th><td><%= folio.folioType || folio.tipo_folio || 'Normal' %></td>
                 <th>Personas (Aprox)</th><td><%= folio.persons || folio.numero_personas || 'N/A' %></td>
             </tr>
+            <% 
+                const extraColor = folio.extraHeight ? 'var(--primary-color)' : '#555';
+                const extraWeight = folio.extraHeight ? 'bold' : 'normal';
+                const extraBg = folio.extraHeight ? 'var(--primary-light)' : 'transparent';
+                const extraStyleAttr = `style="color: ${extraColor}; font-weight: ${extraWeight}; background-color: ${extraBg};"`;
+            %>
+            <tr>
+                <th>Altura Extra</th>
+                <td colspan="3" <%- extraStyleAttr %>>
+                    <%= folio.extraHeight ? 'SÍ (Pastel con Altura Extra)' : 'No' %>
+                </td>
+            </tr>
             <% if (!hasTiers) { %>
             <tr>
                 <th>Sabores (Pan)</th><td><%= Array.isArray(folio.sabores || folio.sabores_pan) ? (folio.sabores || folio.sabores_pan).join(', ') : (folio.sabores || folio.sabores_pan || 'N/A') %></td>
@@ -172,22 +184,16 @@
                 <tr>
                     <th style="width: 15%; text-align: center;">Nivel</th>
                     <th style="width: 15%; text-align: center;">Pers.</th>
-                    
                     <th style="width: 20%;">Pan / Sabor</th>
-                    
                     <th style="width: 20%;">Relleno</th>
-                    
                     <th style="width: 30%;">Notas</th>
                 </tr>
                 <% safePisos.forEach((tier, idx) => { %>
                     <tr>
                         <td style="text-align: center;"><strong>Piso <%= tier.piso || idx + 1 %></strong></td>
                         <td style="text-align: center;"><%= tier.persons || tier.personas || tier.numero_personas || '-' %></td>
-                        
                         <td><%= Array.isArray(tier.panes || tier.sabores_pan) ? (tier.panes || tier.sabores_pan).join(', ') : (tier.panes || tier.sabores_pan || 'N/A') %></td>
-                        
                         <td><%= Array.isArray(tier.rellenos) ? tier.rellenos.join(', ') : (tier.rellenos || 'N/A') %></td>
-                        
                         <td style="font-size: 0.9em; color: #555;"><%= tier.notas || '-' %></td>
                     </tr>
                 <% }); %>
@@ -204,7 +210,6 @@
                     <th style="width: 30%;">Descripción Extra</th>
                 </tr>
                 <% safeComps.forEach((comp) => { 
-                    // 🚀 Súper Extractor Visual: Atrapa el valor venga como venga (DB cruda, Frontend o DTO)
                     const fSabor = comp.flavor || comp.sabor_pan || comp.sabor || (Array.isArray(comp.sabores_pan) ? comp.sabores_pan.join(', ') : comp.sabores_pan) || 'Original / Vacío';
                     const fRelleno = comp.filling || comp.relleno || (Array.isArray(comp.rellenos) ? comp.rellenos.join(', ') : comp.rellenos) || 'Original / Vacío';
                 %>
@@ -216,6 +221,29 @@
                     </tr>
                 <% }); %>
             </table>
+        <% } %>
+
+        <% if (hasExtras) { %>
+            <div class="keep-together">
+                <div class="section-title">Accesorios y Extras de Diseño</div>
+                <table style="width: 60%;">
+                    <tr>
+                        <th style="width: 20%; text-align: center;">Cantidad</th>
+                        <th style="width: 80%;">Concepto / Nombre</th>
+                    </tr>
+                    <% safeExtras.forEach((extra) => { 
+                        // Rescate en la vista por si viene malformado de la DB
+                        let n = extra.name || extra.nombre || extra.descripcion;
+                        let q = extra.qty || extra.cantidad || 1;
+                        if (!n) { n = typeof extra === 'object' ? JSON.stringify(extra) : extra; }
+                    %>
+                        <tr>
+                            <td style="text-align: center; font-weight: bold; font-size: 14px;"><%= q %></td>
+                            <td><%= n %></td>
+                        </tr>
+                    <% }); %>
+                </table>
+            </div>
         <% } %>
 
         <% if (hasImages) { %>

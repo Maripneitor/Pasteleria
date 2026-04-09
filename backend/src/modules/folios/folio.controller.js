@@ -1,7 +1,7 @@
 const folioService = require('./folio.service');
 const { buildTenantWhere } = require('../../../utils/tenantScope');
 const asyncHandler = require('../../core/asyncHandler');
-const { generateComandaPdf, generateNotaVentaPdf } = require('../../../services/pdfService'); // Temp
+const { generateComandaPdf, generateNotaVentaPdf } = require('../../../services/pdfService');
 
 // ✅ LIST
 exports.listFolios = asyncHandler(async (req, res) => {
@@ -12,23 +12,27 @@ exports.listFolios = asyncHandler(async (req, res) => {
 
 // ✅ GET ONE
 exports.getFolioById = asyncHandler(async (req, res) => {
-    // TRAMPA 1: Ver qué ID está recibiendo realmente
-    console.log("🔍 FRONTEND PIDIENDO EL FOLIO ID:", req.params.id); 
-    
     const tenantFilter = buildTenantWhere(req);
-    // TRAMPA 2: Ver los filtros de seguridad
-    console.log("🔐 Filtros aplicados:", tenantFilter); 
-    
     const row = await folioService.getFolioById(req.params.id, tenantFilter);
     
     if (!row) {
-        // TRAMPA 3: Ver si la base de datos lo rechazó
-        console.log("❌ ERROR: La base de datos devolvió NULL para el ID:", req.params.id); 
         return res.status(404).json({ message: 'Folio no encontrado (o sin acceso)' });
     }
     
-    console.log("✅ FOLIO ENCONTRADO Y ENVIADO AL FRONTEND");
-    res.json(row);
+    // 🔥 BLINDAJE DE LECTURA: Interceptamos el JSON antes de mandarlo al Frontend
+    // Si Sequelize borró la columna raíz, la rescatamos del JSON diseno_metadata
+    const folioJson = row.toJSON();
+    const isExtra = 
+        folioJson.diseno_metadata?.extraHeight === true || 
+        folioJson.diseno_metadata?.altura_extra === 'Sí' ||
+        folioJson.altura_extra === 'Sí' || 
+        folioJson.extraHeight === true ||
+        String(folioJson.extraHeight) === 'true';
+
+    folioJson.extraHeight = isExtra;
+    folioJson.altura_extra = isExtra ? 'Sí' : 'No';
+
+    res.json(folioJson);
 });
 
 // ✅ CREATE
@@ -39,10 +43,12 @@ exports.createFolio = asyncHandler(async (req, res) => {
 
     const baseUrl = (process.env.API_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
     
+    // 🔥 RESCATE DEL BOOLEANO DESDE EL FORM DATA
+    const isExtra = body.extraHeight === 'true' || body.extraHeight === true || body.altura_extra === 'Sí';
+
     if (!body.diseno_metadata) body.diseno_metadata = {};
     let finalImages = [];
 
-    // 🌟 Rescatar las URLs no importa cómo las mande el frontend
     if (body.diseno_metadata?.allImages && body.diseno_metadata.allImages.length > 0) {
         finalImages = Array.isArray(body.diseno_metadata.allImages) ? body.diseno_metadata.allImages : [body.diseno_metadata.allImages];
     } else if (body.referenceImages) {
@@ -51,13 +57,14 @@ exports.createFolio = asyncHandler(async (req, res) => {
         finalImages = Array.isArray(body.existingImages) ? body.existingImages : [body.existingImages];
     }
     
-    // Por si llegan archivos nuevos multipart
     if (req.files && req.files.length > 0) {
         const imageUrls = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
         finalImages = [...finalImages, ...imageUrls];
     }
 
     body.diseno_metadata.allImages = finalImages;
+    body.diseno_metadata.extraHeight = isExtra; // 🔥 Lo incrustamos en el JSON seguro
+
     if (finalImages.length > 0) body.imagen_referencia_url = finalImages[0];
 
     const { sequelize } = require('../../../models');
@@ -80,39 +87,45 @@ exports.updateFolio = asyncHandler(async (req, res) => {
     try {
         const tenantFilter = buildTenantWhere(req);
         const { normalizeBody } = require('../../../utils/parseMaybeJson');
-        const body = normalizeBody(req.body); // Asegurar que todo esté parseado
+        const body = normalizeBody(req.body); 
         
         const baseUrl = (process.env.API_URL || 'http://localhost:3000/api/v1').replace('/api/v1', '');
+        
+        // 🔥 RESCATE DEL BOOLEANO EN EDICIÓN
+        const isExtra = body.extraHeight === 'true' || body.extraHeight === true || body.altura_extra === 'Sí';
         
         if (!body.diseno_metadata) body.diseno_metadata = {};
         let finalImages = [];
         
-        // 🌟 Rescatar imágenes previas para no borrarlas al editar
         if (body.existingImages) {
             finalImages = Array.isArray(body.existingImages) ? body.existingImages : [body.existingImages];
         } else if (body.diseno_metadata?.allImages && body.diseno_metadata.allImages.length > 0) {
             finalImages = Array.isArray(body.diseno_metadata.allImages) ? body.diseno_metadata.allImages : [body.diseno_metadata.allImages];
         }
 
-        // Agregar las nuevas imágenes subidas durante la edición
         if (req.files && req.files.length > 0) {
             const newImages = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
             finalImages = [...finalImages, ...newImages];
         }
 
         body.diseno_metadata.allImages = finalImages;
+        body.diseno_metadata.extraHeight = isExtra; // 🔥 Lo incrustamos en el JSON seguro
+
         if (finalImages.length > 0) body.imagen_referencia_url = finalImages[0];
 
         const row = await folioService.updateFolio(req.params.id, body, tenantFilter, t, req.user?.id);
         await t.commit();
-        res.json(row);
+        
+        const folioJson = row.toJSON();
+        folioJson.extraHeight = isExtra; // Forzamos retorno inmediato para React
+        res.json(folioJson);
     } catch (error) {
         await t.rollback();
         throw error;
     }
 });
 
-// ✅ CANCEL
+// ✅ RESTO DE CONTROLADORES SIN CAMBIOS (Mismos de tu versión anterior)
 exports.cancelFolio = asyncHandler(async (req, res) => {
     const { sequelize } = require('../../../models');
     const t = await sequelize.transaction();
@@ -127,67 +140,56 @@ exports.cancelFolio = asyncHandler(async (req, res) => {
     }
 });
 
-// Status update
 exports.updateFolioStatus = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
     const row = await folioService.updateFolioStatus(req.params.id, req.body.status, tenantFilter);
     res.json(row);
 });
 
-// ✅ DELETE
 exports.deleteFolio = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
     await folioService.deleteFolio(req.params.id, req.user, tenantFilter);
     res.json({ message: 'Eliminado' });
 });
 
-// ✅ CALENDAR
 exports.getCalendarEvents = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
     const events = await folioService.getCalendarEvents(req.query.start, req.query.end, tenantFilter);
     res.json(events);
 });
 
-// ✅ DASHBOARD STATS
 exports.getDashboardStats = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
     const stats = await folioService.getDashboardStats(tenantFilter);
     res.json(stats);
 });
 
-// ✅ GET AUDITS (HISTORIAL DE CAMBIOS)
 exports.getFolioAudits = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const AuditLog = require('../../../models/AuditLog');
     const User = require('../../../models/user');
-
     const logs = await AuditLog.findAll({
         where: { entity: 'FOLIO', entityId: id },
         order: [['createdAt', 'DESC']],
         include: [{ model: User, as: 'actor', attributes: ['name', 'email'] }]
     });
-
     const result = logs.map((log) => {
         const j = log.toJSON();
-        j.details = j.meta; // Mantenemos la compatibilidad
+        j.details = j.meta; 
         return j;
     });
-
     res.json(result);
 });
 
-// ✅ PDF Single
 exports.generarPDF = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
     const { buffer, filename } = await folioService.generateFolioPdf(req.params.id, tenantFilter, req.user);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', buffer.length);
-    // Cambiamos 'inline' por 'attachment'
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
 });
 
-// ✅ PDF Labels (Individual)
 exports.generarEtiqueta = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
     const { buffer, filename } = await folioService.generateLabelPdf(req.params.id, tenantFilter);
@@ -196,10 +198,9 @@ exports.generarEtiqueta = asyncHandler(async (req, res) => {
     res.send(buffer);
 });
 
-// ✅ PDF DAY SUMMARY (Comandas & Labels)
 exports.getDaySummary = asyncHandler(async (req, res) => {
     const date = req.query.date || req.query.fecha;
-    const baseUrl = process.env.API_URL || 'http://localhost:3000/api/v1'; // Update to v1
+    const baseUrl = process.env.API_URL || 'http://localhost:3000/api/v1'; 
     res.json({
         date,
         comandasUrl: `${baseUrl}/folios/pdf/comandas/${date}`,
@@ -209,14 +210,9 @@ exports.getDaySummary = asyncHandler(async (req, res) => {
 
 exports.downloadComandasPdf = asyncHandler(async (req, res) => {
     const tenantFilter = buildTenantWhere(req);
-    // Obtenemos el buffer del servicio
     const { comandasBuffer } = await folioService.generateDaySummaryPdfs(req.params.date, tenantFilter);
-    
-    // Configuramos headers de descarga
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="Resumen-${req.params.date}.pdf"`);
-    
-    // Enviamos el buffer directamente
     res.end(comandasBuffer); 
 });
 
@@ -228,12 +224,10 @@ exports.downloadEtiquetasPdf = asyncHandler(async (req, res) => {
     res.send(etiquetasBuffer);
 });
 
-// Modern PDF Endpoints (Merged from folioPdfController)
 exports.getFolioComandaPdf = asyncHandler(async (req, res) => {
     const folioId = req.params.id;
     const ctx = { tenantId: req.user.tenantId, branchId: req.user.branchId, role: req.user.role, userId: req.user.id };
     const pdfBuffer = await generateComandaPdf(folioId, ctx);
-
     const download = String(req.query.download).toLowerCase() === 'true';
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="comanda_folio-${folioId}.pdf"`);
@@ -244,7 +238,6 @@ exports.getFolioNotaPdf = asyncHandler(async (req, res) => {
     const folioId = req.params.id;
     const ctx = { tenantId: req.user.tenantId, branchId: req.user.branchId, role: req.user.role, userId: req.user.id };
     const pdfBuffer = await generateNotaVentaPdf(folioId, ctx);
-
     const download = String(req.query.download).toLowerCase() === 'true';
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `${download ? 'attachment' : 'inline'}; filename="nota_folio-${folioId}.pdf"`);

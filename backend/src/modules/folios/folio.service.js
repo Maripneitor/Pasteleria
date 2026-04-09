@@ -8,46 +8,30 @@ const commissionService = require('../../../services/commissionService');
 const auditService = require('../../../services/auditService');
 const pdfService = require('../../../services/pdfService');
 
-// Helper: Compute Watermark
 function computeWatermark(folio) {
     if (folio.estatus_folio === 'Cancelado') return 'CANCELADO';
     if (folio.estatus_pago === 'Pagado') return 'PAGADO';
     return 'PENDIENTE';
 }
 
-// Helper: Safe Number
 const safeNum = (v) => {
     const n = parseFloat(String(v || 0).replace(/[^0-9.-]/g, ''));
     return isNaN(n) ? 0 : n;
 };
 
-// 🚀 HELPER CRÍTICO: Saneamiento Extremo de Logística (Kill Ghost Data)
 function sanitizeLogistics(data, isUpdate = false) {
-    // Si es un update parcial que no envía la bandera, no tocamos la logística
-    if (isUpdate && data.is_delivery === undefined) {
-        return data;
-    }
-
-    // Estandarizamos a booleano estricto
+    if (isUpdate && data.is_delivery === undefined) return data;
     const isDelivery = data.is_delivery === true || data.is_delivery === 'true' || data.is_delivery === 1 || data.is_delivery === '1';
     data.is_delivery = isDelivery;
 
     if (!isDelivery) {
-        // 🔥 ANIQUILACIÓN DE DATOS FANTASMA
-        data.costo_envio = 0;
-        data.calle = null;
-        data.num_ext = null;
-        data.num_int = null;
-        data.colonia = null;
-        data.referencias = null;
-        data.ubicacion_maps = null;
+        data.costo_envio = 0; data.calle = null; data.num_ext = null; data.num_int = null;
+        data.colonia = null; data.referencias = null; data.ubicacion_maps = null;
         data.ubicacion_entrega = 'Recolección en tienda';
     }
-    
     return data;
 }
 
-// Helper: Generate Smart Folio ID
 async function generateSmartFolio(fechaEntrega, telefono, tenantId) {
     const fecha = new Date(fechaEntrega);
     const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -91,10 +75,7 @@ class FolioService {
 
         return Folio.findAll({
             where,
-            order: [
-                ['fecha_entrega', 'ASC'], 
-                ['hora_entrega', 'ASC']
-            ],
+            order: [['fecha_entrega', 'ASC'], ['hora_entrega', 'ASC']],
             limit: 100 
         });
     }
@@ -114,33 +95,31 @@ class FolioService {
     async createFolio(folioData, user, tenantId, t = null) {
         if (!folioData.cliente_nombre || !folioData.cliente_telefono) {
             const err = new Error('Datos incompletos: cliente_nombre y/o cliente_telefono');
-            err.status = 400;
-            err.code = 'VALIDATION_ERROR';
-            throw err;
+            err.status = 400; err.code = 'VALIDATION_ERROR'; throw err;
         }
 
         const required = ['fecha_entrega', 'hora_entrega'];
         for (const k of required) {
             if (!folioData[k]) {
                 const err = new Error(`Falta campo requerido: ${k}`);
-                err.status = 400;
-                err.code = 'VALIDATION_ERROR';
-                throw err;
+                err.status = 400; err.code = 'VALIDATION_ERROR'; throw err;
             }
         }
 
-        // 🔥 FIREWALL 1: Limpiamos datos fantasma de logística antes de tocar números
         folioData = sanitizeLogistics(folioData, false);
 
-        // 🔥 FIX ALTURA EXTRA: Mapeo de extraHeight (Booleano frontend) a altura_extra (String BD)
-        if (folioData.extraHeight !== undefined) {
-            const isExtra = folioData.extraHeight === true || folioData.extraHeight === 'true';
-            folioData.altura_extra = isExtra ? 'Sí' : 'No';
-        }
+        // 🔥 BLINDAJE DE GUARDADO: Lo alojamos seguro en el JSON metadata
+        const isExtra = folioData.extraHeight === true || String(folioData.extraHeight) === 'true' || folioData.altura_extra === 'Sí';
+        folioData.altura_extra = isExtra ? 'Sí' : 'No';
+        folioData.extraHeight = isExtra;
+        
+        if (typeof folioData.diseno_metadata !== 'object') folioData.diseno_metadata = {};
+        folioData.diseno_metadata.extraHeight = isExtra;
+        folioData.diseno_metadata.altura_extra = isExtra ? 'Sí' : 'No';
 
         const folioNumber = await generateSmartFolio(folioData.fecha_entrega, folioData.cliente_telefono, tenantId);
         const costo_base = safeNum(folioData.costo_base);
-        const costo_envio = safeNum(folioData.costo_envio); // Ya estará en 0 si no es delivery
+        const costo_envio = safeNum(folioData.costo_envio); 
         const anticipo = safeNum(folioData.anticipo);
         const total = folioData.total ? safeNum(folioData.total) : (costo_base + costo_envio);
         const estatus_pago = (folioData.estatus_pago) || (total - anticipo <= 0.01 ? 'Pagado' : 'Pendiente');
@@ -160,7 +139,6 @@ class FolioService {
             resolvedRellenos = fillings.map(f => f.name);
         }
 
-        if (typeof folioData.diseno_metadata !== 'object') folioData.diseno_metadata = {};
         folioData.diseno_metadata.flavorIds = flavorIds;
         folioData.diseno_metadata.fillingIds = fillingIds;
 
@@ -204,10 +182,7 @@ class FolioService {
         try {
             const applyComm = folioData.aplicar_comision_cliente === true || folioData.aplicar_comision_cliente === 'true';
             await commissionService.createCommission({
-                folioNumber: row.folioNumber,
-                total: row.total,
-                appliedToCustomer: applyComm,
-                userId: user?.id
+                folioNumber: row.folioNumber, total: row.total, appliedToCustomer: applyComm, userId: user?.id
             }, t);
         } catch (commError) {
             console.error(`[Commission] FAILED:`, commError);
@@ -225,14 +200,20 @@ class FolioService {
             row.cliente_telefono_extra = data.cliente_telefono_extra ? String(data.cliente_telefono_extra).trim() : null;
         }
 
-        // 🔥 FIREWALL 1: Saneamos logística
         data = sanitizeLogistics(data, true);
 
-        // 🔥 FIX ALTURA EXTRA: Mapeo para Update
-        if (data.extraHeight !== undefined) {
-            const isExtra = data.extraHeight === true || data.extraHeight === 'true';
-            data.altura_extra = isExtra ? 'Sí' : 'No';
-        }
+        // 🔥 BLINDAJE DE UPDATE: Aseguramos el JSON sin borrar otra metadata existente
+        const isExtra = data.extraHeight === true || String(data.extraHeight) === 'true' || data.altura_extra === 'Sí';
+        data.altura_extra = isExtra ? 'Sí' : 'No';
+        data.extraHeight = isExtra; 
+
+        const currentMetadata = row.diseno_metadata || {};
+        data.diseno_metadata = {
+            ...currentMetadata,
+            ...(data.diseno_metadata || {}),
+            extraHeight: isExtra,
+            altura_extra: isExtra ? 'Sí' : 'No'
+        };
 
         const before = row.toJSON();
         await row.update(data, { transaction: t });
@@ -241,20 +222,13 @@ class FolioService {
         
         if (Array.isArray(compsData)) {
             await FolioComplemento.destroy({ where: { folioId: id }, transaction: t });
-            
             if (compsData.length > 0) {
                 const compsToCreate = compsData.map(c => {
                     const saborReal = c.sabor || c.sabor_pan || (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : '') || '';
                     const rellenoReal = c.relleno || (Array.isArray(c.rellenos) ? c.rellenos[0] : '') || '';
-
                     return {
-                        folioId: id,
-                        personas: safeNum(c.personas || c.numero_personas),
-                        forma: c.forma,
-                        sabor_pan: saborReal, 
-                        relleno: rellenoReal,
-                        precio: safeNum(c.precio),
-                        descripcion: c.descripcion
+                        folioId: id, personas: safeNum(c.personas || c.numero_personas), forma: c.forma,
+                        sabor_pan: saborReal, relleno: rellenoReal, precio: safeNum(c.precio), descripcion: c.descripcion
                     };
                 });
                 await FolioComplemento.bulkCreate(compsToCreate, { transaction: t });
@@ -278,11 +252,7 @@ class FolioService {
     async cancelFolio(id, motivo, user, tenantFilter, t = null) {
         const row = await this.getFolioById(id, tenantFilter, true);
         if (!row) throw { status: 404, message: 'Folio no encontrado' };
-        await row.update({
-            estatus_folio: 'Cancelado',
-            cancelado_en: new Date(),
-            motivo_cancelacion: motivo || null,
-        }, { transaction: t });
+        await row.update({ estatus_folio: 'Cancelado', cancelado_en: new Date(), motivo_cancelacion: motivo || null }, { transaction: t });
         auditService.log('CANCEL', 'FOLIO', row.id, { motivo }, user?.id, t);
         return row;
     }
@@ -312,24 +282,12 @@ class FolioService {
         const sumAnticipo = await Folio.sum('anticipo', { where: baseWhere }) || 0;
 
         const recientes = await Folio.findAll({
-            where: baseWhere, 
-            limit: 5, 
-            order: [
-                ['fecha_entrega', 'ASC'], 
-                ['hora_entrega', 'ASC']
-            ]
+            where: baseWhere, limit: 5, order: [['fecha_entrega', 'ASC'], ['hora_entrega', 'ASC']]
         });
 
         return {
-            metrics: {
-                totalOrders: totalCount,
-                pendingOrders: pendingCount,
-                todayOrders: todayCount,
-                totalSales: Number(sumTotal),
-                totalAdvance: Number(sumAnticipo)
-            },
-            recientes,
-            populares: []
+            metrics: { totalOrders: totalCount, pendingOrders: pendingCount, todayOrders: todayCount, totalSales: Number(sumTotal), totalAdvance: Number(sumAnticipo) },
+            recientes, populares: []
         };
     }
 
@@ -338,11 +296,8 @@ class FolioService {
         if (start && end) where.fecha_entrega = { [Op.between]: [start, end] };
         const rows = await Folio.findAll({ where, order: [['fecha_entrega', 'ASC'], ['hora_entrega', 'ASC']] });
         return rows.map(f => ({
-            id: String(f.id),
-            title: `${f.folioNumber} • ${f.cliente_nombre}`,
-            start: `${f.fecha_entrega}T${f.hora_entrega}`,
-            statusPago: f.estatus_pago,
-            statusFolio: f.estatus_folio,
+            id: String(f.id), title: `${f.folioNumber} • ${f.cliente_nombre}`, start: `${f.fecha_entrega}T${f.hora_entrega}`,
+            statusPago: f.estatus_pago, statusFolio: f.estatus_folio,
             color: f.estatus_folio === 'Cancelado' ? '#ef4444' : f.estatus_pago === 'Pagado' ? '#10b981' : '#f59e0b'
         }));
     }
@@ -361,10 +316,7 @@ class FolioService {
         };
 
         const isDelivery = f.is_delivery === true || f.is_delivery === 'true' || f.is_delivery === 1 || f.is_delivery === '1';
-        
-        // 🔥 FIREWALL 2: Filtramos al vuelo en caso de registros antiguos bugeados en la BD
         const envioCosto = isDelivery ? parseFloat(f.costo_envio || 0) : 0;
-
         let addressStr = 'Recolección en tienda'; 
 
         if (isDelivery) {
@@ -373,45 +325,27 @@ class FolioService {
             if (f.num_ext) parts.push(`#${f.num_ext}`);
             if (f.num_int) parts.push(`Int. ${f.num_int}`);
             if (f.colonia) parts.push(`Col. ${f.colonia}`);
-            
             let baseAddr = parts.join(', ');
             if (f.referencias) baseAddr += `<br><small style="color:#555;"><b>Ref:</b> ${f.referencias}</small>`;
-            
             addressStr = baseAddr || f.ubicacion_entrega || 'Dirección no detallada';
         }
 
         const nombreVendedor = user?.nombre || user?.name || 'Vendedor no asignado';
 
         const folioData = {
-            id: f.id,
-            folio_numero: f.folioNumber || f.id,
-            fecha_entrega: f.fecha_entrega,
-            hora_entrega: f.hora_entrega,
-            estatus_produccion: f.estatus_produccion,
-            tipo_folio: f.tipo_folio || 'Normal',
-            numero_personas: f.numero_personas,
-            sabores_pan: safeParse(f.sabores_pan),
-            rellenos: safeParse(f.rellenos),
-            descripcion_diseno: f.descripcion_diseno || 'Sin descripción detallada',
-            cliente_nombre: f.cliente_nombre,
-            cliente_telefono: f.cliente_telefono,
-            cliente_telefono_extra: f.cliente_telefono_extra,
-            total: f.total,
-            anticipo: f.anticipo,
-            balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
-            
-            is_delivery: isDelivery,
-            ubicacion_entrega: addressStr, 
-            costo_envio: envioCosto,
+            id: f.id, folio_numero: f.folioNumber || f.id, fecha_entrega: f.fecha_entrega, hora_entrega: f.hora_entrega,
+            estatus_produccion: f.estatus_produccion, tipo_folio: f.tipo_folio || 'Normal', numero_personas: f.numero_personas,
+            sabores_pan: safeParse(f.sabores_pan), rellenos: safeParse(f.rellenos), descripcion_diseno: f.descripcion_diseno || 'Sin descripción detallada',
+            cliente_nombre: f.cliente_nombre, cliente_telefono: f.cliente_telefono, cliente_telefono_extra: f.cliente_telefono_extra,
+            total: f.total, anticipo: f.anticipo, balance: (parseFloat(f.total || 0) - parseFloat(f.anticipo || 0)),
+            is_delivery: isDelivery, ubicacion_entrega: addressStr, costo_envio: envioCosto,
             ubicacion_maps_link: isDelivery && f.ubicacion_maps && f.ubicacion_maps.startsWith('http') ? f.ubicacion_maps : null,
             
             imagenes_referencia: (() => {
                 const imgs = [];
                 if (f.imagen_referencia_url) imgs.push(f.imagen_referencia_url);
                 if (f.diseno_metadata && Array.isArray(f.diseno_metadata.allImages)) {
-                    f.diseno_metadata.allImages.forEach(url => {
-                        if (!imgs.includes(url)) imgs.push(url);
-                    });
+                    f.diseno_metadata.allImages.forEach(url => { if (!imgs.includes(url)) imgs.push(url); });
                 }
                 return imgs;
             })(),
@@ -437,20 +371,10 @@ class FolioService {
         if (!folio) throw { status: 404, message: 'Folio no encontrado' };
         
         const branding = pdfService.getDefaultBranding();
-
         const buffer = await renderPdf({
             templateName: 'labelsTemplate',
-            data: { 
-                etiquetas: [{
-                    folio: folio.folioNumber,
-                    horaEntrega: folio.hora_entrega,
-                    personas: folio.numero_personas + 'p',
-                    clientName: folio.cliente_nombre
-                }],
-                fecha: folio.fecha_entrega
-            },
-            branding: branding,
-            options: { format: 'A4', printBackground: true }
+            data: { etiquetas: [{ folio: folio.folioNumber, horaEntrega: folio.hora_entrega, personas: folio.numero_personas + 'p', clientName: folio.cliente_nombre }], fecha: folio.fecha_entrega },
+            branding: branding, options: { format: 'A4', printBackground: true }
         });
 
         return { buffer, filename: `etiqueta-${folio.folioNumber}.pdf` };
@@ -459,8 +383,7 @@ class FolioService {
     async generateDaySummaryPdfs(date, tenantFilter) {
         const folios = await Folio.findAll({
             where: { fecha_entrega: date, ...tenantFilter, estatus_folio: { [Op.ne]: 'Cancelado' } },
-            order: [['hora_entrega', 'ASC']],
-            include: [{ association: 'complementosList' }]
+            order: [['hora_entrega', 'ASC']], include: [{ association: 'complementosList' }]
         });
 
         const branding = pdfService.getDefaultBranding();
@@ -468,48 +391,20 @@ class FolioService {
         const foliosData = folios.map(f => {
             const json = f.toJSON();
             const base = Number(json.costo_base || 0);
-            
-            // 🔥 Evitar datos fantasma en el reporte del día
             const isDelivery = json.is_delivery === true || json.is_delivery === 'true' || json.is_delivery === 1;
             const envio = isDelivery ? Number(json.costo_envio || 0) : 0;
-            
             const total = Number(json.total || 0);
             const adicionales = total - base - envio;
 
             return {
-                folio: json.folioNumber,
-                horaEntrega: json.hora_entrega,
-                cliente: { nombre: json.cliente_nombre, telefono: json.cliente_telefono },
-                costo: { 
-                    total: total, 
-                    anticipo: Number(json.anticipo || 0),
-                    pastel: base,
-                    envio: envio,
-                    adicionales: adicionales > 0 ? adicionales : 0
-                }
+                folio: json.folioNumber, horaEntrega: json.hora_entrega, cliente: { nombre: json.cliente_nombre, telefono: json.cliente_telefono },
+                costo: { total: total, anticipo: Number(json.anticipo || 0), pastel: base, envio: envio, adicionales: adicionales > 0 ? adicionales : 0 }
             };
         });
 
-        const comandasBuffer = await renderPdf({
-            templateName: 'ordersTemplate',
-            data: { folios: foliosData, fecha: date },
-            branding: branding,
-            options: { format: 'A4', printBackground: true }
-        });
-
-        const labelsData = folios.map(f => ({
-            folio: f.folioNumber,
-            horaEntrega: f.hora_entrega,
-            personas: f.numero_personas + 'p',
-            clientName: f.cliente_nombre
-        }));
-
-        const etiquetasBuffer = await renderPdf({
-            templateName: 'labelsTemplate',
-            data: { etiquetas: labelsData, fecha: date },
-            branding: branding,
-            options: { format: 'A4', printBackground: true }
-        });
+        const comandasBuffer = await renderPdf({ templateName: 'ordersTemplate', data: { folios: foliosData, fecha: date }, branding: branding, options: { format: 'A4', printBackground: true } });
+        const labelsData = folios.map(f => ({ folio: f.folioNumber, horaEntrega: f.hora_entrega, personas: f.numero_personas + 'p', clientName: f.cliente_nombre }));
+        const etiquetasBuffer = await renderPdf({ templateName: 'labelsTemplate', data: { etiquetas: labelsData, fecha: date }, branding: branding, options: { format: 'A4', printBackground: true } });
 
         return { comandasBuffer, etiquetasBuffer };
     }
