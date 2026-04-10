@@ -99,7 +99,7 @@ const Folio = sequelize.define('Folio', {
   // Machine State (Strict)
   status: {
     type: DataTypes.ENUM('DRAFT', 'CONFIRMED', 'IN_PRODUCTION', 'READY', 'DELIVERED', 'CANCELLED'),
-    defaultValue: 'DRAFT',
+    defaultValue: 'CONFIRMED', // 🔥 EL CAMBIO
     allowNull: false
   }
 

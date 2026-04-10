@@ -11,12 +11,41 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const [sizes, setSizes] = useState([]);   
     const [loading, setLoading] = useState(true);
 
+    // 🔥 MAGIA TECH LEAD: Inicialización robusta para leer los datos de la IA
     const [localPisos, setLocalPisos] = useState(() => {
-        const ctxPisos = orderData.pisos || [];
-        return Array.from({ length: 8 }, (_, i) => ({
-            personas: '', panes: [], rellenos: [], notas: '',
-            ...(ctxPisos[i] || {})
-        }));
+        let loadedPisos = [];
+        
+        // 1. Intentar leer de "detallesPisos" (Como lo guarda la IA en la base de datos)
+        if (orderData.detallesPisos) {
+            try {
+                loadedPisos = typeof orderData.detallesPisos === 'string' 
+                    ? JSON.parse(orderData.detallesPisos) 
+                    : orderData.detallesPisos;
+            } catch (e) {
+                console.error("Error parseando detallesPisos", e);
+            }
+        } 
+        // 2. Fallback al estado local "pisos" que usa React normalmente
+        else if (orderData.pisos) {
+            loadedPisos = orderData.pisos;
+        }
+
+        return Array.from({ length: 8 }, (_, i) => {
+            const piso = loadedPisos[i] || {};
+            
+            // Formatear personas para que coincida con tu select (Ej. si IA manda 10, convertir a "10 Personas")
+            let personasVal = piso.personas ? String(piso.personas) : '';
+            if (/^\d+$/.test(personasVal)) {
+                personasVal = `${personasVal} Personas`;
+            }
+
+            return {
+                personas: personasVal, 
+                panes: Array.isArray(piso.panes) ? piso.panes : (piso.panes ? [piso.panes] : []), 
+                rellenos: Array.isArray(piso.rellenos) ? piso.rellenos : (piso.rellenos ? [piso.rellenos] : []), 
+                notas: piso.notas || ''
+            };
+        });
     });
 
     useEffect(() => {
@@ -47,9 +76,11 @@ const StepB_OrderDetails = ({ next, prev }) => {
     }, [localPisos]);
 
     const getParsedTime = () => {
-        if (!orderData.deliveryTime) return { hour: '', minute: '', period: '' };
+        // Soporta tanto el formato Frontend (deliveryTime) como el de Base de Datos (hora_entrega)
+        const rawTime = orderData.deliveryTime || orderData.hora_entrega;
+        if (!rawTime) return { hour: '', minute: '', period: '' };
         
-        const timeClean = orderData.deliveryTime.replace(/[^0-9:]/g, ''); 
+        const timeClean = rawTime.replace(/[^0-9:]/g, ''); 
         if (!timeClean.includes(':')) return { hour: '', minute: '', period: '' };
 
         const [h24, m] = timeClean.split(':');
@@ -87,18 +118,17 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const isBase = orderData.tipo_folio === 'Base' || orderData.tipo_folio === 'Base/Especial';
     
     // 🔥 LÓGICA INTELIGENTE DE TAMAÑOS (PERSONAS)
-    // Extrae el número puro de cualquier texto (ej. "20 Personas" -> 20)
     const getNumericSize = (sizeStr) => {
         if (!sizeStr) return 0;
         const num = parseInt(sizeStr.toString().replace(/[^0-9]/g, ''), 10);
         return isNaN(num) ? 0 : num;
     };
 
-    const totalPersonas = getNumericSize(orderData.peopleCount);
+    // Soporta frontend (peopleCount) o IA (numero_personas)
+    const totalPersonas = getNumericSize(orderData.peopleCount || orderData.numero_personas);
     const sumPisos = localPisos.reduce((sum, p) => sum + getNumericSize(p.personas), 0);
     const remainingPersonas = totalPersonas - sumPisos;
 
-    // Cuando cambia el tamaño principal, si los pisos suman más, lanzamos una alerta
     useEffect(() => {
         if (totalPersonas > 0 && sumPisos > totalPersonas) {
             import('react-hot-toast').then(m => m.default.error(`Los pisos actuales suman ${sumPisos}, excediendo el nuevo total de ${totalPersonas}. Ajusta los pisos.`));
@@ -189,14 +219,19 @@ const StepB_OrderDetails = ({ next, prev }) => {
         return `${yyyy}-${mm}-${dd}`;
     };
 
-    // Validación estricta: No permite continuar si los pisos superan al pastel principal
     const hasPisos = isBase && localPisos.some(p => getNumericSize(p.personas) > 0);
     const isPisosValid = hasPisos && (sumPisos <= totalPersonas); 
-    const hasSelections = orderData.panes?.length > 0 && orderData.rellenos?.length > 0;
     
-    const isValid = orderData.deliveryDate && orderData.deliveryTime &&
-        orderData.peopleCount &&
-        (isBase ? isPisosValid : hasSelections);
+    // Soporta lectura de BD o de estado actual
+    const currentPanes = orderData.panes || (typeof orderData.sabores_pan === 'string' ? JSON.parse(orderData.sabores_pan || '[]') : orderData.sabores_pan) || [];
+    const currentRellenos = orderData.rellenos ? (typeof orderData.rellenos === 'string' ? JSON.parse(orderData.rellenos) : orderData.rellenos) : [];
+
+    const hasSelections = currentPanes.length > 0 && currentRellenos.length > 0;
+    
+    const isValid = (orderData.deliveryDate || orderData.fecha_entrega) && 
+                    (orderData.deliveryTime || orderData.hora_entrega) &&
+                    (orderData.peopleCount || orderData.numero_personas) &&
+                    (isBase ? isPisosValid : hasSelections);
 
     if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin text-pink-500 mx-auto" /></div>;
 
@@ -216,7 +251,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     <input
                         type="date"
                         min={getMinDate()}
-                        value={orderData.deliveryDate || ''}
+                        value={orderData.deliveryDate || orderData.fecha_entrega || ''}
                         onChange={(e) => updateOrder({ deliveryDate: e.target.value })}
                         className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500"
                     />
@@ -284,7 +319,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     <label className="block text-sm font-bold text-gray-700 mb-2">Número de Personas {isBase && "(Total)"}</label>
                     <select
                         className="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-pink-500"
-                        value={orderData.peopleCount || ''}
+                        value={orderData.peopleCount || orderData.numero_personas || ''}
                         onChange={(e) => updateOrder({ peopleCount: e.target.value })}
                     >
                         <option value="">Seleccione tamaño...</option>
@@ -295,7 +330,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     <label className="block text-sm font-bold text-gray-700 mb-2">Forma</label>
                     <select
                         className="w-full p-3 border border-gray-300 rounded-xl bg-white"
-                        value={orderData.shape || ''}
+                        value={orderData.shape || orderData.forma || ''}
                         onChange={(e) => updateOrder({ shape: e.target.value })}
                     >
                         <option value="">Seleccione forma...</option>
@@ -312,13 +347,13 @@ const StepB_OrderDetails = ({ next, prev }) => {
                             <Cake size={16} /> Sabores de Pan (Máx 3)
                         </label>
                         <div className="flex flex-wrap gap-1 mb-2">
-                            {(orderData.panes || []).map((pan, i) => (
+                            {currentPanes.map((pan, i) => (
                                 <span key={i} className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-md">
                                     {pan}
                                     <button 
                                         type="button" 
                                         onClick={() => {
-                                            const newList = [...(orderData.panes || [])];
+                                            const newList = [...currentPanes];
                                             newList.splice(i, 1);
                                             updateOrder({ panes: newList });
                                         }} 
@@ -335,13 +370,12 @@ const StepB_OrderDetails = ({ next, prev }) => {
                             onChange={(e) => {
                                 const val = e.target.value;
                                 if (!val) return;
-                                const current = orderData.panes || [];
-                                if (current.length >= 3) {
+                                if (currentPanes.length >= 3) {
                                     import('react-hot-toast').then(m => m.default.error('Máximo 3 sabores de pan'));
                                     return;
                                 }
-                                if (!current.includes(val)) {
-                                    updateOrder({ panes: [...current, val] });
+                                if (!currentPanes.includes(val)) {
+                                    updateOrder({ panes: [...currentPanes, val] });
                                 }
                             }}
                         >
@@ -355,13 +389,13 @@ const StepB_OrderDetails = ({ next, prev }) => {
                             <Layers size={16} /> Rellenos (Máx 2)
                         </label>
                         <div className="flex flex-wrap gap-1 mb-2">
-                            {(orderData.rellenos || []).map((rell, i) => (
+                            {currentRellenos.map((rell, i) => (
                                 <span key={i} className="inline-flex items-center gap-1 bg-pink-100 text-pink-700 text-xs font-bold px-2 py-1 rounded-md">
                                     {rell}
                                     <button 
                                         type="button" 
                                         onClick={() => {
-                                            const newList = [...(orderData.rellenos || [])];
+                                            const newList = [...currentRellenos];
                                             newList.splice(i, 1);
                                             updateOrder({ rellenos: newList });
                                         }} 
@@ -378,13 +412,12 @@ const StepB_OrderDetails = ({ next, prev }) => {
                             onChange={(e) => {
                                 const val = e.target.value;
                                 if (!val) return;
-                                const current = orderData.rellenos || [];
-                                if (current.length >= 2) {
+                                if (currentRellenos.length >= 2) {
                                     import('react-hot-toast').then(m => m.default.error('Máximo 2 rellenos'));
                                     return;
                                 }
-                                if (!current.includes(val)) {
-                                    updateOrder({ rellenos: [...current, val] });
+                                if (!currentRellenos.includes(val)) {
+                                    updateOrder({ rellenos: [...currentRellenos, val] });
                                 }
                             }}
                         >
@@ -395,7 +428,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
                 </div>
             ) : (
                 <div className="bg-purple-50/50 p-6 rounded-2xl border border-purple-100">
-                    {/* 🔥 ENCABEZADO CON MARCADOR INTELIGENTE */}
                     <div className="flex items-center justify-between border-b border-purple-200 pb-2 mb-4">
                         <h3 className="text-lg font-bold text-purple-800 flex items-center gap-2">
                             <Layers size={20} className="text-purple-600" /> Estructura por Pisos (Máx 8)
@@ -415,7 +447,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
 
                     <div className="space-y-4">
                         {localPisos.map((piso, idx) => {
-                            // Cálculos por piso para ocultar opciones irreales
                             const pisoActualValue = getNumericSize(piso.personas);
                             const maxAllowedForThisSelect = remainingPersonas + pisoActualValue;
 
@@ -435,7 +466,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                             >
                                                 <option value="">{totalPersonas ? "Seleccione..." : "Elige Total ⬆️"}</option>
                                                 {sizes
-                                                    // 🔥 MAGIA: Solo muestra tamaños que entren en el saldo restante
                                                     .filter(s => {
                                                         const sNum = getNumericSize(s.name);
                                                         return sNum > 0 && sNum <= maxAllowedForThisSelect;
@@ -458,7 +488,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                                 value="" 
                                                 onChange={(e) => handleAddItem(idx, 'panes', e.target.value)} 
                                                 className="w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm bg-white" 
-                                                disabled={!piso.personas} // Opcional: Bloquear hasta que elijan personas
+                                                disabled={!piso.personas}
                                             >
                                                 <option value="">+ Agregar pan...</option>
                                                 {flavors.map(f => (
