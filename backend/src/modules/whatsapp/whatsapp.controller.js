@@ -172,35 +172,43 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
             
             let orderData = {};
             try {
-                // Extractor inteligente de JSON por si la IA le añade basurita
-                let cleanJson = posibleJson.replace(/```json/gi, '').replace(/```/g, '').trim();
-                const startIndex = cleanJson.indexOf('{');
-                const endIndex = cleanJson.lastIndexOf('}');
-                if (startIndex !== -1 && endIndex !== -1) {
-                    cleanJson = cleanJson.substring(startIndex, endIndex + 1);
+                // Extractor Regex Infalible: Busca todo lo que esté entre la primera '{' y la última '}'
+                const matchJson = posibleJson.match(/\{[\s\S]*\}/);
+                if (matchJson) {
+                    orderData = JSON.parse(matchJson[0]);
+                } else {
+                    throw new Error("No se encontró estructura JSON.");
                 }
-                orderData = JSON.parse(cleanJson);
             } catch (jsonError) {
-                console.error("❌ Error parseando JSON de la IA:", jsonError);
+                console.error("❌ Error parseando JSON de la IA:", jsonError, "Payload recibido:", posibleJson);
+                // Fallback de emergencia
                 orderData = await getInitialExtraction(session.whatsappConversation); 
             }
 
             try {
+                // Validación estricta del booleano para evitar que "Sucursal" marque true
+                const esDomicilio = orderData.is_delivery === true || orderData.is_delivery === "true";
+
                 const nuevoFolio = await Folio.create({
                     cliente_nombre: orderData.cliente_nombre || orderData.nombre || 'Cliente WhatsApp',
-                    cliente_telefono: contactId.replace('@c.us', ''),
+                    // Si el JSON trajo teléfono lo usamos, si no, usamos el del chat
+                    cliente_telefono: orderData.cliente_telefono || contactId.replace('@c.us', ''),
+                    cliente_telefono_extra: orderData.cliente_telefono_extra || null, 
+                    
                     fecha_entrega: orderData.fecha_entrega || null,
                     hora_entrega: orderData.hora_entrega || null,
-                    is_delivery: !!orderData.ubicacion_entrega || !!orderData.calle,
+                    
+                    // Mapeo corregido de entrega
+                    is_delivery: esDomicilio,
                     calle: orderData.calle || null,
                     colonia: orderData.colonia || null,
-                    ubicacion_entrega: orderData.ubicacion_entrega || orderData.calle || 'Sucursal',
+                    ubicacion_entrega: orderData.ubicacion_entrega || (esDomicilio ? 'Domicilio' : 'Sucursal'),
                     
                     numero_personas: orderData.numero_personas || 10,
                     forma: orderData.forma || null,
                     tipo_folio: orderData.tipo_folio || 'Normal',
                     
-                    // 🔥 USAMOS PARSE ARRAY SAFE PARA QUE NUNCA SE GUARDE MAL EN MYSQL
+                    // Arrays seguros
                     detallesPisos: parseArraySafe(orderData.detallesPisos),
                     complementarios: parseArraySafe(orderData.complementarios),
                     sabores_pan: parseArraySafe(orderData.sabores_pan || orderData.sabor_pan), 
@@ -210,7 +218,7 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                     dedicatoria: orderData.dedicatoria || null,
                     
                     origen: 'WhatsApp Bot',
-                    status: 'DRAFT',
+                    status: 'DRAFT', // ¡Clave! Se guarda como borrador para revisión en Frontend
                     estatus_produccion: 'Pendiente',
                     estatus_pago: 'Pendiente',
                     tenantId: tenantId 
@@ -222,7 +230,7 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                 
             } catch (dbError) {
                 console.error("❌ Error al guardar el Folio en MySQL:", dbError);
-                aiReplyText = `⚠️ Hemos confirmado tu pedido, pero ocurrió un pequeño retraso al generar el número de folio en nuestro sistema. Lo revisaremos enseguida.`;
+                aiReplyText = textoDespedida + `\n\n⚠️ Hemos confirmado tu pedido, pero ocurrió un pequeño retraso al registrarlo en nuestro sistema. Lo revisaremos enseguida.`;
             }
         }
 
