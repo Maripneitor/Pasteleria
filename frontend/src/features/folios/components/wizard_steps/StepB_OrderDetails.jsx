@@ -11,42 +11,61 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const [sizes, setSizes] = useState([]);   
     const [loading, setLoading] = useState(true);
 
-    // 🔥 MAGIA TECH LEAD: Inicialización robusta para leer los datos de la IA
-    const [localPisos, setLocalPisos] = useState(() => {
-        let loadedPisos = [];
+    // 1. Inicialización vacía por defecto
+    const [localPisos, setLocalPisos] = useState(() => 
+        Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))
+    );
+
+    // 🔥 2. MAGIA TECH LEAD: Sincronización reactiva con los datos de la IA
+    useEffect(() => {
+        const sourcePisos = orderData.detallesPisos || orderData.pisos;
         
-        // 1. Intentar leer de "detallesPisos" (Como lo guarda la IA en la base de datos)
-        if (orderData.detallesPisos) {
+        // Solo sincronizamos si hay datos en la BD/IA y nuestro estado local está vacío (para no sobreescribir al usuario)
+        if (sourcePisos && localPisos.every(p => !p.personas)) {
+            let loadedPisos = [];
+            
             try {
-                loadedPisos = typeof orderData.detallesPisos === 'string' 
-                    ? JSON.parse(orderData.detallesPisos) 
-                    : orderData.detallesPisos;
+                loadedPisos = typeof sourcePisos === 'string' ? JSON.parse(sourcePisos) : sourcePisos;
             } catch (e) {
                 console.error("Error parseando detallesPisos", e);
             }
-        } 
-        // 2. Fallback al estado local "pisos" que usa React normalmente
-        else if (orderData.pisos) {
-            loadedPisos = orderData.pisos;
-        }
 
-        return Array.from({ length: 8 }, (_, i) => {
-            const piso = loadedPisos[i] || {};
-            
-            // Formatear personas para que coincida con tu select (Ej. si IA manda 10, convertir a "10 Personas")
-            let personasVal = piso.personas ? String(piso.personas) : '';
-            if (/^\d+$/.test(personasVal)) {
-                personasVal = `${personasVal} Personas`;
+            if (Array.isArray(loadedPisos) && loadedPisos.length > 0) {
+                const mapped = Array.from({ length: 8 }, (_, i) => {
+                    const piso = loadedPisos[i] || {};
+                    
+                    let personasVal = piso.personas ? String(piso.personas) : '';
+                    if (/^\d+$/.test(personasVal)) {
+                        personasVal = `${personasVal} Personas`;
+                    }
+
+                    // Función blindada contra variaciones de la IA (strings sueltos vs arrays)
+                    const parseArraySafe = (val) => {
+                        if (!val) return [];
+                        if (Array.isArray(val)) return val;
+                        if (typeof val === 'string') return val.split(',').map(s => s.trim());
+                        return [String(val)];
+                    };
+
+                    return {
+                        personas: personasVal, 
+                        panes: parseArraySafe(piso.panes || piso.pan), 
+                        rellenos: parseArraySafe(piso.rellenos || piso.relleno), 
+                        notas: piso.notas || piso.nota || piso.forma || ''
+                    };
+                });
+                
+                setLocalPisos(mapped);
             }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [orderData.detallesPisos, orderData.pisos]);
 
-            return {
-                personas: personasVal, 
-                panes: Array.isArray(piso.panes) ? piso.panes : (piso.panes ? [piso.panes] : []), 
-                rellenos: Array.isArray(piso.rellenos) ? piso.rellenos : (piso.rellenos ? [piso.rellenos] : []), 
-                notas: piso.notas || ''
-            };
-        });
-    });
+    // 3. Sincronizar el estado local con el Contexto Global
+    useEffect(() => {
+        updateOrder({ pisos: localPisos });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localPisos]);
 
     useEffect(() => {
         const load = async () => {
@@ -70,13 +89,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
         load();
     }, []);
 
-    useEffect(() => {
-        updateOrder({ pisos: localPisos });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [localPisos]);
-
     const getParsedTime = () => {
-        // Soporta tanto el formato Frontend (deliveryTime) como el de Base de Datos (hora_entrega)
         const rawTime = orderData.deliveryTime || orderData.hora_entrega;
         if (!rawTime) return { hour: '', minute: '', period: '' };
         
@@ -115,16 +128,15 @@ const StepB_OrderDetails = ({ next, prev }) => {
     };
 
     const parsedTime = getParsedTime();
-    const isBase = orderData.tipo_folio === 'Base' || orderData.tipo_folio === 'Base/Especial';
+    // Aceptamos también "Especial" o "Base/Especial"
+    const isBase = orderData.tipo_folio === 'Base' || orderData.tipo_folio === 'Base/Especial' || orderData.tipo_folio === 'Especial';
     
-    // 🔥 LÓGICA INTELIGENTE DE TAMAÑOS (PERSONAS)
     const getNumericSize = (sizeStr) => {
         if (!sizeStr) return 0;
         const num = parseInt(sizeStr.toString().replace(/[^0-9]/g, ''), 10);
         return isNaN(num) ? 0 : num;
     };
 
-    // Soporta frontend (peopleCount) o IA (numero_personas)
     const totalPersonas = getNumericSize(orderData.peopleCount || orderData.numero_personas);
     const sumPisos = localPisos.reduce((sum, p) => sum + getNumericSize(p.personas), 0);
     const remainingPersonas = totalPersonas - sumPisos;
@@ -222,7 +234,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const hasPisos = isBase && localPisos.some(p => getNumericSize(p.personas) > 0);
     const isPisosValid = hasPisos && (sumPisos <= totalPersonas); 
     
-    // Soporta lectura de BD o de estado actual
     const currentPanes = orderData.panes || (typeof orderData.sabores_pan === 'string' ? JSON.parse(orderData.sabores_pan || '[]') : orderData.sabores_pan) || [];
     const currentRellenos = orderData.rellenos ? (typeof orderData.rellenos === 'string' ? JSON.parse(orderData.rellenos) : orderData.rellenos) : [];
 
@@ -304,7 +315,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                         <button
                             className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${isBase ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                             onClick={() => {
-                                updateOrder({ tipo_folio: 'Base' });
+                                updateOrder({ tipo_folio: 'Base/Especial' });
                                 if (!orderData.pisos || orderData.pisos.length === 0) {
                                     const fixedPisos = Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }));
                                     updateOrder({ pisos: fixedPisos });
@@ -519,14 +530,14 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Notas</label>
+                                            <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Notas / Forma</label>
                                             <div className="flex gap-2 relative">
                                                 <input 
                                                     type="text" 
                                                     value={piso.notas} 
                                                     onChange={(e) => handleUpdatePiso(idx, 'notas', e.target.value)} 
                                                     className="w-full py-2 px-3 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm" 
-                                                    placeholder="Dicta la nota..." 
+                                                    placeholder="Ej: Cuadrado, rosa..." 
                                                     disabled={!piso.personas}
                                                 />
                                                 <button 
