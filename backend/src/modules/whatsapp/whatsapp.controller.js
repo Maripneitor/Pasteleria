@@ -6,7 +6,7 @@ const aiOrderParsingService = require('../../../services/aiOrderParsingService')
 const { getInitialExtraction } = require('../../../services/aiExtractorService'); 
 
 // =====================================================================
-// 🔥 NUEVO: UTILIDAD SALVAVIDAS PARA ARREGLOS (EVITA QUE SE PIERDAN DATOS)
+// 🔥 BLINDAJE EXTREMO: UTILIDAD SALVAVIDAS PARA ARREGLOS Y OBJETOS
 // =====================================================================
 const parseArraySafe = (data) => {
     if (!data) return [];
@@ -14,11 +14,14 @@ const parseArraySafe = (data) => {
     if (typeof data === 'string') {
         try { 
             const parsed = JSON.parse(data); 
-            return Array.isArray(parsed) ? parsed : [parsed];
+            if (Array.isArray(parsed)) return parsed;
+            if (typeof parsed === 'object') return Object.values(parsed); // Rescata si GPT mandó un objeto
+            return [parsed];
         } catch(e) { 
             return [data]; 
         }
     }
+    if (typeof data === 'object') return Object.values(data);
     return [data];
 };
 
@@ -39,12 +42,8 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
         return; 
     }
 
-    // ========================================================
-    // 📸 DETECCIÓN DE IMAGEN (MODO SaaS: Sin guardar en disco)
-    // ========================================================
     const tieneImagen = !!messageData.media || !!messageData.hasMedia;
     
-    // Si mandó solo imagen sin texto, le ponemos un placeholder para que la IA sepa qué pasó
     if (tieneImagen && !bodyText) {
         bodyText = "*(El cliente adjuntó una imagen)*";
     }
@@ -54,7 +53,6 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
     try {
         const textoLimpio = bodyText.trim().toLowerCase();
         
-        // --- 🚦 MANEJO DE COMANDOS DE FLUJO ---
         if (textoLimpio === 'cancelar') {
             const sesionExistente = await AISession.findOne({ where: { customerPhone: contactId, status: 'active' } });
             if (sesionExistente) {
@@ -70,10 +68,8 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                 sesionExistente.status = 'completed';
                 await sesionExistente.save();
             }
-            // No hacemos return; dejamos que fluya para que la IA mande el Menú oficial
         }
 
-        // --- ⏱️ AUTO-REINICIO POR INACTIVIDAD (5 MINUTOS) ---
         let session = await AISession.findOne({
             where: { customerPhone: contactId, status: 'active' }
         });
@@ -87,29 +83,19 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
             }
         }
 
-        // ========================================================
-        // 🚪 EL PORTERO: FILTRO DE INICIO (TRIGGERS)
-        // ========================================================
         const triggersInicio = [
             'hola', 'buenos dias', 'buenos días', 'buenas tardes', 'buenas noches', 
             'pedido', 'hacer pedido', 'detalles', 'ver detalles', 'informacion', 
             'información', 'menu', 'menú', 'reiniciar'
         ];
 
-        // Verificamos si el mensaje es una "llave" para abrir la plática
         const esTrigger = triggersInicio.some(t => textoLimpio.includes(t));
-
         let conversationText = messageData.conversation;
 
         if (!session) {
-            // SI NO HAY SESIÓN Y NO ES UN SALUDO/PEDIDO: Ignoramos (Silencio total)
             if (!esTrigger) {
-                console.log(`[WA-Controller] 🤐 Mensaje de ${contactId} ignorado (No es trigger): "${bodyText}"`);
                 return; 
             }
-
-            // SI ES TRIGGER: Intentamos recuperar contexto de Whaticket
-            console.log(`[WA-Controller] 🚀 Trigger detectado. Iniciando nueva sesión para ${contactId}`);
             
             if (!conversationText && process.env.WHATICKET_API_URL && process.env.WHATICKET_API_TOKEN) {
                 try {
@@ -125,15 +111,12 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                             return `${sender}: ${m.body}`;
                         }).join('\n');
                     }
-                } catch (apiError) {
-                    console.error("❌ Error API Whaticket:", apiError.message);
-                }
+                } catch (apiError) {}
             }
 
             if (!conversationText) conversationText = `Cliente: ${bodyText}`;
             else conversationText += `\nCliente: ${bodyText}`;
 
-            // CREACIÓN DE LA SESIÓN (Limpia, sin imageUrls para modo SaaS)
             session = await AISession.create({
                 customerPhone: contactId, 
                 whatsappConversation: conversationText,
@@ -141,11 +124,8 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                 status: 'active'
             });
         }
-        
         else {
             session.whatsappConversation += `\nCliente: ${bodyText}`;
-            
-            // NUEVO: Avisarle a la IA que el cliente mandó un archivo multimedia
             if (messageData.hasMedia) {
                 const avisoImagen = { 
                     role: 'system', 
@@ -155,16 +135,12 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
             } else {
                 session.chatHistory = [...session.chatHistory, { role: 'user', content: bodyText }];
             }
-            
             await session.save();
         }
 
         const tenantId = 1; 
         let aiReplyText = await aiOrderParsingService.generateWhatsAppReply(session.chatHistory, tenantId);
 
-        // ====================================================================
-        // INTERCEPCIÓN A: CREAR UN NUEVO PEDIDO LEYENDO EL JSON DE LA IA
-        // ====================================================================
         if (aiReplyText.includes('[CREAR_FOLIO_AHORA]')) {
             const partes = aiReplyText.split('[CREAR_FOLIO_AHORA]');
             const textoDespedida = partes[0]; 
@@ -172,33 +148,28 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
             
             let orderData = {};
             try {
-                // Extractor Regex Infalible: Busca todo lo que esté entre la primera '{' y la última '}'
                 const matchJson = posibleJson.match(/\{[\s\S]*\}/);
-                if (matchJson) {
-                    orderData = JSON.parse(matchJson[0]);
-                } else {
-                    throw new Error("No se encontró estructura JSON.");
-                }
+                if (matchJson) orderData = JSON.parse(matchJson[0]);
+                else throw new Error("No se encontró estructura JSON.");
             } catch (jsonError) {
-                console.error("❌ Error parseando JSON de la IA:", jsonError, "Payload recibido:", posibleJson);
-                // Fallback de emergencia
                 orderData = await getInitialExtraction(session.whatsappConversation); 
             }
 
             try {
-                // Validación estricta del booleano para evitar que "Sucursal" marque true
                 const esDomicilio = orderData.is_delivery === true || orderData.is_delivery === "true";
+
+                // 🔥 FORZAMOS LA VERIFICACIÓN: Si la IA mandó pisos, ES Base/Especial obligatoriamente.
+                const arrayPisosSafe = parseArraySafe(orderData.detallesPisos || orderData.pisos || orderData.detalles_pisos);
+                const tipoFolioCalculado = arrayPisosSafe.length > 0 ? 'Base/Especial' : (orderData.tipo_folio || 'Normal');
 
                 const nuevoFolio = await Folio.create({
                     cliente_nombre: orderData.cliente_nombre || orderData.nombre || 'Cliente WhatsApp',
-                    // Si el JSON trajo teléfono lo usamos, si no, usamos el del chat
                     cliente_telefono: orderData.cliente_telefono || contactId.replace('@c.us', ''),
                     cliente_telefono_extra: orderData.cliente_telefono_extra || null, 
                     
                     fecha_entrega: orderData.fecha_entrega || null,
                     hora_entrega: orderData.hora_entrega || null,
                     
-                    // Mapeo corregido de entrega
                     is_delivery: esDomicilio,
                     calle: orderData.calle || null,
                     colonia: orderData.colonia || null,
@@ -206,10 +177,9 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                     
                     numero_personas: orderData.numero_personas || 10,
                     forma: orderData.forma || null,
-                    tipo_folio: orderData.tipo_folio || 'Normal',
+                    tipo_folio: tipoFolioCalculado,
                     
-                    // Arrays seguros
-                    detallesPisos: parseArraySafe(orderData.detallesPisos),
+                    detallesPisos: arrayPisosSafe,
                     complementarios: parseArraySafe(orderData.complementarios),
                     sabores_pan: parseArraySafe(orderData.sabores_pan || orderData.sabor_pan), 
                     rellenos: parseArraySafe(orderData.rellenos || orderData.relleno),       
@@ -218,25 +188,20 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                     dedicatoria: orderData.dedicatoria || null,
                     
                     origen: 'WhatsApp Bot',
-                    status: 'DRAFT', // ¡Clave! Se guarda como borrador para revisión en Frontend
+                    status: 'DRAFT', 
                     estatus_produccion: 'Pendiente',
                     estatus_pago: 'Pendiente',
                     tenantId: tenantId 
                 });
 
                 aiReplyText = textoDespedida + `\n\n✅ ¡Excelente! Tu pedido ha sido registrado con éxito. Tu número de folio oficial es el *#${nuevoFolio.id}*. \n\n⚠️ *Nota:* Si necesitas cambiar algo, comunícate al local lo antes posible.\n\n¡Te esperamos en Pastelería La Fiesta!\n\n_(🤖 El asistente se ha pausado. Escribe "Hola" o "Menú" para iniciar otra plática)_`;
-                
                 session.status = 'completed';
                 
             } catch (dbError) {
-                console.error("❌ Error al guardar el Folio en MySQL:", dbError);
                 aiReplyText = textoDespedida + `\n\n⚠️ Hemos confirmado tu pedido, pero ocurrió un pequeño retraso al registrarlo en nuestro sistema. Lo revisaremos enseguida.`;
             }
         }
 
-        // ====================================================================
-        // INTERCEPCIÓN B: VER DETALLES DE UN PEDIDO EXISTENTE
-        // ====================================================================
         const buscarFolioRegex = /\[BUSCAR_FOLIO:\s*#?(\d+)\]/i; 
         const folioMatch = aiReplyText.match(buscarFolioRegex);
         
@@ -246,9 +211,7 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
 
             try {
                 const f = await Folio.findByPk(folioBuscado);
-                
                 if (f) {
-                    // 🔥 USAMOS PARSE ARRAY SAFE PARA LEER DE MYSQL
                     const panes = parseArraySafe(f.sabores_pan);
                     const panTxt = panes.length > 0 ? panes.join(', ') : "No especificado";
 
@@ -272,11 +235,8 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                     }
                     
                     let precioTxt = "Por definir (El local te confirmará el total)";
-                    if (f.total && parseFloat(f.total) > 0) {
-                        precioTxt = `$${parseFloat(f.total).toFixed(2)}`;
-                    }
+                    if (f.total && parseFloat(f.total) > 0) precioTxt = `$${parseFloat(f.total).toFixed(2)}`;
 
-                    // Armar la lista de complementarios si existen usando parseArraySafe
                     const compArray = parseArraySafe(f.complementarios);
                     let complementariosTxt = '';
                     if (compArray.length > 0) {
@@ -285,48 +245,20 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                         ).join('\n');
                     }
 
-                    // APLICANDO EL NUEVO DISEÑO VISUAL
-                    aiReplyText += `\n\n📋 *DETALLES DE TU PEDIDO #${folioBuscado}*\n` +
-                                   `👤 *Nombre:* ${f.cliente_nombre}\n` +
-                                   `📅 *Fecha y Hora:* ${f.fecha_entrega || 'Pendiente'} a las ${f.hora_entrega || 'Pendiente'}\n` +
-                                   `📍 *Entrega:* ${entregaTxt}\n\n` +
-                                   // CÓDIGO CORREGIDO:
-                                    `🎂 *PASTEL PRINCIPAL*\n` +
-                                    `🍰 *Tamaño:* ${f.numero_personas ? f.numero_personas + ' Personas' : 'Especificado en la Forma/Estructura'}\n` +
-                                    `💠 *Forma / Estilo:* ${f.forma || 'N/A'}\n` +
-                                   `🏢 *Estructura:* ${pisosTxt}\n` +
-                                   `🍞 *Pan principal:* ${panTxt}\n` +
-                                   `🍓 *Relleno principal:* ${rellenoTxt}\n` +
-                                   `🎨 *Diseño:* ${disenoTxt}\n` +
-                                   `✍️ *Dedicatoria:* ${dedicatoriaTxt}\n` +
-                                   `📸 *Imágenes:* Revisar fotos adjuntas en el chat (si aplica)` +
-                                   `${complementariosTxt}\n\n` +
-                                   `--------------------------\n` +
-                                   `💵 *Precio Total:* ${precioTxt}\n` +
-                                   `💰 *Estado de Pago:* ${f.estatus_pago}\n` +
-                                   `\nAquí tienes la información de tu pedido. Si necesitas alguna modificación, por favor comunícate directamente a la sucursal.\n` +
-                                   `\n_(🤖 El asistente se ha pausado. Escribe "Hola" o "Menú" para iniciar otra plática)_`;
+                    aiReplyText += `\n\n📋 *DETALLES DE TU PEDIDO #${folioBuscado}*\n👤 *Nombre:* ${f.cliente_nombre}\n📅 *Fecha y Hora:* ${f.fecha_entrega || 'Pendiente'} a las ${f.hora_entrega || 'Pendiente'}\n📍 *Entrega:* ${entregaTxt}\n\n🎂 *PASTEL PRINCIPAL*\n🍰 *Tamaño:* ${f.numero_personas ? f.numero_personas + ' Personas' : 'Especificado en la Forma/Estructura'}\n💠 *Forma / Estilo:* ${f.forma || 'N/A'}\n🏢 *Estructura:* ${pisosTxt}\n🍞 *Pan principal:* ${panTxt}\n🍓 *Relleno principal:* ${rellenoTxt}\n🎨 *Diseño:* ${disenoTxt}\n✍️ *Dedicatoria:* ${dedicatoriaTxt}\n📸 *Imágenes:* Revisar fotos adjuntas en el chat (si aplica)${complementariosTxt}\n\n--------------------------\n💵 *Precio Total:* ${precioTxt}\n💰 *Estado de Pago:* ${f.estatus_pago}\n\nAquí tienes la información de tu pedido. Si necesitas alguna modificación, por favor comunícate directamente a la sucursal.\n\n_(🤖 El asistente se ha pausado. Escribe "Hola" o "Menú" para iniciar otra plática)_`;
                 } else {
                     aiReplyText += `\n\n⚠️ Lo siento, no encontré ningún pedido con el folio *#${folioBuscado}*. Revisa el número e intenta de nuevo.`;
                 }
-                
                 session.status = 'completed';
-                
             } catch (err) {
-                console.error("❌ Error al buscar folio:", err);
                 aiReplyText += `\n\n⚠️ Tuvimos un problema técnico. Intenta de nuevo en unos minutos.`;
             }
         }
 
-        // ====================================================================
-        // INTERCEPCIÓN C: CIERRE DE SESIÓN PARA INFORMACIÓN O DUDAS
-        // ========================================================
         if (aiReplyText.includes('[FINALIZAR_SESION]')) {
             aiReplyText = aiReplyText.replace('[FINALIZAR_SESION]', '').trim();
             aiReplyText += `\n\n_(🤖 El asistente se ha pausado. Escribe "Hola" o "Menú" para iniciar otra plática)_`;
-            
             session.status = 'completed';
-            console.log(`[WA-Controller] 🚪 Sesión finalizada por información general para ${contactId}`);
         }
 
         session.whatsappConversation += `\nAsistente: ${aiReplyText}`;
@@ -341,31 +273,16 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
 });
 
 exports.getQR = asyncHandler(async (req, res) => {
-    // 1. Obtenemos el estado completo (con qr, status, etc.)
     const data = gateway.getStatus();
-
-    // 2. LOG PARA DIAGNÓSTICO
-    console.log("--- DEBUG BACKEND ---");
-    console.log("Datos que el API va a enviar:", JSON.stringify(data).substring(0, 100) + '...');
-    console.log("---------------------");
-
-    // 3. Si el frontend pide la imagen directamente (con ?format=image en la URL)
     if (req.query.format === 'image') {
-        if (!data.qr) {
-            return res.status(404).send('QR no listo');
-        }
+        if (!data.qr) return res.status(404).send('QR no listo');
         const qrcode = require('qrcode');
         res.setHeader('Content-Type', 'image/png');
         return qrcode.toFileStream(res, data.qr);
     }
-
-    // 4. Si el frontend pide el JSON para saber el estado
     if (!data.qr && data.status !== 'ready') {
-        // Cambiamos el 404 por 202 (Accepted, pero no completado aún)
         return res.status(202).json({ message: 'QR Not Ready', status: data.status || 'initializing' });
     }
-
-    // Devolvemos el JSON completo al Hook de React
     return res.json(data);
 });
 

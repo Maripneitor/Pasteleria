@@ -11,21 +11,25 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const [sizes, setSizes] = useState([]);   
     const [loading, setLoading] = useState(true);
 
-    // 1. Inicialización vacía por defecto
     const [localPisos, setLocalPisos] = useState(() => 
         Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))
     );
 
-    // 🔥 2. MAGIA TECH LEAD: Sincronización reactiva con los datos de la IA
+    // 🔥 1. MAGIA TECH LEAD EXTREMA: Espera a los catálogos y empareja exacto.
     useEffect(() => {
-        const sourcePisos = orderData.detallesPisos || orderData.pisos;
+        if (sizes.length === 0) return; // ESPERAR a que carguen los catálogos antes de mapear
+
+        const sourcePisos = orderData.detallesPisos || orderData.pisos || orderData.detalles_pisos;
         
-        // Solo sincronizamos si hay datos en la BD/IA y nuestro estado local está vacío (para no sobreescribir al usuario)
+        // Solo sincronizamos si la IA mandó datos y nuestro estado local está vacío
         if (sourcePisos && localPisos.every(p => !p.personas)) {
             let loadedPisos = [];
             
             try {
                 loadedPisos = typeof sourcePisos === 'string' ? JSON.parse(sourcePisos) : sourcePisos;
+                if (typeof loadedPisos === 'object' && !Array.isArray(loadedPisos)) {
+                    loadedPisos = Object.values(loadedPisos); // Blindaje anti-hallucinaciones de GPT
+                }
             } catch (e) {
                 console.error("Error parseando detallesPisos", e);
             }
@@ -34,12 +38,15 @@ const StepB_OrderDetails = ({ next, prev }) => {
                 const mapped = Array.from({ length: 8 }, (_, i) => {
                     const piso = loadedPisos[i] || {};
                     
-                    let personasVal = piso.personas ? String(piso.personas) : '';
-                    if (/^\d+$/.test(personasVal)) {
-                        personasVal = `${personasVal} Personas`;
+                    let personasVal = '';
+                    if (piso.personas) {
+                        // Emparejador matemático: Extrae el número puro (ej. "10") y busca la opción exacta (ej. "10 Personas")
+                        const numStr = String(piso.personas).replace(/[^0-9]/g, '');
+                        const matchSize = sizes.find(s => String(s.name).replace(/[^0-9]/g, '') === numStr);
+                        personasVal = matchSize ? matchSize.name : String(piso.personas);
                     }
 
-                    // Función blindada contra variaciones de la IA (strings sueltos vs arrays)
+                    // Función blindada contra variaciones de la IA
                     const parseArraySafe = (val) => {
                         if (!val) return [];
                         if (Array.isArray(val)) return val;
@@ -49,9 +56,9 @@ const StepB_OrderDetails = ({ next, prev }) => {
 
                     return {
                         personas: personasVal, 
-                        panes: parseArraySafe(piso.panes || piso.pan), 
-                        rellenos: parseArraySafe(piso.rellenos || piso.relleno), 
-                        notas: piso.notas || piso.nota || piso.forma || ''
+                        panes: parseArraySafe(piso.panes || piso.pan || piso.flavor || piso.sabores), 
+                        rellenos: parseArraySafe(piso.rellenos || piso.relleno || piso.filling), 
+                        notas: piso.notas || piso.nota || piso.forma || piso.detalles || ''
                     };
                 });
                 
@@ -59,9 +66,8 @@ const StepB_OrderDetails = ({ next, prev }) => {
             }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [orderData.detallesPisos, orderData.pisos]);
+    }, [orderData.detallesPisos, orderData.pisos, sizes]); // Ahora depende de 'sizes'
 
-    // 3. Sincronizar el estado local con el Contexto Global
     useEffect(() => {
         updateOrder({ pisos: localPisos });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,8 +134,10 @@ const StepB_OrderDetails = ({ next, prev }) => {
     };
 
     const parsedTime = getParsedTime();
-    // Aceptamos también "Especial" o "Base/Especial"
-    const isBase = orderData.tipo_folio === 'Base' || orderData.tipo_folio === 'Base/Especial' || orderData.tipo_folio === 'Especial';
+    
+    // 🔥 VALIDACIÓN IS_BASE INFALIBLE: Incluso si GPT se equivoca, si hay pisos, fuerza Base.
+    const arrayPisosSafe = Array.isArray(orderData.detallesPisos) ? orderData.detallesPisos : [];
+    const isBase = orderData.tipo_folio?.includes('Base') || orderData.tipo_folio?.includes('Especial') || arrayPisosSafe.length > 0;
     
     const getNumericSize = (sizeStr) => {
         if (!sizeStr) return 0;
@@ -231,6 +239,14 @@ const StepB_OrderDetails = ({ next, prev }) => {
         return `${yyyy}-${mm}-${dd}`;
     };
 
+    // 🔥 EMPAREJADOR PARA SELECT PRINCIPAL DE PERSONAS
+    let mainSizeValue = orderData.peopleCount || orderData.numero_personas || '';
+    if (mainSizeValue && sizes.length > 0) {
+        const numStr = String(mainSizeValue).replace(/[^0-9]/g, '');
+        const matchSize = sizes.find(s => String(s.name).replace(/[^0-9]/g, '') === numStr);
+        if (matchSize) mainSizeValue = matchSize.name;
+    }
+
     const hasPisos = isBase && localPisos.some(p => getNumericSize(p.personas) > 0);
     const isPisosValid = hasPisos && (sumPisos <= totalPersonas); 
     
@@ -241,7 +257,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
     
     const isValid = (orderData.deliveryDate || orderData.fecha_entrega) && 
                     (orderData.deliveryTime || orderData.hora_entrega) &&
-                    (orderData.peopleCount || orderData.numero_personas) &&
+                    (mainSizeValue) &&
                     (isBase ? isPisosValid : hasSelections);
 
     if (loading) return <div className="p-8 text-center"><Loader2 className="animate-spin text-pink-500 mx-auto" /></div>;
@@ -330,7 +346,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     <label className="block text-sm font-bold text-gray-700 mb-2">Número de Personas {isBase && "(Total)"}</label>
                     <select
                         className="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-pink-500"
-                        value={orderData.peopleCount || orderData.numero_personas || ''}
+                        value={mainSizeValue}
                         onChange={(e) => updateOrder({ peopleCount: e.target.value })}
                     >
                         <option value="">Seleccione tamaño...</option>
@@ -530,7 +546,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Notas / Forma</label>
+                                            <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Notas / Detalles</label>
                                             <div className="flex gap-2 relative">
                                                 <input 
                                                     type="text" 
