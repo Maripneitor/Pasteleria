@@ -184,7 +184,14 @@ exports.handleWebhook = asyncHandler(async (req, res) => {
                     
                     is_delivery: esDomicilio,
                     calle: orderData.calle || null,
+                    
+                    // 🚀 FIX: Conectamos los campos extraídos por la IA hacia la Base de Datos
+                    num_ext: orderData.num_ext || null,
+                    num_int: orderData.num_int || null,
                     colonia: orderData.colonia || null,
+                    referencias: orderData.referencias || null,
+                    ubicacion_maps: orderData.ubicacion_maps || null,
+                    
                     ubicacion_entrega: orderData.ubicacion_entrega || (esDomicilio ? 'Domicilio' : 'Sucursal'),
                     
                     numero_personas: orderData.numero_personas || 10,
