@@ -11,24 +11,27 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const [sizes, setSizes] = useState([]);   
     const [loading, setLoading] = useState(true);
 
-    const [localPisos, setLocalPisos] = useState(() => 
-        Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))
-    );
+    const [localPisos, setLocalPisos] = useState(() => {
+        const ctxPisos = orderData.detallesPisos || orderData.pisos || [];
+        const initial = Array.isArray(ctxPisos) ? ctxPisos : [];
+        return Array.from({ length: 8 }, (_, i) => ({
+            personas: '', panes: [], rellenos: [], notas: '',
+            ...(initial[i] || {})
+        }));
+    });
 
-    // 🔥 1. MAGIA TECH LEAD EXTREMA: Espera a los catálogos y empareja exacto.
     useEffect(() => {
-        if (sizes.length === 0) return; // ESPERAR a que carguen los catálogos antes de mapear
+        if (sizes.length === 0) return;
 
         const sourcePisos = orderData.detallesPisos || orderData.pisos || orderData.detalles_pisos;
         
-        // Solo sincronizamos si la IA mandó datos y nuestro estado local está vacío
         if (sourcePisos && localPisos.every(p => !p.personas)) {
             let loadedPisos = [];
             
             try {
                 loadedPisos = typeof sourcePisos === 'string' ? JSON.parse(sourcePisos) : sourcePisos;
                 if (typeof loadedPisos === 'object' && !Array.isArray(loadedPisos)) {
-                    loadedPisos = Object.values(loadedPisos); // Blindaje anti-hallucinaciones de GPT
+                    loadedPisos = Object.values(loadedPisos);
                 }
             } catch (e) {
                 console.error("Error parseando detallesPisos", e);
@@ -40,13 +43,11 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     
                     let personasVal = '';
                     if (piso.personas) {
-                        // Emparejador matemático: Extrae el número puro (ej. "10") y busca la opción exacta (ej. "10 Personas")
                         const numStr = String(piso.personas).replace(/[^0-9]/g, '');
                         const matchSize = sizes.find(s => String(s.name).replace(/[^0-9]/g, '') === numStr);
                         personasVal = matchSize ? matchSize.name : String(piso.personas);
                     }
 
-                    // Función blindada contra variaciones de la IA
                     const parseArraySafe = (val) => {
                         if (!val) return [];
                         if (Array.isArray(val)) return val;
@@ -66,7 +67,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
             }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [orderData.detallesPisos, orderData.pisos, sizes]); // Ahora depende de 'sizes'
+    }, [orderData.detallesPisos, orderData.pisos, sizes]); 
 
     useEffect(() => {
         updateOrder({ pisos: localPisos });
@@ -82,6 +83,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                     catalogApi.getShapes('MAIN', false).catch(() => []),
                     catalogApi.getSizes('MAIN', false).catch(() => []) 
                 ]);
+                
                 setFlavors(f);
                 setFillings(c);
                 setShapes(sh);
@@ -134,11 +136,10 @@ const StepB_OrderDetails = ({ next, prev }) => {
     };
 
     const parsedTime = getParsedTime();
-    
-    // 🔥 VALIDACIÓN IS_BASE INFALIBLE: Incluso si GPT se equivoca, si hay pisos, fuerza Base.
     const arrayPisosSafe = Array.isArray(orderData.detallesPisos) ? orderData.detallesPisos : [];
     const isBase = orderData.tipo_folio?.includes('Base') || orderData.tipo_folio?.includes('Especial') || arrayPisosSafe.length > 0;
     
+    // 🔥 LÓGICA MATEMÁTICA RESTAURADA
     const getNumericSize = (sizeStr) => {
         if (!sizeStr) return 0;
         const num = parseInt(sizeStr.toString().replace(/[^0-9]/g, ''), 10);
@@ -148,12 +149,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
     const totalPersonas = getNumericSize(orderData.peopleCount || orderData.numero_personas);
     const sumPisos = localPisos.reduce((sum, p) => sum + getNumericSize(p.personas), 0);
     const remainingPersonas = totalPersonas - sumPisos;
-
-    useEffect(() => {
-        if (totalPersonas > 0 && sumPisos > totalPersonas) {
-            import('react-hot-toast').then(m => m.default.error(`Los pisos actuales suman ${sumPisos}, excediendo el nuevo total de ${totalPersonas}. Ajusta los pisos.`));
-        }
-    }, [totalPersonas, sumPisos]);
 
     const handleUpdatePiso = (idx, field, val) => {
         setLocalPisos(prev => {
@@ -219,11 +214,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
             });
         };
 
-        recognition.onerror = (event) => {
-            console.error('Speech recognition error', event.error);
-            import('react-hot-toast').then(m => m.default.error('No se pudo escuchar correctamente.'));
-        };
-
         recognition.start();
     };
 
@@ -239,7 +229,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
         return `${yyyy}-${mm}-${dd}`;
     };
 
-    // 🔥 EMPAREJADOR PARA SELECT PRINCIPAL DE PERSONAS
     let mainSizeValue = orderData.peopleCount || orderData.numero_personas || '';
     if (mainSizeValue && sizes.length > 0) {
         const numStr = String(mainSizeValue).replace(/[^0-9]/g, '');
@@ -248,13 +237,13 @@ const StepB_OrderDetails = ({ next, prev }) => {
     }
 
     const hasPisos = isBase && localPisos.some(p => getNumericSize(p.personas) > 0);
-    const isPisosValid = hasPisos && (sumPisos <= totalPersonas); 
-    
-    const currentPanes = orderData.panes || (typeof orderData.sabores_pan === 'string' ? JSON.parse(orderData.sabores_pan || '[]') : orderData.sabores_pan) || [];
-    const currentRellenos = orderData.rellenos ? (typeof orderData.rellenos === 'string' ? JSON.parse(orderData.rellenos) : orderData.rellenos) : [];
-
+    const currentPanes = orderData.panes || [];
+    const currentRellenos = orderData.rellenos || [];
     const hasSelections = currentPanes.length > 0 && currentRellenos.length > 0;
     
+    // Validamos que los pisos no sumen más del total
+    const isPisosValid = hasPisos && (totalPersonas === 0 || sumPisos <= totalPersonas);
+
     const isValid = (orderData.deliveryDate || orderData.fecha_entrega) && 
                     (orderData.deliveryTime || orderData.hora_entrega) &&
                     (mainSizeValue) &&
@@ -330,13 +319,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                         </button>
                         <button
                             className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${isBase ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                            onClick={() => {
-                                updateOrder({ tipo_folio: 'Base/Especial' });
-                                if (!orderData.pisos || orderData.pisos.length === 0) {
-                                    const fixedPisos = Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }));
-                                    updateOrder({ pisos: fixedPisos });
-                                }
-                            }}
+                            onClick={() => updateOrder({ tipo_folio: 'Base/Especial' })}
                         >
                             Base / Especial
                         </button>
@@ -459,16 +442,18 @@ const StepB_OrderDetails = ({ next, prev }) => {
                         <h3 className="text-lg font-bold text-purple-800 flex items-center gap-2">
                             <Layers size={20} className="text-purple-600" /> Estructura por Pisos (Máx 8)
                         </h3>
+                        {/* 🔥 CONTADOR DE ASIGNACIONES RESTAURADO */}
                         {totalPersonas > 0 && (
                             <div className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-colors ${sumPisos === totalPersonas ? 'bg-green-100 text-green-700' : sumPisos > totalPersonas ? 'bg-red-100 text-red-700' : 'bg-purple-200 text-purple-800'}`}>
                                 Asignadas: {sumPisos} / {totalPersonas}
                             </div>
                         )}
                     </div>
-                    
-                    {sumPisos > totalPersonas && (
-                        <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs flex items-center gap-2 font-bold">
-                            <AlertCircle size={14} /> Has superado el tamaño del pastel principal.
+
+                    {/* 🔥 ALERTA DE EXCESO DE PISOS */}
+                    {totalPersonas > 0 && sumPisos > totalPersonas && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center gap-2 font-bold shadow-sm">
+                            <AlertCircle size={18} /> Has superado el tamaño del pastel principal ({totalPersonas} personas).
                         </div>
                     )}
 
@@ -478,7 +463,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                             const maxAllowedForThisSelect = remainingPersonas + pisoActualValue;
 
                             return (
-                                <div key={idx} className={`bg-white p-4 rounded-xl border shadow-sm relative group transition-colors ${!totalPersonas ? 'opacity-60 pointer-events-none grayscale' : 'border-purple-100'}`}>
+                                <div key={idx} className="bg-white p-4 rounded-xl border border-purple-100 shadow-sm relative group hover:border-purple-300 transition-colors">
                                     <span className={`absolute -top-2 -left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${pisoActualValue > 0 ? 'bg-purple-600' : 'bg-gray-400'}`}>
                                         PISO {idx + 1}
                                     </span>
@@ -488,12 +473,13 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                             <select 
                                                 value={piso.personas || ''} 
                                                 onChange={(e) => handleUpdatePiso(idx, 'personas', e.target.value)} 
-                                                className={`w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm ${piso.personas ? 'bg-purple-50 text-purple-900 font-bold' : 'bg-white'}`}
-                                                disabled={!totalPersonas}
+                                                className="w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm bg-white"
                                             >
-                                                <option value="">{totalPersonas ? "Seleccione..." : "Elige Total ⬆️"}</option>
+                                                <option value="">Seleccione...</option>
+                                                {/* 🔥 FILTRO MATEMÁTICO RESTAURADO */}
                                                 {sizes
                                                     .filter(s => {
+                                                        if (totalPersonas === 0) return true; // Si no hay total, muestra todos
                                                         const sNum = getNumericSize(s.name);
                                                         return sNum > 0 && sNum <= maxAllowedForThisSelect;
                                                     })
@@ -515,7 +501,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                                 value="" 
                                                 onChange={(e) => handleAddItem(idx, 'panes', e.target.value)} 
                                                 className="w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm bg-white" 
-                                                disabled={!piso.personas}
                                             >
                                                 <option value="">+ Agregar pan...</option>
                                                 {flavors.map(f => (
@@ -537,7 +522,6 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                                 value="" 
                                                 onChange={(e) => handleAddItem(idx, 'rellenos', e.target.value)} 
                                                 className="w-full py-2 px-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm bg-white" 
-                                                disabled={!piso.personas}
                                             >
                                                 <option value="">+ Agregar relleno...</option>
                                                 {fillings.map(f => (
@@ -554,14 +538,12 @@ const StepB_OrderDetails = ({ next, prev }) => {
                                                     onChange={(e) => handleUpdatePiso(idx, 'notas', e.target.value)} 
                                                     className="w-full py-2 px-3 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none text-sm" 
                                                     placeholder="Ej: Cuadrado, rosa..." 
-                                                    disabled={!piso.personas}
                                                 />
                                                 <button 
                                                     type="button"
                                                     onClick={() => startDictation(idx)}
-                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-600 transition disabled:opacity-50"
+                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-600 transition"
                                                     title="Dictar nota por voz"
-                                                    disabled={!piso.personas}
                                                 >
                                                     <Mic size={16} />
                                                 </button>
@@ -584,7 +566,7 @@ const StepB_OrderDetails = ({ next, prev }) => {
                 </button>
                 <button
                     onClick={next}
-                    disabled={!isValid || (isBase && sumPisos > totalPersonas)}
+                    disabled={!isValid || (isBase && totalPersonas > 0 && sumPisos > totalPersonas)}
                     className="bg-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-pink-200"
                 >
                     Siguiente

@@ -15,13 +15,25 @@ const parseArraySafe = (data) => {
         try { 
             const parsed = JSON.parse(data); 
             if (Array.isArray(parsed)) return parsed;
-            if (typeof parsed === 'object') return Object.values(parsed); // Rescata si GPT mandó un objeto
+            if (typeof parsed === 'object') {
+                // FIX: Si el objeto parece ser un solo ítem (conserva sus llaves)
+                if (parsed.personas || parsed.panes || parsed.rellenos || parsed.shape || parsed.forma) {
+                    return [parsed];
+                }
+                return Object.values(parsed); // Rescata si GPT mandó un diccionario {"1": {...}}
+            }
             return [parsed];
         } catch(e) { 
             return [data]; 
         }
     }
-    if (typeof data === 'object') return Object.values(data);
+    if (typeof data === 'object') {
+        // FIX: Si el objeto es un solo ítem
+        if (data.personas || data.panes || data.rellenos || data.shape || data.forma) {
+            return [data];
+        }
+        return Object.values(data);
+    }
     return [data];
 };
 
