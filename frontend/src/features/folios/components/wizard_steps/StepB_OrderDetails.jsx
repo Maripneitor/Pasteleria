@@ -70,7 +70,9 @@ const StepB_OrderDetails = ({ next, prev }) => {
     }, [orderData.detallesPisos, orderData.pisos, sizes]); 
 
     useEffect(() => {
-        updateOrder({ pisos: localPisos });
+        // 🚀 FIX: Forzamos la actualización de ambas variables para que 
+        // el payload que viaja al backend no pierda la estructura original
+        updateOrder({ pisos: localPisos, detallesPisos: localPisos });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [localPisos]);
 

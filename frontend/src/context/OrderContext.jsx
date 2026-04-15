@@ -49,18 +49,27 @@ export const OrderProvider = ({ children }) => {
     };
 
     const loadOrder = (folio) => {
-        let rawComps = folio.complementosList || folio.complementarios || folio.complementos || [];
+        // 🚀 FIX: Evitamos el cortocircuito. Priorizamos 'complementarios' (IA DRAFT) 
+        // Si está vacío o nulo, caemos en 'complementosList' (BD Relacional)
+        let rawComps = folio.complementarios;
         if (typeof rawComps === 'string') {
             try { rawComps = JSON.parse(rawComps); } catch(e) { rawComps = []; }
         }
+        if (!Array.isArray(rawComps) || rawComps.length === 0) {
+            rawComps = folio.complementosList || folio.complementos || [];
+            if (typeof rawComps === 'string') {
+                try { rawComps = JSON.parse(rawComps); } catch(e) { rawComps = []; }
+            }
+        }
         if (!Array.isArray(rawComps)) rawComps = [];
 
+        // 🚀 FIX: Aceptamos las llaves en inglés (modo legacy de la IA) y en español
         const parsedComplements = rawComps.map(c => ({
-            personas: c.numero_personas || c.personas || '',
-            forma: c.forma || 'Redondo',
-            sabor: (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : (c.sabor || c.sabor_pan)) || '',
-            relleno: (Array.isArray(c.rellenos) ? c.rellenos[0] : c.relleno) || '',
-            descripcion: c.descripcion || '',
+            personas: c.personas || c.numero_personas || c.persons || '',
+            forma: c.forma || c.shape || 'Redondo',
+            sabor: (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : (c.sabor || c.sabor_pan || c.flavor)) || '',
+            relleno: (Array.isArray(c.rellenos) ? c.rellenos[0] : (c.relleno || c.filling)) || '',
+            descripcion: c.descripcion || c.description || '',
             precio: parseFloat(c.precio) || 0 
         }));
 
@@ -94,9 +103,24 @@ export const OrderProvider = ({ children }) => {
             referenceImages: folio.diseno_metadata?.allImages || (folio.imagen_referencia_url ? [folio.imagen_referencia_url] : []),
             total: folio.total || 0, anticipo: folio.anticipo || 0, aplica_comision: !!folio.aplica_comision, 
             
-            pisos: (folio.diseno_metadata?.pisos?.length === 8) 
-                ? folio.diseno_metadata.pisos 
-                : [...(folio.diseno_metadata?.pisos || []), ...Array.from({ length: Math.max(0, 8 - (folio.diseno_metadata?.pisos?.length || 0)) }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))].slice(0, 8),
+            // 🚀 FIX: Leemos desde la fuente de verdad del Backend (detallesPisos)
+            pisos: (() => {
+                let raw = folio.detallesPisos || folio.pisos || folio.diseno_metadata?.pisos || [];
+                if (typeof raw === 'string') {
+                    try { raw = JSON.parse(raw); } catch(e) { raw = []; }
+                }
+                if (!Array.isArray(raw)) raw = [];
+                return [...raw, ...Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))].slice(0, 8);
+            })(),
+            
+            detallesPisos: (() => {
+                let raw = folio.detallesPisos || folio.pisos || folio.diseno_metadata?.pisos || [];
+                if (typeof raw === 'string') {
+                    try { raw = JSON.parse(raw); } catch(e) { raw = []; }
+                }
+                if (!Array.isArray(raw)) raw = [];
+                return [...raw, ...Array.from({ length: 8 }, () => ({ personas: '', panes: [], rellenos: [], notas: '' }))].slice(0, 8);
+            })(),
             
             complements: [...parsedComplements, ...Array.from({ length: 3 }, () => ({ personas: '', forma: 'Redondo', sabor: '', relleno: '', descripcion: '', precio: 0 }))].slice(0, 3)
         });

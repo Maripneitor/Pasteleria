@@ -77,6 +77,7 @@ const StepE_Logistics = ({ next, prev }) => {
                                 value={orderData.colonia || ''}
                                 onChange={(e) => updateOrder({ colonia: e.target.value })}
                                 className="w-full p-3 border border-gray-300 rounded-xl"
+                                placeholder="Buenos Aires..."
                             />
                         </div>
                         <div>

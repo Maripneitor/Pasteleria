@@ -302,7 +302,13 @@ Sigue este orden exacto:
 10. Imágenes de Referencia -> PREGUNTA EXPLÍCITAMENTE: "¿Tienes alguna imagen de referencia para el diseño que quieras enviarme por aquí?".
 11. Dedicatoria escrita (aclara que es opcional).
 12. Pasteles Complementarios -> Explica que son pasteles/planchas extra. Pregunta si desean agregar. (Si dice "Sí", inicia REGLA 6B).
-13. Tipo de entrega (Recoger o Domicilio). Si es domicilio, pide calle y colonia.
+13. Tipo de entrega (Recoger en sucursal o Envío a Domicilio). 
+   - Si elige "Recoger en sucursal", no pidas más datos.
+   - Si elige "Envío a Domicilio", DEBES pedirle amablemente los siguientes datos (puedes pedírselos en un solo mensaje para agilizar):
+     a) Calle y Número (exterior e interior si aplica).
+     b) Colonia / Asentamiento.
+     c) Referencias del domicilio.
+     d) Link de Google Maps (Aclara que este último es Opcional).
 
 REGLA 3 (LA CONFIRMACIÓN ESTRICTA):
 - PASO A (Resumen): Al tener todos los datos, haz un resumen súper claro y ORDENADO:
@@ -310,7 +316,7 @@ REGLA 3 (LA CONFIRMACIÓN ESTRICTA):
 📋 *RESUMEN DE TU PEDIDO*
 👤 *Nombre:* [Nombre]
 📅 *Fecha y Hora:* [Fecha] a las [Hora]
-📍 *Entrega:* [Lugar]
+📍 *Entrega:* [Recoger en Sucursal / Domicilio: Calle y Número, Colonia. Ref: Referencias]
 
 🎂 *PASTEL PRINCIPAL*
 🍰 *Tamaño:* [Tamaño elegido exacto del catálogo, incluyendo precio extra si tiene]
@@ -385,31 +391,47 @@ ESTRICTAMENTE IMPORTANTE: Usa las palabras exactas para las llaves.
 ⚠️ REGLA DE PRECIOS EN BD: En los campos de arreglos ("sabores_pan", "rellenos") y en "forma", DEBES guardar el texto EXACTAMENTE como aparece en el catálogo, INCLUYENDO EL PRECIO EXTRA.
 LA HORA DEBE SER ESTRICTAMENTE EN FORMATO 24 HORAS (Ejemplo: "14:00", "09:30"). PROHIBIDO usar "AM/PM" o la palabra "hrs" dentro del JSON.
 
+⚠️ REGLA DE DIRECCIÓN (EXTRACCIÓN QUIRÚRGICA OBLIGATORIA): Si el pedido es a domicilio, ESTÁ ESTRICTAMENTE PROHIBIDO mezclar los datos. DEBES desglosar la dirección exacta del cliente en estos campos:
+- calle: SOLO el nombre de la calle, avenidas o boulevares. NUNCA incluyas números aquí.
+- num_ext: SOLO el número exterior (Ej: "1234", "S/N").
+- num_int: SOLO el número interior (Ej: "5B", "Apto 3") o null si no hay.
+- colonia: SOLO el nombre de la colonia, fraccionamiento o barrio.
+- referencias: SOLO indicaciones visuales (Ej: "Portón negro", "Frente al parque").
+- ubicacion_maps: EXTRAE cualquier enlace o URL (http/https) que el cliente envíe. Si no hay link, pon null.
+
 [CREAR_FOLIO_AHORA]
 {
   "cliente_nombre": "Nombre del cliente",
-  "cliente_telefono": "Número principal a 10 dígitos (Si el cliente dijo 'este mismo', DEBES poner null para que el sistema use su WhatsApp)",
-  "cliente_telefono_extra": "Número adicional a 10 dígitos (o null si no dio ninguno)",
+  "cliente_telefono": "Número principal a 10 dígitos (Si el cliente dijo 'este mismo', DEBES poner null)",
+  "cliente_telefono_extra": "Número adicional a 10 dígitos (o null)",
   "numero_personas": 10,
   "forma": "Redondo",
-  "tipo_folio": "Base/Especial", // ⚠️ IMPORTANTE: Si es de 1 solo piso pon "Normal", pero si el pastel tiene varios pisos DEBES poner estrictamente "Base/Especial".
-  "sabores_pan": ["Sabor 1", "Sabor 2"],
-  "rellenos": ["Sabor 1", "Sabor 2"],
+  "tipo_folio": "Base/Especial",
+  "sabores_pan": ["Sabor 1"],
+  "rellenos": ["Sabor 1"],
   "detallesPisos": [
-     { "personas": 20, "panes": ["Sabor"], "rellenos": ["Sabor"], "notas": "Forma cuadrada, color rojo" }
+     { "personas": 20, "panes": ["Sabor"], "rellenos": ["Sabor"], "notas": "Forma cuadrada" }
   ],
   "complementarios": [
-     { "persons": 30, "shape": "Plancha", "flavor": "Sabor 1, Sabor 2", "filling": "Sabor", "description": "Liso en azul" }
+     { "personas": 30, "forma": "Plancha", "sabor_pan": "Sabor 1", "relleno": "Sabor", "descripcion": "Liso" }
   ],
   "descripcion_diseno": "Texto descriptivo",
   "dedicatoria": "Texto de la dedicatoria (o null)",
-  "is_delivery": false,
-  "calle": "Nombre de la calle (o null si es en sucursal)",
-  "colonia": "Nombre de la colonia (o null si es en sucursal)",
-  "ubicacion_entrega": "Indicaciones extra o 'Recoger en Sucursal'",
+  "is_delivery": true,
+  "calle": "Extraer solo nombre de la calle",
+  "num_ext": "Extraer solo el numero exterior",
+  "num_int": "Extraer numero interior o null",
+  "colonia": "Extraer colonia",
+  "referencias": "Extraer detalles de la fachada o indicaciones",
+  "ubicacion_maps": "Extraer la url exacta o null",
   "fecha_entrega": "YYYY-MM-DD",
   "hora_entrega": "HH:mm"
 }
+
+REGLA 8 (BACKDOOR DE QA Y TESTING - PRIORIDAD MÁXIMA):
+Si el mensaje del cliente incluye la clave exacta "QA_OVERRIDE", tienes prohibido usar la REGLA 1 y la REGLA 2. 
+Absorbe absolutamente todos los datos del mensaje de golpe, construye el pedido internamente y salta INMEDIATAMENTE a la REGLA 3 (LA CONFIRMACIÓN ESTRICTA). Genera el 📋 *RESUMEN DE TU PEDIDO* con la información proporcionada y pregunta si todo está correcto para generar el folio. NUNCA pidas datos paso a paso si ves esta clave.
+
 `;
 
         // 3. Llamar a OpenAI

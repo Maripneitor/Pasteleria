@@ -24,7 +24,14 @@ const createFolioSchema = z.object({
     extraHeight: z.boolean().or(z.string().transform(v => v === 'true' || v === '1')).optional(), 
     altura_extra: z.string().optional(),
 
-    detallesPisos: z.array(z.object({ piso: z.number().or(z.string()), personas: z.number().or(z.string()).optional(), sabores_pan: z.array(z.string()).optional(), rellenos: z.array(z.string()).optional(), notas: z.string().optional() }).passthrough()).optional(),
+    detallesPisos: z.array(z.object({ 
+        piso: z.number().or(z.string()).optional(), // 🚀 FIX: Ya no es obligatorio
+        personas: z.number().or(z.string()).optional(), 
+        sabores_pan: z.array(z.string()).optional(), 
+        panes: z.array(z.string()).optional(), // 🚀 FIX: Aceptamos "panes" directo como lo manda la IA y React
+        rellenos: z.array(z.string()).optional(), 
+        notas: z.string().optional() 
+    }).passthrough()).optional(),
     complementarios: z.array(z.object({ numero_personas: z.number().or(z.string()).optional(), forma: z.string().optional(), sabores_pan: z.array(z.string()).optional(), rellenos: z.array(z.string()).optional(), descripcion: z.string().optional(), sabor: z.string().optional(), sabor_pan: z.string().optional(), relleno: z.string().optional(), precio: z.number().or(z.string()).optional() }).passthrough()).optional(),
     complementsList: z.array(z.object({ personas: z.number().or(z.string()).optional(), forma: z.string().optional(), sabor: z.string().optional(), sabor_pan: z.string().optional(), sabores_pan: z.array(z.string()).optional(), relleno: z.string().optional(), rellenos: z.array(z.string()).optional(), descripcion: z.string().optional(), precio: z.number().or(z.string()).optional() }).passthrough()).optional(),
     accesorios: z.any().optional(),

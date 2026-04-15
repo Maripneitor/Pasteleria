@@ -10,26 +10,24 @@ const StepC_Complements = ({ next, prev }) => {
     const [shapes, setShapes] = useState([]); 
     const [sizes, setSizes] = useState([]);   
     const [loading, setLoading] = useState(true);
+    const [hasHydrated, setHasHydrated] = useState(false); // 🚀 FIX: Candado de Hidratación
 
     const [localComps, setLocalComps] = useState(() => {
         const ctxComps = orderData.complements || orderData.complementosList || orderData.complementarios || [];
-        
         return Array.from({ length: 3 }, (_, i) => {
             const c = ctxComps[i] || {};
-            const saborReal = c.sabor || c.sabor_pan || (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : '') || '';
-            const rellenoReal = c.relleno || (Array.isArray(c.rellenos) ? c.rellenos[0] : '') || '';
-
             return {
                 personas: c.personas || c.numero_personas || '',
-                forma: c.forma || 'Redondo',
-                sabor: saborReal,     
-                relleno: rellenoReal, 
-                descripcion: c.descripcion || '',
-                precio: 0 // 🔥 Siempre 0, el usuario lo cobra en el Precio Total del Pastel
+                forma: c.forma || c.shape || 'Redondo',
+                sabor: c.sabor || c.sabor_pan || (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : '') || '',     
+                relleno: c.relleno || (Array.isArray(c.rellenos) ? c.rellenos[0] : '') || '', 
+                descripcion: c.descripcion || c.description || '',
+                precio: c.precio || 0 
             };
         });
     });
 
+    // 1. Cargar Catálogos
     useEffect(() => {
         const load = async () => {
             try {
@@ -52,10 +50,84 @@ const StepC_Complements = ({ next, prev }) => {
         load();
     }, []);
 
+    // 2. Hidratación Inteligente y Normalizada
     useEffect(() => {
-        updateOrder({ complements: localComps });
+        if (hasHydrated) return; // Si ya hidratamos, no lo volvemos a hacer
+        if (sizes.length === 0 || shapes.length === 0 || flavors.length === 0 || fillings.length === 0) return;
+
+        const sourceComps = orderData.complements || orderData.complementosList || orderData.complementarios || [];
+        
+        // Normalizador antibugs (quita acentos, mayúsculas y espacios extra)
+        const normalize = (str) => {
+            if (typeof str !== 'string') return '';
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        };
+
+        const mapped = Array.from({ length: 3 }, (_, i) => {
+            const c = sourceComps[i] || {};
+            
+            // Mapeo Personas
+            let personasVal = '';
+            if (c.personas) {
+                const numStr = String(c.personas).replace(/[^0-9]/g, '');
+                const matchSize = sizes.find(s => String(s.name).replace(/[^0-9]/g, '') === numStr);
+                personasVal = matchSize ? matchSize.name : String(c.personas);
+            }
+
+            // 🚀 FIX: Mapeo Forma Ultra-Agresivo
+            let formaVal = c.forma || c.shape || '';
+            if (formaVal && formaVal.toLowerCase() !== 'redondo') { 
+                const normForma = normalize(formaVal);
+                const matchShape = shapes.find(s => 
+                    normalize(s.name) === normForma || 
+                    normalize(s.name).includes(normForma) || 
+                    normForma.includes(normalize(s.name))
+                );
+                if (matchShape) formaVal = matchShape.name;
+            }
+
+            // Mapeo Sabor
+            let saborReal = c.sabor || c.sabor_pan || (Array.isArray(c.sabores_pan) ? c.sabores_pan[0] : '') || '';
+            if (saborReal) {
+                const normSabor = normalize(saborReal);
+                const matchFlavor = flavors.find(f => normalize(f.name) === normSabor || normalize(f.name).includes(normSabor) || normSabor.includes(normalize(f.name)));
+                if (matchFlavor) saborReal = matchFlavor.name;
+            }
+
+            // Mapeo Relleno
+            let rellenoReal = c.relleno || (Array.isArray(c.rellenos) ? c.rellenos[0] : '') || '';
+            if (rellenoReal) {
+                const normRelleno = normalize(rellenoReal);
+                const matchFilling = fillings.find(f => normalize(f.name) === normRelleno || normalize(f.name).includes(normRelleno) || normRelleno.includes(normalize(f.name)));
+                if (matchFilling) rellenoReal = matchFilling.name;
+            }
+
+            return {
+                personas: personasVal,
+                forma: formaVal,
+                sabor: saborReal,     
+                relleno: rellenoReal, 
+                descripcion: c.descripcion || c.description || '',
+                precio: c.precio || 0 
+            };
+        });
+        
+        setLocalComps(mapped);
+        setHasHydrated(true); // 🚀 FIX: Cerramos el candado. Ya no se volverá a ejecutar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [localComps]);
+    }, [sizes, shapes, flavors, fillings, hasHydrated, orderData.complements]);
+
+    // 3. Sincronización al Contexto Global
+    useEffect(() => {
+        if (!hasHydrated) return; // 🚀 FIX: Prohibido sincronizar basura hacia el backend si no hemos hidratado
+        
+        updateOrder({ 
+            complements: localComps, 
+            complementsList: localComps,
+            complementarios: localComps 
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localComps, hasHydrated]);
 
     const updateComplement = (index, field, value) => {
         setLocalComps(prev => {
@@ -98,16 +170,20 @@ const StepC_Complements = ({ next, prev }) => {
                             <select
                                 value={comp.forma || ''}
                                 onChange={(e) => updateComplement(idx, 'forma', e.target.value)}
-                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm"
+                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-pink-500 outline-none"
                             >
+                                {/* 🚀 FIX: Agregamos la opción neutra para evitar que el navegador auto-seleccione el primero */}
+                                <option value="">Seleccione...</option>
+                                
                                 {shapes.length > 0 ? (
                                     shapes.map(s => <option key={s.id} value={s.name}>{s.name}</option>)
                                 ) : (
                                     <>
-                                        <option value="Redondo">Redondo</option>
+                                        <option value="Círculo">Círculo</option>
+                                        <option value="Huevo">Huevo</option>
+                                        <option value="Pilín">Pilín</option>
                                         <option value="Cuadrado">Cuadrado</option>
                                         <option value="Rectangular">Rectangular</option>
-                                        <option value="Corazon">Corazón</option>
                                     </>
                                 )}
                             </select>
